@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 
 class ShopSettingsPage extends StatefulWidget {
-  const ShopSettingsPage({Key? key}) : super(key: key);
+  const ShopSettingsPage({super.key});
 
   @override
   State<ShopSettingsPage> createState() => _ShopSettingsPageState();
@@ -21,8 +21,14 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Logout')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Logout'),
+          ),
         ],
       ),
     );
@@ -110,23 +116,23 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => 
-            {
-              _confirmAndLogout(),
-            },
+            onPressed: () => {_confirmAndLogout()},
             icon: const Icon(Icons.logout),
             label: const Text('Logout'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade600,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: () {
               // Quick access: go back to dashboard/home
-              Navigator.pop(  context);
+              Navigator.pop(context);
             },
             child: const Text('Back to Dashboard'),
           ),

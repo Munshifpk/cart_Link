@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class HomeTab extends StatelessWidget {
   final Function(int) onNavigateToOrders;
-  
-  const HomeTab({Key? key, required this.onNavigateToOrders}) : super(key: key);
+
+  const HomeTab({super.key, required this.onNavigateToOrders});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +22,9 @@ class HomeTab extends StatelessWidget {
               // Welcome Card
               Card(
                 elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -38,7 +40,11 @@ class HomeTab extends StatelessWidget {
                       CircleAvatar(
                         radius: 30,
                         backgroundColor: Colors.white.withOpacity(0.2),
-                        child: const Icon(Icons.storefront, size: 32, color: Colors.white),
+                        child: const Icon(
+                          Icons.storefront,
+                          size: 32,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -73,35 +79,55 @@ class HomeTab extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 itemBuilder: (BuildContext context, int index) {
                   return _buildStatCard(
-                    title: index == 0 ? 'Today\'s Sales' :
-                           index == 1 ? 'Orders' :
-                           index == 2 ? 'Products' : 'Customers',
-                    value: index == 0 ? '₹12,450' :
-                           index == 1 ? '24' :
-                           index == 2 ? '156' : '1.2K',
-                    trend: index == 0 ? '+12%' :
-                           index == 1 ? '+3' :
-                           index == 2 ? 'Active' : '+5%',
-                    icon: index == 0 ? Icons.currency_rupee :
-                          index == 1 ? Icons.shopping_bag_outlined :
-                          index == 2 ? Icons.inventory_2_outlined : Icons.people_outline,
-                    color: index == 0 ? Colors.green :
-                           index == 1 ? Colors.orange :
-                           index == 2 ? Colors.blue : Colors.purple,
+                    title: index == 0
+                        ? 'Today\'s Sales'
+                        : index == 1
+                        ? 'Orders'
+                        : index == 2
+                        ? 'Products'
+                        : 'Customers',
+                    value: index == 0
+                        ? '₹12,450'
+                        : index == 1
+                        ? '24'
+                        : index == 2
+                        ? '156'
+                        : '1.2K',
+                    trend: index == 0
+                        ? '+12%'
+                        : index == 1
+                        ? '+3'
+                        : index == 2
+                        ? 'Active'
+                        : '+5%',
+                    icon: index == 0
+                        ? Icons.currency_rupee
+                        : index == 1
+                        ? Icons.shopping_bag_outlined
+                        : index == 2
+                        ? Icons.inventory_2_outlined
+                        : Icons.people_outline,
+                    color: index == 0
+                        ? Colors.green
+                        : index == 1
+                        ? Colors.orange
+                        : index == 2
+                        ? Colors.blue
+                        : Colors.purple,
                   );
-      
-                  },
-                separatorBuilder: (BuildContext context, int index) { 
+                },
+                separatorBuilder: (BuildContext context, int index) {
                   return const SizedBox(height: 2);
-                 },
+                },
                 itemCount: 4,
-                
               ),
               const SizedBox(height: 24),
 
               // Quick Actions
-              const Text('Quick Actions', 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Quick Actions',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -134,8 +160,10 @@ class HomeTab extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Recent Orders', 
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Recent Orders',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   TextButton(
                     onPressed: () => onNavigateToOrders(2),
                     child: const Text('View All'),
@@ -152,11 +180,18 @@ class HomeTab extends StatelessWidget {
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue.shade50,
-                      child: const Icon(Icons.shopping_bag_outlined, color: Colors.blue),
+                      child: const Icon(
+                        Icons.shopping_bag_outlined,
+                        color: Colors.blue,
+                      ),
                     ),
                     title: Text('Order #${1001 + index}'),
-                    subtitle: Text('${2 + index} items • ₹${750 + (index * 100)}'),
-                    trailing: _buildStatusChip(index % 2 == 0 ? 'New' : 'Processing'),
+                    subtitle: Text(
+                      '${2 + index} items • ₹${750 + (index * 100)}',
+                    ),
+                    trailing: _buildStatusChip(
+                      index % 2 == 0 ? 'New' : 'Processing',
+                    ),
                     onTap: () => onNavigateToOrders(2),
                   );
                 },
@@ -190,19 +225,31 @@ class HomeTab extends StatelessWidget {
                 Icon(icon, color: color),
                 const Spacer(), // OK in Row (bounded width)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(trend, style: TextStyle(color: color, fontSize: 12)),
+                  child: Text(
+                    trend,
+                    style: TextStyle(color: color, fontSize: 12),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12), // replace Spacer (was causing error)
-            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
-            Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+            Text(
+              title,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
           ],
         ),
       ),

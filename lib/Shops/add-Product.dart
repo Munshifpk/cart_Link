@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'product_aded.dart';
 
 class AddProductPage extends StatefulWidget {
-  const AddProductPage({Key? key}) : super(key: key);
+  const AddProductPage({super.key});
 
   @override
   State<AddProductPage> createState() => _AddProductPageState();
@@ -28,7 +28,7 @@ class _AddProductPageState extends State<AddProductPage> {
     'Fashion',
     'Home & Kitchen',
     'Beauty & Personal Care',
-    'Other'
+    'Other',
   ];
 
   @override
@@ -52,10 +52,10 @@ class _AddProductPageState extends State<AddProductPage> {
         const SnackBar(content: Text('Product added successfully!')),
       );
       // In _submit() method after successful addition
-Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(builder: (_) => const ProductAddedSuccess()),
-);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ProductAddedSuccess()),
+      );
       //Navigator.pop(context);
     });
   }
@@ -64,7 +64,10 @@ Navigator.pushReplacement(
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Boost Your Sales', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Boost Your Sales',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF0D47A1),
         elevation: 0,
         actions: [
@@ -74,10 +77,16 @@ Navigator.pushReplacement(
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(color: Colors.white))
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
                 : const Icon(Icons.rocket_launch, color: Colors.white),
-            label: const Text('Launch Product', 
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            label: const Text(
+              'Launch Product',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -114,7 +123,10 @@ Navigator.pushReplacement(
                       children: [
                         CircleAvatar(
                           backgroundColor: Colors.green.shade100,
-                          child: Icon(Icons.trending_up, color: Colors.green.shade700),
+                          child: Icon(
+                            Icons.trending_up,
+                            color: Colors.green.shade700,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -150,10 +162,7 @@ Navigator.pushReplacement(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Colors.blue.shade50,
-                            Colors.white,
-                          ],
+                          colors: [Colors.blue.shade50, Colors.white],
                         ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.blue.shade100),
@@ -171,8 +180,11 @@ Navigator.pushReplacement(
                                 color: Colors.blue.shade100,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.add_photo_alternate_outlined,
-                                  size: 48, color: Colors.blue.shade700),
+                              child: Icon(
+                                Icons.add_photo_alternate_outlined,
+                                size: 48,
+                                color: Colors.blue.shade700,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             const Text(
@@ -204,7 +216,10 @@ Navigator.pushReplacement(
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border(
-                          left: BorderSide(color: Colors.blue.shade400, width: 4),
+                          left: BorderSide(
+                            color: Colors.blue.shade400,
+                            width: 4,
+                          ),
                         ),
                       ),
                       child: Padding(
@@ -212,9 +227,13 @@ Navigator.pushReplacement(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Basic Information',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Basic Information',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _nameController,
@@ -222,8 +241,9 @@ Navigator.pushReplacement(
                                 labelText: 'Product Name',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (v) =>
-                                  v!.isEmpty ? 'Please enter product name' : null,
+                              validator: (v) => v!.isEmpty
+                                  ? 'Please enter product name'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
@@ -233,19 +253,24 @@ Navigator.pushReplacement(
                                 labelText: 'Description',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (v) =>
-                                  v!.isEmpty ? 'Please enter description' : null,
+                              validator: (v) => v!.isEmpty
+                                  ? 'Please enter description'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
-                              value: _category,
+                              initialValue: _category,
                               decoration: const InputDecoration(
                                 labelText: 'Category',
                                 border: OutlineInputBorder(),
                               ),
                               items: _categories
-                                  .map((c) =>
-                                      DropdownMenuItem(value: c, child: Text(c)))
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(c),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (v) => setState(() => _category = v),
                               validator: (v) =>
@@ -268,7 +293,10 @@ Navigator.pushReplacement(
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border(
-                          left: BorderSide(color: Colors.blue.shade400, width: 4),
+                          left: BorderSide(
+                            color: Colors.blue.shade400,
+                            width: 4,
+                          ),
                         ),
                       ),
                       child: Padding(
@@ -276,9 +304,13 @@ Navigator.pushReplacement(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Pricing & Inventory',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Pricing & Inventory',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 16),
                             Row(
                               children: [
@@ -288,7 +320,8 @@ Navigator.pushReplacement(
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [
                                       FilteringTextInputFormatter.allow(
-                                          RegExp(r'^\d+\.?\d{0,2}')),
+                                        RegExp(r'^\d+\.?\d{0,2}'),
+                                      ),
                                     ],
                                     decoration: const InputDecoration(
                                       labelText: 'Price',
@@ -305,14 +338,15 @@ Navigator.pushReplacement(
                                     controller: _stockController,
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly
+                                      FilteringTextInputFormatter.digitsOnly,
                                     ],
                                     decoration: const InputDecoration(
                                       labelText: 'Stock Quantity',
                                       border: OutlineInputBorder(),
                                     ),
-                                    validator: (v) =>
-                                        v!.isEmpty ? 'Enter stock quantity' : null,
+                                    validator: (v) => v!.isEmpty
+                                        ? 'Enter stock quantity'
+                                        : null,
                                   ),
                                 ),
                               ],
@@ -323,7 +357,8 @@ Navigator.pushReplacement(
                               decoration: const InputDecoration(
                                 labelText: 'SKU (Optional)',
                                 border: OutlineInputBorder(),
-                                helperText: 'Unique identifier for your product',
+                                helperText:
+                                    'Unique identifier for your product',
                               ),
                             ),
                           ],
@@ -343,7 +378,10 @@ Navigator.pushReplacement(
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border(
-                          left: BorderSide(color: Colors.blue.shade400, width: 4),
+                          left: BorderSide(
+                            color: Colors.blue.shade400,
+                            width: 4,
+                          ),
                         ),
                       ),
                       child: Padding(
@@ -351,9 +389,13 @@ Navigator.pushReplacement(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Options',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Options',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 16),
                             SwitchListTile(
                               title: const Text('Active'),
@@ -363,8 +405,9 @@ Navigator.pushReplacement(
                             ),
                             SwitchListTile(
                               title: const Text('Featured'),
-                              subtitle:
-                                  const Text('Show in featured products section'),
+                              subtitle: const Text(
+                                'Show in featured products section',
+                              ),
                               value: _isFeatured,
                               onChanged: (v) => setState(() => _isFeatured = v),
                             ),
@@ -387,8 +430,10 @@ Navigator.pushReplacement(
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.lightbulb_outline, 
-                                color: Colors.orange.shade700),
+                            Icon(
+                              Icons.lightbulb_outline,
+                              color: Colors.orange.shade700,
+                            ),
                             const SizedBox(width: 8),
                             const Text(
                               'Pro Tips for Success',
@@ -403,7 +448,9 @@ Navigator.pushReplacement(
                         _buildTip('Add multiple images from different angles'),
                         _buildTip('Use detailed descriptions to build trust'),
                         _buildTip('Keep stock updated to avoid disappointment'),
-                        _buildTip('Set competitive prices for better conversion'),
+                        _buildTip(
+                          'Set competitive prices for better conversion',
+                        ),
                       ],
                     ),
                   ),
@@ -422,8 +469,11 @@ Navigator.pushReplacement(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline, 
-              size: 20, color: Colors.green.shade700),
+          Icon(
+            Icons.check_circle_outline,
+            size: 20,
+            color: Colors.green.shade700,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(text, style: const TextStyle(color: Colors.black87)),

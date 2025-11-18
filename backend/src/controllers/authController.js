@@ -116,8 +116,8 @@ exports.verifyCredentials = async (req, res) => {
             });
         }
 
-        // Compare password
-        const isValid = await owner.password == password;
+        // Compare password using bcrypt
+        const isValid = await owner.comparePassword(password);
 
         if (!isValid) {
             return res.status(401).json({

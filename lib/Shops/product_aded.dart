@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
- import 'package:lottie/lottie.dart';
+import 'package:lottie/lottie.dart';
 import 'bottom bar/home-Shops.dart';
 
 class ProductAddedSuccess extends StatefulWidget {
-  const ProductAddedSuccess({Key? key}) : super(key: key);
+  const ProductAddedSuccess({super.key});
 
   @override
   State<ProductAddedSuccess> createState() => _ProductAddedSuccessState();
 }
 
-class _ProductAddedSuccessState extends State<ProductAddedSuccess> with SingleTickerProviderStateMixin {
+class _ProductAddedSuccessState extends State<ProductAddedSuccess>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -21,9 +22,10 @@ class _ProductAddedSuccessState extends State<ProductAddedSuccess> with SingleTi
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _controller.forward();
   }
@@ -72,17 +74,18 @@ class _ProductAddedSuccessState extends State<ProductAddedSuccess> with SingleTi
                       repeat: false,
                       delegates: LottieDelegates(
                         values: [
-                          ValueDelegate.color(
-                            const ['**', 'circle', '**'],
-                            value: Colors.green,
-                          ),
+                          ValueDelegate.color(const [
+                            '**',
+                            'circle',
+                            '**',
+                          ], value: Colors.green),
                         ],
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Success message
                 ScaleTransition(
                   scale: _scaleAnimation,
@@ -96,21 +99,18 @@ class _ProductAddedSuccessState extends State<ProductAddedSuccess> with SingleTi
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Subtext
                 ScaleTransition(
                   scale: _scaleAnimation,
                   child: const Text(
                     'Your product is now live and ready for customers',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 60),
-                
+
                 // Home button
                 ScaleTransition(
                   scale: _scaleAnimation,
