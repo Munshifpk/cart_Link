@@ -14,7 +14,7 @@ const String _backendUrl = kIsWeb
     : 'http://10.0.2.2:5000/api/auth';
 
 class ShopLoginPage extends StatefulWidget {
-  const ShopLoginPage({Key? key}) : super(key: key);
+  const ShopLoginPage({super.key});
 
   @override
   State<ShopLoginPage> createState() => _ShopLoginPageState();
@@ -46,20 +46,19 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
       print('🔍 Verifying credentials for mobile: $mobile');
       print('📡 Connecting to: $_backendUrl/verify-credentials');
 
-      final response = await http.post(
-        Uri.parse('$_backendUrl/verify-credentials'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'mobile': mobile,
-          'password': password,
-        }),
-      ).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () => throw Exception('Connection timeout'),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_backendUrl/verify-credentials'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'mobile': mobile, 'password': password}),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw Exception('Connection timeout'),
+          );
 
       print('📡 Response status: ${response.statusCode}');
       print('📡 Response body: ${response.body}');
@@ -110,10 +109,7 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
           data['message'] ?? 'No account exists for this mobile number',
         );
       } else {
-        _showErrorDialog(
-          'Server Error',
-          'Error ${response.statusCode}',
-        );
+        _showErrorDialog('Server Error', 'Error ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Error: $e');
@@ -159,9 +155,14 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
               constraints: const BoxConstraints(maxWidth: 520),
               child: Card(
                 elevation: 8,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 26,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -169,7 +170,10 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color.fromARGB(255, 41, 96, 179), Color.fromARGB(255, 87, 138, 188)],
+                            colors: [
+                              Color.fromARGB(255, 41, 96, 179),
+                              Color.fromARGB(255, 87, 138, 188),
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -180,13 +184,21 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                             CircleAvatar(
                               radius: 28,
                               backgroundColor: Colors.white24,
-                              child: Icon(Icons.storefront_outlined, size: 30, color: Colors.white),
+                              child: Icon(
+                                Icons.storefront_outlined,
+                                size: 30,
+                                color: Colors.white,
+                              ),
                             ),
                             SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 'Grow your business\nReach more customers',
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],
@@ -200,7 +212,9 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                             TextFormField(
                               controller: _mobileController,
                               keyboardType: TextInputType.phone,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               maxLength: 15,
                               decoration: const InputDecoration(
                                 labelText: 'Mobile number',
@@ -210,8 +224,10 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty) return 'Enter mobile number';
-                                if (v.trim().length < 7) return 'Enter a valid number';
+                                if (v == null || v.trim().isEmpty)
+                                  return 'Enter mobile number';
+                                if (v.trim().length < 7)
+                                  return 'Enter a valid number';
                                 return null;
                               },
                             ),
@@ -224,12 +240,18 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                                 prefixIcon: const Icon(Icons.lock_outline),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
-                                  icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                                  onPressed: () => setState(() => _obscure = !_obscure),
+                                  icon: Icon(
+                                    _obscure
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () =>
+                                      setState(() => _obscure = !_obscure),
                                 ),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Enter password';
+                                if (v == null || v.isEmpty)
+                                  return 'Enter password';
                                 if (v.length < 6) return 'Password too short';
                                 return null;
                               },
@@ -240,12 +262,21 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                               height: 48,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(255, 22, 84, 177),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  backgroundColor: const Color.fromARGB(
+                                    255,
+                                    22,
+                                    84,
+                                    177,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                                 onPressed: _loading ? null : _verifyCredentials,
                                 child: _loading
-                                    ? const CircularProgressIndicator(color: Colors.white)
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white,
+                                      )
                                     : const Text(
                                         'Login',
                                         style: TextStyle(
@@ -263,15 +294,23 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text("Don't have an account??", style: TextStyle(color: Colors.black87)),
+                          const Text(
+                            "Don't have an account??",
+                            style: TextStyle(color: Colors.black87),
+                          ),
                           TextButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const ShopSignUpPage()),
+                                MaterialPageRoute(
+                                  builder: (context) => const ShopSignUpPage(),
+                                ),
                               );
                             },
-                            child: const Text('Create one', style: TextStyle(fontWeight: FontWeight.w600)),
+                            child: const Text(
+                              'Create one',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
                           ),
                         ],
                       ),
@@ -279,7 +318,9 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                       Text(
                         'Join thousands of businesses using our platform to increase sales and reach new customers.',
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade700,
+                        ),
                       ),
                     ],
                   ),

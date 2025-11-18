@@ -8,7 +8,7 @@ import 'orders_tab.dart';
 import 'profile_tab.dart';
 
 class ShopHomePage extends StatefulWidget {
-  const ShopHomePage({Key? key}) : super(key: key);
+  const ShopHomePage({super.key});
 
   @override
   State<ShopHomePage> createState() => _ShopHomePageState();
@@ -38,20 +38,26 @@ class _ShopHomePageState extends State<ShopHomePage> {
           _currentIndex == 0
               ? 'Owner Dashboard'
               : _currentIndex == 1
-                  ? 'Products'
-                  : _currentIndex == 2
-                      ? 'Orders'
-                      : 'Profile',
+              ? 'Products'
+              : _currentIndex == 2
+              ? 'Orders'
+              : 'Profile',
         ),
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationCenterPage())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationCenterPage()),
+            ),
             icon: const Icon(Icons.notifications_none),
           ),
           IconButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopSettingsPage())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ShopSettingsPage()),
+            ),
             icon: const Icon(Icons.settings_outlined),
           ),
         ],
@@ -61,7 +67,10 @@ class _ShopHomePageState extends State<ShopHomePage> {
       floatingActionButton: _currentIndex == 1
           ? FloatingActionButton.extended(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductPage()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddProductPage()),
+                );
               },
               label: const Text('Add Product'),
               icon: const Icon(Icons.add_business_outlined),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ProductsTab extends StatelessWidget {
-  const ProductsTab({Key? key}) : super(key: key);
+  const ProductsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,8 +13,10 @@ class ProductsTab extends StatelessWidget {
         children: const [
           Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
           SizedBox(height: 16),
-          Text('Products Coming Soon',
-              style: TextStyle(fontSize: 16, color: Colors.grey)),
+          Text(
+            'Products Coming Soon',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
         ],
       ),
     );
