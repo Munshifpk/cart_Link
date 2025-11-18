@@ -120,14 +120,50 @@ class _AdminHomeState extends State<AdminHome> {
       {'icon': Icons.storefront, 'title': 'Shops'},
       {'icon': Icons.shopping_cart, 'title': 'Orders'},
       {'icon': Icons.people, 'title': 'Users'},
+      {'icon': Icons.inventory, 'title': 'Products'},
       {'icon': Icons.bar_chart, 'title': 'Analytics'},
       {'icon': Icons.settings, 'title': 'Settings'},
-      {'icon': Icons.message, 'title': 'Announcements'},
+      {'icon': Icons.campaign_outlined, 'title': 'Announcements'},
+      {'icon': Icons.feedback, 'title': 'Feedback'},
+      // {'icon': Icons.support_agent, 'title': 'Support'},
     ];
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Panel'),
         backgroundColor: AdminTheme.primary,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none),
+            onPressed: () => <Future>{
+              // Action for notifications can be added here
+              Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text('Notifications')),
+          body: Center(child: Text('Notifications - coming soon')),
+        ),
+      ),
+    ),
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => <Future>{
+              // Action for notifications can be added here
+              Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text('Settings')),
+          body: Center(child: Text('Settings - coming soon')),
+        ),
+      ),
+    ),
+            },
+          ),
+        ],
       ),
       backgroundColor: AdminTheme.scaffoldBackground,
       body: Padding(
@@ -136,26 +172,36 @@ class _AdminHomeState extends State<AdminHome> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Overview',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Welcome to the Admin Panel',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: GridView.count(
-                // Fixed 3 columns to produce 2 rows x 3 columns for 6 items
-                crossAxisCount: 3,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.25,
-                children: List.generate(cardItems.length, (i) {
-                  final item = cardItems[i];
-                  final color = (i % 2 == 0) ? _kPrimary : _kAccent;
-                  return _buildCard(
-                    item['icon'] as IconData,
-                    item['title'] as String,
-                    color,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Use 2 columns on narrow screens, 3 otherwise
+                  final cols = constraints.maxWidth < 700 ? 2 : 3;
+                  final aspect = constraints.maxWidth < 700 ? 1.05 : 1.25;
+                  return GridView.count(
+                    crossAxisCount: cols,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: aspect,
+                    children: List.generate(cardItems.length, (i) {
+                      final item = cardItems[i];
+                      final color = (i % 2 == 0) ? _kPrimary : _kAccent;
+                      return _buildCard(
+                        item['icon'] as IconData,
+                        item['title'] as String,
+                        color,
+                      );
+                    }),
                   );
-                }),
+                },
               ),
             ),
           ],
