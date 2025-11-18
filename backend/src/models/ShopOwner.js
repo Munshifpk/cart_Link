@@ -12,6 +12,7 @@ const ShopOwnerSchema = new mongoose.Schema({
     taxId: { type: String, required: false },
     balance: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
+
 }
     , { collection: 'Shops' }); // explicit collection name);
 
