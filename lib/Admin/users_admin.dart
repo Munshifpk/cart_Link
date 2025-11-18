@@ -193,7 +193,7 @@ class _UsersAdminState extends State<UsersAdmin> {
             scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
+              child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minWidth: constraints.maxWidth,
                   minHeight: constraints.maxHeight,
@@ -202,90 +202,91 @@ class _UsersAdminState extends State<UsersAdmin> {
                   width: constraints.maxWidth,
                   height: constraints.maxHeight,
                   child: DataTable(
-                  headingRowColor: MaterialStateProperty.resolveWith(
-                    (states) => const Color(0xFF0D47A1),
-                  ),
-                  headingRowHeight: 56,
-                  dataRowHeight: 70,
-                  columnSpacing: 20,
-                  columns: const [
-                    DataColumn(
-                      label: Text(
-                        'User ID',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                    headingRowColor: MaterialStateProperty.resolveWith(
+                      (states) => const Color(0xFF0D47A1),
+                    ),
+                    headingRowHeight: 56,
+                    dataRowHeight: 70,
+                    columnSpacing: 20,
+                    columns: const [
+                      DataColumn(
+                        label: Text(
+                          'User ID',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Profile',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      DataColumn(
+                        label: Text(
+                          'Profile',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Location',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      DataColumn(
+                        label: Text(
+                          'Location',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Total Orders',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      DataColumn(
+                        label: Text(
+                          'Total Orders',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Info',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      DataColumn(
+                        label: Text(
+                          'Info',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  rows: List.generate(_users.length, (index) {
-                    final u = _users[index];
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(u.id)),
-                        DataCell(
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Colors.blue.shade200,
-                                child: Text(
-                                  u.name.isNotEmpty ? u.name[0] : '?',
+                    ],
+                    rows: List.generate(_users.length, (index) {
+                      final u = _users[index];
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(u.id)),
+                          DataCell(
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Colors.blue.shade200,
+                                  child: Text(
+                                    u.name.isNotEmpty ? u.name[0] : '?',
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(u.name),
-                            ],
+                                const SizedBox(width: 12),
+                                Text(u.name),
+                              ],
+                            ),
                           ),
-                        ),
-                        DataCell(Text(u.location)),
-                        DataCell(Text(u.totalOrders.toString())),
-                        DataCell(
-                          IconButton(
-                            icon: const Icon(Icons.info_outline),
-                            tooltip: 'Info',
-                            onPressed: () => _showInfo(u),
+                          DataCell(Text(u.location)),
+                          DataCell(Text(u.totalOrders.toString())),
+                          DataCell(
+                            IconButton(
+                              icon: const Icon(Icons.info_outline),
+                              tooltip: 'Info',
+                              onPressed: () => _showInfo(u),
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  }),
+                        ],
+                      );
+                    }),
+                  ),
                 ),
               ),
             ),
