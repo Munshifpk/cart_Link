@@ -224,10 +224,12 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Enter mobile number';
-                                if (v.trim().length < 7)
+                                }
+                                if (v.trim().length < 7) {
                                   return 'Enter a valid number';
+                                }
                                 return null;
                               },
                             ),
@@ -250,8 +252,9 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                                 ),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty)
+                                if (v == null || v.isEmpty) {
                                   return 'Enter password';
+                                }
                                 if (v.length < 6) return 'Password too short';
                                 return null;
                               },

@@ -212,10 +212,12 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
           actions: [
             PopupMenuButton<String>(
               onSelected: (v) {
-                if (v == 'mark_all_notifications')
+                if (v == 'mark_all_notifications') {
                   _markAllRead(_ItemType.notification);
-                if (v == 'clear_notifications')
+                }
+                if (v == 'clear_notifications') {
                   _clearAll(_ItemType.notification);
+                }
                 if (v == 'mark_all_orders') _markAllRead(_ItemType.order);
                 if (v == 'clear_orders') _clearAll(_ItemType.order);
               },

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/shop_service.dart';
 
 class ShopsAdmin extends StatefulWidget {
   const ShopsAdmin({super.key});
@@ -121,79 +120,58 @@ class _ShopsAdminState extends State<ShopsAdmin> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shops'),
-        backgroundColor: const Color(0xFF0D47A1),
+        backgroundColor: AdminTheme.primary,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadShops, tooltip: 'Refresh'),
-        ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _shops.isEmpty
-              ? const Center(child: Text('No shops found'))
-              : LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDialog,
+        child: const Icon(Icons.add),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: _shops.isEmpty
+            ? const Center(child: Text('No shops yet'))
+            : Column(
+                children: [
+                  Expanded(
                     child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: constraints.maxWidth,
-                          minHeight: constraints.maxHeight,
-                        ),
-                        child: DataTable(
-                          headingRowColor: MaterialStateProperty.resolveWith((states) => const Color(0xFF0D47A1)),
-                          headingRowHeight: 56,
-                          dataRowHeight: 70,
-                          columnSpacing: 20,
-                          columns: const [
-                            DataColumn(
-                              label: Text(
-                                'Shop Name',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
+                      scrollDirection: Axis.vertical,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width,
+                          child: DataTable(
+                            headingRowColor: MaterialStateProperty.resolveWith(
+                              (states) => const Color(0xFFEEEEEE),
                             ),
-                            DataColumn(
-                              label: Text(
-                                'Owner',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'Location',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'Contact',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'Info',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                          rows: List.generate(_shops.length, (index) {
-                            final s = _shops[index];
-                            return DataRow(cells: [
-                              DataCell(Text(s.name)),
-                              DataCell(Text(s.ownerName ?? '')),
-                              DataCell(Text(s.address)),
-                              DataCell(Text(s.mobile.toString())),
-                              DataCell(
-                                IconButton(
-                                  icon: const Icon(Icons.info_outline),
-                                  tooltip: 'Details',
-                                  onPressed: () => _showShopDetails(s),
-                                ),
-                              ),
-                            ]);
-                          }),
+                            columns: const [
+                              DataColumn(label: Text('Name')),
+                              DataColumn(label: Text('Location')),
+                              DataColumn(label: Text('Contact')),
+                              DataColumn(label: Text('Actions')),
+                            ],
+                            rows: List.generate(_shops.length, (index) {
+                              final s = _shops[index];
+                              return DataRow(
+                                cells: [
+                                  DataCell(Text(s.name)),
+                                  DataCell(Text(s.location)),
+                                  DataCell(Text(s.contact)),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.info_outline),
+                                          tooltip: 'Details',
+                                          onPressed: () => _showShopDetails(s),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
+                          ),
                         ),
                       ),
                     ),

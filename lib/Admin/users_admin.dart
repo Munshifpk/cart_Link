@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'admin_theme.dart';
 
 class UsersAdmin extends StatefulWidget {
   const UsersAdmin({super.key});
@@ -180,11 +181,12 @@ class _UsersAdminState extends State<UsersAdmin> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Users'),
-        backgroundColor: const Color(0xFF0D47A1),
+        backgroundColor: AdminTheme.primary,
         foregroundColor: Colors.white,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
+        backgroundColor: AdminTheme.accent,
         child: const Icon(Icons.add),
       ),
       body: LayoutBuilder(
@@ -202,8 +204,8 @@ class _UsersAdminState extends State<UsersAdmin> {
                   width: constraints.maxWidth,
                   height: constraints.maxHeight,
                   child: DataTable(
-                    headingRowColor: MaterialStateProperty.resolveWith(
-                      (states) => const Color(0xFF0D47A1),
+                    headingRowColor: WidgetStateProperty.resolveWith(
+                      (states) => AdminTheme.primary,
                     ),
                     headingRowHeight: 56,
                     dataRowHeight: 70,
