@@ -7,7 +7,12 @@ const ShopOwnerSchema = new mongoose.Schema({
     email: { type: String, required: false, lowercase: true },
     mobile: { type: Number, required: true, unique: true },
     password: { type: String, required: true },
+    businessType: { type: String, required: true },
+    address: { type: String, required: true },
+    taxId: { type: String, required: false },
+    balance: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
+
 }
     , { collection: 'Shops' }); // explicit collection name);
 
