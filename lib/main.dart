@@ -1,3 +1,4 @@
+import 'package:cart_link/Admin/admin_Home.dart';
 import 'package:flutter/material.dart';
 import 'Customer/login.dart';
 import 'Shops/login-Shops.dart';
@@ -28,7 +29,9 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     // Limit tile width on larger screens
-    final maxTileWidth = screenWidth > 800 ? 300.0 : (screenWidth - (screenWidth/3)) / 2;
+    final maxTileWidth = screenWidth > 800
+        ? 300.0
+        : (screenWidth - (screenWidth / 3)) / 2;
     final tileSize = maxTileWidth;
 
     return Scaffold(
@@ -36,6 +39,20 @@ class HomePage extends StatelessWidget {
         title: const Text('Cart Link'),
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminHome()),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Admin panel coming soon!')),
+              );
+            },
+            child: const Text('Admin', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -84,10 +101,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text(
                     'Start growing your business today',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                   const SizedBox(height: 40),
                   // Tiles Row
@@ -101,7 +115,9 @@ class HomePage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           onTap: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const ShopLoginPage()),
+                            MaterialPageRoute(
+                              builder: (_) => const ShopLoginPage(),
+                            ),
                           ),
                           child: Container(
                             width: tileSize,
@@ -115,14 +131,17 @@ class HomePage extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF1E88E5).withOpacity(0.3),
+                                  color: const Color(
+                                    0xFF1E88E5,
+                                  ).withOpacity(0.3),
                                   blurRadius: 12,
                                   offset: const Offset(0, 6),
                                 ),
                               ],
                             ),
                             child: Stack(
-                              alignment: Alignment.center, // center content inside the stack
+                              alignment: Alignment
+                                  .center, // center content inside the stack
                               children: [
                                 // Background decorative elements
                                 Positioned(
@@ -154,7 +173,11 @@ class HomePage extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.store, size: 56, color: Colors.white),
+                                    const Icon(
+                                      Icons.store,
+                                      size: 56,
+                                      color: Colors.white,
+                                    ),
                                     const SizedBox(height: 16),
                                     const Text(
                                       'Shop Owner',
@@ -188,7 +211,9 @@ class HomePage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           onTap: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const LoginPage()),
+                            MaterialPageRoute(
+                              builder: (_) => const LoginPage(),
+                            ),
                           ),
                           child: Container(
                             width: tileSize,
@@ -202,14 +227,17 @@ class HomePage extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFFA500).withOpacity(0.3),
+                                  color: const Color(
+                                    0xFFFFA500,
+                                  ).withOpacity(0.3),
                                   blurRadius: 12,
                                   offset: const Offset(0, 6),
                                 ),
                               ],
                             ),
                             child: Stack(
-                              alignment: Alignment.center, // center content inside the stack
+                              alignment: Alignment
+                                  .center, // center content inside the stack
                               children: [
                                 // Background decorative elements
                                 Positioned(
@@ -241,7 +269,11 @@ class HomePage extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.shopping_bag, size: 56, color: Colors.white),
+                                    const Icon(
+                                      Icons.shopping_bag,
+                                      size: 56,
+                                      color: Colors.white,
+                                    ),
                                     const SizedBox(height: 16),
                                     const Text(
                                       'Customer',
@@ -282,7 +314,11 @@ class HomePage extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.trending_up, color: Color(0xFF0D47A1), size: 32),
+                        const Icon(
+                          Icons.trending_up,
+                          color: Color(0xFF0D47A1),
+                          size: 32,
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'Boost Your Sales',

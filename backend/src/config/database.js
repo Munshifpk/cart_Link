@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const uri = process.env.MONGODB_URI || 'mongodb+srv://cartLink_mongodb:CartLink123@cartlink.edvcqv6.mongodb.net/Cart_Link?appName=CartLink';
+const uri = process.env.MONGODB_URI || MONGODB_URI;
 
 mongoose.set('strictQuery', true);
 
