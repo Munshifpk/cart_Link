@@ -2,10 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'bottom bar/home-Shops.dart';
-import 'login-Shops.dart';
 import '../services/auth_service.dart';
 
 /// Simple AuthService implementation — replace endpoints with your real API.
@@ -333,10 +330,12 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                                         : null,
                                   ),
                                   validator: (v) {
-                                    if (v == null || v.trim().isEmpty)
+                                    if (v == null || v.trim().isEmpty) {
                                       return 'Enter mobile';
-                                    if (v.trim().length < 7)
+                                    }
+                                    if (v.trim().length < 7) {
                                       return 'Invalid number';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -383,10 +382,12 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Enter email';
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v))
+                              }
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
                                 return 'Enter valid email';
+                              }
                               return null;
                             },
                           ),
@@ -461,8 +462,9 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Enter password';
+                              }
                               if (v.length < 6) return 'Minimum 6 characters';
                               return null;
                             },
@@ -489,10 +491,12 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Confirm password';
-                              if (v != _password.text)
+                              }
+                              if (v != _password.text) {
                                 return 'Passwords do not match';
+                              }
                               return null;
                             },
                           ),

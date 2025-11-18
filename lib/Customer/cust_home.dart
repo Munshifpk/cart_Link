@@ -171,7 +171,7 @@ class _CustomerHomeState extends State<CustomerHome> {
 
 // Placeholder pages - replace with real implementations
 class _HomePage extends StatelessWidget {
-  const _HomePage({super.key});
+  const _HomePage();
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +225,7 @@ class _HomePage extends StatelessWidget {
 }
 
 class _CategoryPage extends StatelessWidget {
-  const _CategoryPage({super.key});
+  const _CategoryPage();
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +248,7 @@ class _CategoryPage extends StatelessWidget {
 }
 
 class _CartPage extends StatelessWidget {
-  const _CartPage({super.key});
+  const _CartPage();
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +273,7 @@ class _CartPage extends StatelessWidget {
 }
 
 class _ProfilePage extends StatelessWidget {
-  const _ProfilePage({super.key});
+  const _ProfilePage();
 
   @override
   Widget build(BuildContext context) {

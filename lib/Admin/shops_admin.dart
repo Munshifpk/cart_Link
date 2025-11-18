@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'admin_theme.dart';
 
 class ShopsAdmin extends StatefulWidget {
   const ShopsAdmin({super.key});
@@ -137,11 +138,12 @@ class _ShopsAdminState extends State<ShopsAdmin> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shops'),
-        backgroundColor: const Color(0xFF0D47A1),
+        backgroundColor: AdminTheme.primary,
         foregroundColor: Colors.white,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
+        backgroundColor: AdminTheme.accent,
         child: const Icon(Icons.add),
       ),
       body: Padding(
@@ -158,8 +160,8 @@ class _ShopsAdminState extends State<ShopsAdmin> {
                         child: SizedBox(
                           width: MediaQuery.of(context).size.width,
                           child: DataTable(
-                            headingRowColor: MaterialStateProperty.resolveWith(
-                              (states) => const Color(0xFFEEEEEE),
+                            headingRowColor: WidgetStateProperty.resolveWith(
+                              (states) => AdminTheme.primary,
                             ),
                             columns: const [
                               DataColumn(label: Text('Name')),
