@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/shop_service.dart';
 
 class ShopsAdmin extends StatefulWidget {
   const ShopsAdmin({super.key});
@@ -16,6 +17,7 @@ class Shop {
   String? ownerName;
   String? businessType;
   String? taxId;
+  DateTime? createdAt;
 
   Shop({
     this.id,
@@ -26,6 +28,7 @@ class Shop {
     this.ownerName,
     this.businessType,
     this.taxId,
+    this.createdAt,
   });
 
   factory Shop.fromJson(Map<String, dynamic> json) {
@@ -38,6 +41,7 @@ class Shop {
       ownerName: json['ownerName'],
       businessType: json['businessType'],
       taxId: json['taxId'],
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
     );
   }
 }
@@ -93,6 +97,8 @@ class _ShopsAdminState extends State<ShopsAdmin> {
             Text('Type: ${shop.businessType ?? 'N/A'}'),
             const SizedBox(height: 8),
             Text('Tax ID: ${shop.taxId ?? 'N/A'}'),
+            const SizedBox(height: 8),
+            Text('Created At: ${shop.createdAt != null ? shop.createdAt!.toLocal().toString() : 'N/A'}'),
           ],
         ),
         actions: [
@@ -120,58 +126,79 @@ class _ShopsAdminState extends State<ShopsAdmin> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shops'),
-        backgroundColor: AdminTheme.primary,
+        backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadShops, tooltip: 'Refresh'),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        child: const Icon(Icons.add),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: _shops.isEmpty
-            ? const Center(child: Text('No shops yet'))
-            : Column(
-                children: [
-                  Expanded(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _shops.isEmpty
+              ? const Center(child: Text('No shops found'))
+              : LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
                     child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width,
-                          child: DataTable(
-                            headingRowColor: MaterialStateProperty.resolveWith(
-                              (states) => const Color(0xFFEEEEEE),
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: constraints.maxWidth,
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: DataTable(
+                          headingRowColor: MaterialStateProperty.resolveWith((states) => const Color(0xFF0D47A1)),
+                          headingRowHeight: 56,
+                          dataRowHeight: 70,
+                          columnSpacing: 20,
+                          columns: const [
+                            DataColumn(
+                              label: Text(
+                                'Shop Name',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                            columns: const [
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Location')),
-                              DataColumn(label: Text('Contact')),
-                              DataColumn(label: Text('Actions')),
-                            ],
-                            rows: List.generate(_shops.length, (index) {
-                              final s = _shops[index];
-                              return DataRow(
-                                cells: [
-                                  DataCell(Text(s.name)),
-                                  DataCell(Text(s.location)),
-                                  DataCell(Text(s.contact)),
-                                  DataCell(
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.info_outline),
-                                          tooltip: 'Details',
-                                          onPressed: () => _showShopDetails(s),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }),
-                          ),
+                            DataColumn(
+                              label: Text(
+                                'Owner',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Location',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Contact',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Info',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                          rows: List.generate(_shops.length, (index) {
+                            final s = _shops[index];
+                            return DataRow(cells: [
+                              DataCell(Text(s.name)),
+                              DataCell(Text(s.ownerName ?? '')),
+                              DataCell(Text(s.address)),
+                              DataCell(Text(s.mobile.toString())),
+                              DataCell(
+                                IconButton(
+                                  icon: const Icon(Icons.info_outline),
+                                  tooltip: 'Details',
+                                  onPressed: () => _showShopDetails(s),
+                                ),
+                              ),
+                            ]);
+                          }),
                         ),
                       ),
                     ),
