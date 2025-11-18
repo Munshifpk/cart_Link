@@ -38,7 +38,6 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (context) => CustomerHome()),
       );
     }
-    ;
   }
 
   @override

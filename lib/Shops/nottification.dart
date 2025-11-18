@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class NotificationCenterPage extends StatefulWidget {
-  const NotificationCenterPage({Key? key}) : super(key: key);
+  const NotificationCenterPage({super.key});
 
   @override
   State<NotificationCenterPage> createState() => _NotificationCenterPageState();
@@ -13,7 +13,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
     (i) => _Item(
       id: 'n$i',
       title: i.isEven ? 'New message from customer' : 'Price alert',
-      subtitle: i.isEven ? 'Customer asked about product availability.' : 'One of your items is trending.',
+      subtitle: i.isEven
+          ? 'Customer asked about product availability.'
+          : 'One of your items is trending.',
       time: DateTime.now().subtract(Duration(minutes: i * 12 + 5)),
       isRead: i.isEven ? false : true,
       type: _ItemType.notification,
@@ -35,7 +37,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
   void _markAllRead(_ItemType type) {
     setState(() {
       final list = type == _ItemType.notification ? _notifications : _orders;
-      for (var it in list) it.isRead = true;
+      for (var it in list) {
+        it.isRead = true;
+      }
     });
   }
 
@@ -81,16 +85,24 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
             setState(() {
               items.removeAt(index);
             });
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Removed')));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Removed')));
           },
           child: ListTile(
             leading: Stack(
               children: [
                 CircleAvatar(
-                  backgroundColor: item.type == _ItemType.order ? Colors.blue.shade50 : Colors.green.shade50,
+                  backgroundColor: item.type == _ItemType.order
+                      ? Colors.blue.shade50
+                      : Colors.green.shade50,
                   child: Icon(
-                    item.type == _ItemType.order ? Icons.shopping_bag_outlined : Icons.notifications_outlined,
-                    color: item.type == _ItemType.order ? Colors.blue : Colors.green,
+                    item.type == _ItemType.order
+                        ? Icons.shopping_bag_outlined
+                        : Icons.notifications_outlined,
+                    color: item.type == _ItemType.order
+                        ? Colors.blue
+                        : Colors.green,
                   ),
                 ),
                 if (!item.isRead)
@@ -100,14 +112,25 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                     child: Container(
                       width: 10,
                       height: 10,
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
               ],
             ),
-            title: Text(item.title, style: TextStyle(fontWeight: item.isRead ? FontWeight.normal : FontWeight.w600)),
+            title: Text(
+              item.title,
+              style: TextStyle(
+                fontWeight: item.isRead ? FontWeight.normal : FontWeight.w600,
+              ),
+            ),
             subtitle: Text(item.subtitle),
-            trailing: Text(_timeAgo(item.time), style: const TextStyle(fontSize: 12, color: Colors.black45)),
+            trailing: Text(
+              _timeAgo(item.time),
+              style: const TextStyle(fontSize: 12, color: Colors.black45),
+            ),
             onTap: () => _openDetail(item),
             onLongPress: () {
               setState(() => item.isRead = true);
@@ -141,17 +164,25 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
             if (item.type == _ItemType.order)
               const Padding(
                 padding: EdgeInsets.only(top: 12),
-                child: Text('Order actions: Accept • Prepare • Ship', style: TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Order actions: Accept • Prepare • Ship',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
           if (item.type == _ItemType.order)
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order opened')));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Order opened')));
               },
               child: const Text('Open Order'),
             ),
@@ -181,17 +212,31 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
           actions: [
             PopupMenuButton<String>(
               onSelected: (v) {
-                if (v == 'mark_all_notifications') _markAllRead(_ItemType.notification);
-                if (v == 'clear_notifications') _clearAll(_ItemType.notification);
+                if (v == 'mark_all_notifications')
+                  _markAllRead(_ItemType.notification);
+                if (v == 'clear_notifications')
+                  _clearAll(_ItemType.notification);
                 if (v == 'mark_all_orders') _markAllRead(_ItemType.order);
                 if (v == 'clear_orders') _clearAll(_ItemType.order);
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'mark_all_notifications', child: Text('Mark all notifications read')),
-                const PopupMenuItem(value: 'clear_notifications', child: Text('Clear notifications')),
+                const PopupMenuItem(
+                  value: 'mark_all_notifications',
+                  child: Text('Mark all notifications read'),
+                ),
+                const PopupMenuItem(
+                  value: 'clear_notifications',
+                  child: Text('Clear notifications'),
+                ),
                 const PopupMenuDivider(),
-                const PopupMenuItem(value: 'mark_all_orders', child: Text('Mark all orders read')),
-                const PopupMenuItem(value: 'clear_orders', child: Text('Clear orders')),
+                const PopupMenuItem(
+                  value: 'mark_all_orders',
+                  child: Text('Mark all orders read'),
+                ),
+                const PopupMenuItem(
+                  value: 'clear_orders',
+                  child: Text('Clear orders'),
+                ),
               ],
             ),
           ],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class OrdersTab extends StatelessWidget {
-  const OrdersTab({Key? key}) : super(key: key);
+  const OrdersTab({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class OrdersTab extends StatelessWidget {
 class _OrdersList extends StatelessWidget {
   final List<Order> orders;
 
-  const _OrdersList({Key? key, required this.orders}) : super(key: key);
+  const _OrdersList({super.key, required this.orders});
 
   @override
   Widget build(BuildContext context) {
@@ -149,10 +149,7 @@ class _OrdersList extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     _timeAgo(order.time),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
               ),

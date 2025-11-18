@@ -10,9 +10,8 @@ import '../services/auth_service.dart';
 
 /// Simple AuthService implementation — replace endpoints with your real API.
 
-
 class ShopSignUpPage extends StatefulWidget {
-  const ShopSignUpPage({Key? key}) : super(key: key);
+  const ShopSignUpPage({super.key});
 
   @override
   State<ShopSignUpPage> createState() => _ShopSignUpPageState();
@@ -30,15 +29,21 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
   final _taxId = TextEditingController();
 
   String? _businessType;
-  final List<String> _types = ['Retail', 'Grocery', 'Electronics', 'Fashion', 'Food & Beverages', 'Pharmacy', 'Others'];
-  
+  final List<String> _types = [
+    'Retail',
+    'Grocery',
+    'Electronics',
+    'Fashion',
+    'Food & Beverages',
+    'Pharmacy',
+    'Others',
+  ];
+
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _loading = false;
   bool _mobileVerified = false;
   bool _checkingMobile = false;
-  
-
 
   @override
   void dispose() {
@@ -77,9 +82,12 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
         final Map<String, dynamic> map = Map<String, dynamic>.from(result);
         success = map['success'] == true;
         exists = map['exists'] == true;
-        if (map['message'] != null) message = map['message'].toString();
-        else if (map['error'] != null) message = map['error'].toString();
-        else if (map['msg'] != null) message = map['msg'].toString();
+        if (map['message'] != null) {
+          message = map['message'].toString();
+        } else if (map['error'] != null)
+          message = map['error'].toString();
+        else if (map['msg'] != null)
+          message = map['msg'].toString();
       } else if (result is String) {
         message = result;
       } else if (result != null) {
@@ -118,7 +126,10 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
     if (!_formKey.currentState!.validate()) return;
 
     if (!_mobileVerified) {
-      _showErrorDialog('Mobile Not Verified', 'Please verify your mobile number first');
+      _showErrorDialog(
+        'Mobile Not Verified',
+        'Please verify your mobile number first',
+      );
       return;
     }
 
@@ -150,7 +161,9 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Welcome ${_shopName.text}! Your shop has been created.'),
+            content: Text(
+              'Welcome ${_shopName.text}! Your shop has been created.',
+            ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
@@ -173,10 +186,7 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
     } catch (e) {
       print('❌ Error: $e');
       if (mounted) {
-        _showErrorDialog(
-          'Connection Error',
-          'Failed to create account:\n$e',
-        );
+        _showErrorDialog('Connection Error', 'Failed to create account:\n$e');
       }
     } finally {
       if (mounted) {
@@ -215,9 +225,14 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
             constraints: const BoxConstraints(maxWidth: 600),
             child: Card(
               elevation: 8,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 24,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -225,7 +240,10 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color.fromARGB(255, 41, 96, 179), Color.fromARGB(255, 87, 138, 188)],
+                          colors: [
+                            Color.fromARGB(255, 41, 96, 179),
+                            Color.fromARGB(255, 87, 138, 188),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -236,13 +254,21 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                           CircleAvatar(
                             radius: 28,
                             backgroundColor: Colors.white24,
-                            child: Icon(Icons.storefront_outlined, size: 30, color: Colors.white),
+                            child: Icon(
+                              Icons.storefront_outlined,
+                              size: 30,
+                              color: Colors.white,
+                            ),
                           ),
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Register Your Shop\nStart selling today',
-                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -262,7 +288,9 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               prefixIcon: Icon(Icons.store),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter shop name' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter shop name'
+                                : null,
                           ),
                           const SizedBox(height: 12),
 
@@ -275,7 +303,9 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               prefixIcon: Icon(Icons.person),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter owner name' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter owner name'
+                                : null,
                           ),
                           const SizedBox(height: 12),
 
@@ -286,7 +316,9 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                                 child: TextFormField(
                                   controller: _mobile,
                                   keyboardType: TextInputType.phone,
-                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
                                   maxLength: 15,
                                   decoration: InputDecoration(
                                     labelText: 'Mobile number',
@@ -294,12 +326,17 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                                     counterText: '',
                                     border: const OutlineInputBorder(),
                                     suffixIcon: _mobileVerified
-                                        ? const Icon(Icons.check_circle, color: Colors.green)
+                                        ? const Icon(
+                                            Icons.check_circle,
+                                            color: Colors.green,
+                                          )
                                         : null,
                                   ),
                                   validator: (v) {
-                                    if (v == null || v.trim().isEmpty) return 'Enter mobile';
-                                    if (v.trim().length < 7) return 'Invalid number';
+                                    if (v == null || v.trim().isEmpty)
+                                      return 'Enter mobile';
+                                    if (v.trim().length < 7)
+                                      return 'Invalid number';
                                     return null;
                                   },
                                 ),
@@ -310,16 +347,26 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF0D47A1),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                   ),
-                                  onPressed: _checkingMobile ? null : _checkMobileAvailability,
+                                  onPressed: _checkingMobile
+                                      ? null
+                                      : _checkMobileAvailability,
                                   child: _checkingMobile
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
-                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
                                         )
-                                      : const Text('Verify', style: TextStyle(color: Colors.white)),
+                                      : const Text(
+                                          'Verify',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
                                 ),
                               ),
                             ],
@@ -336,8 +383,10 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               border: OutlineInputBorder(),
                             ),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Enter email';
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return 'Enter valid email';
+                              if (v == null || v.trim().isEmpty)
+                                return 'Enter email';
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v))
+                                return 'Enter valid email';
                               return null;
                             },
                           ),
@@ -345,15 +394,23 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
 
                           // Business Type
                           DropdownButtonFormField<String>(
-                            value: _businessType,
-                            items: _types.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                            initialValue: _businessType,
+                            items: _types
+                                .map(
+                                  (t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(t),
+                                  ),
+                                )
+                                .toList(),
                             onChanged: (v) => setState(() => _businessType = v),
                             decoration: const InputDecoration(
                               labelText: 'Business type',
                               prefixIcon: Icon(Icons.category_outlined),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Select type' : null,
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Select type' : null,
                           ),
                           const SizedBox(height: 12),
 
@@ -368,7 +425,9 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               prefixIcon: Icon(Icons.location_on_outlined),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter address' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter address'
+                                : null,
                           ),
                           const SizedBox(height: 12),
 
@@ -392,12 +451,18 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               prefixIcon: const Icon(Icons.lock_outline),
                               border: const OutlineInputBorder(),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _obscure = !_obscure),
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Enter password';
+                              if (v == null || v.isEmpty)
+                                return 'Enter password';
                               if (v.length < 6) return 'Minimum 6 characters';
                               return null;
                             },
@@ -413,13 +478,21 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                               prefixIcon: const Icon(Icons.lock),
                               border: const OutlineInputBorder(),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                                icon: Icon(
+                                  _obscureConfirm
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscureConfirm = !_obscureConfirm,
+                                ),
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Confirm password';
-                              if (v != _password.text) return 'Passwords do not match';
+                              if (v == null || v.isEmpty)
+                                return 'Confirm password';
+                              if (v != _password.text)
+                                return 'Passwords do not match';
                               return null;
                             },
                           ),
@@ -432,11 +505,15 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0D47A1),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                               onPressed: _loading ? null : _submitSignUp,
                               child: _loading
-                                  ? const CircularProgressIndicator(color: Colors.white)
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
                                   : const Text(
                                       'Create my Shop',
                                       style: TextStyle(
@@ -453,10 +530,16 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text('Already have an account?', style: TextStyle(color: Colors.black87)),
+                              const Text(
+                                'Already have an account?',
+                                style: TextStyle(color: Colors.black87),
+                              ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
-                                child: const Text('Login', style: TextStyle(fontWeight: FontWeight.w600)),
+                                child: const Text(
+                                  'Login',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
                               ),
                             ],
                           ),
@@ -466,7 +549,9 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
                           Text(
                             'Sign up to start listing products, run promotions and track orders — watch your sales grow.',
                             textAlign: TextAlign.center,
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade700,
+                            ),
                           ),
                         ],
                       ),
