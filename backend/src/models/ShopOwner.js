@@ -14,7 +14,7 @@ const ShopOwnerSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 
 }
-    , { collection: 'Shops' }); // explicit collection name);
+    , { collection: 'shops' }); // explicit collection name);
 
 ShopOwnerSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();

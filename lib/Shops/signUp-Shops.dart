@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'bottom bar/home-Shops.dart';
-import 'login-Shops.dart';
+// import 'login-Shops.dart';
 import '../services/auth_service.dart';
 
 /// Simple AuthService implementation — replace endpoints with your real API.
