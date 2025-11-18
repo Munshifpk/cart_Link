@@ -46,9 +46,6 @@ class HomePage extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (_) => const AdminHome()),
               );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Admin panel coming soon!')),
-              );
             },
             child: const Text('Admin', style: TextStyle(color: Colors.white)),
           ),
