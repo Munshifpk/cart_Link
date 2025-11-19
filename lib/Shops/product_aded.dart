@@ -118,7 +118,7 @@ class _ProductAddedSuccessState extends State<ProductAddedSuccess>
                     onPressed: () {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const ShopHomePage()),
+                        MaterialPageRoute(builder: (_) => ShopHomePage()),
                         (route) => false,
                       );
                     },

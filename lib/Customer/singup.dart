@@ -1,4 +1,5 @@
-import 'package:cart_link/Customer/cust_home.dart';
+import 'package:cart_link/Customer/customer_home.dart';
+import 'package:cart_link/services/customer_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -19,6 +20,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _location;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -30,23 +32,64 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
   }
 
-  void _onSignUp() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Replace with real signup logic
-      _showMessage('Welcome, ${_nameController.text}!');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const CustomerHome()),
+  Future<void> _onSignUp() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    setState(() => _isLoading = true);
+
+    try {
+      final mobileParsed = int.tryParse(_phoneController.text);
+      if (mobileParsed == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showMessage('Invalid phone number', isError: true);
+        }
+        return;
+      }
+
+      final result = await CustomerAuthService.register(
+        customerName: _nameController.text,
+        mobile: mobileParsed,
+        email: _emailController.text,
+        password: _passwordController.text,
+        location: _location!,
       );
+
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      if (result['success'] == true) {
+        _showMessage('Welcome, ${_nameController.text}!');
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+              builder: (context) => CustomerHome(
+                  customer: Customer(name: _nameController.text))),
+          (Route<dynamic> route) => false,
+        );
+      } else {
+        print(' Registration failed: ${result['message']}');
+        _showMessage(result['message'] ?? 'An unknown error occurred.', isError: true);
+      }
+    } catch (e, st) {
+      // Catch unexpected errors and show message without crashing the UI
+      print('Signup error: $e\n$st');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showMessage('An error occurred during registration.', isError: true);
+      }
     }
   }
 
@@ -246,11 +289,20 @@ class _SignUpPageState extends State<SignUpPage> {
                             backgroundColor: const Color(0xFFFFA500),
                             foregroundColor: Colors.white,
                           ),
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Sign Up',
+                                  style: TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
                         ),
                         const SizedBox(height: 16),
                         Row(

@@ -1,8 +1,16 @@
 import 'package:cart_link/main.dart';
 import 'package:flutter/material.dart';
 
+class Customer {
+  final String name;
+  final String? email;
+
+  const Customer({required this.name, this.email});
+}
+
 class CustomerHome extends StatefulWidget {
-  const CustomerHome({super.key});
+  final Customer customer;
+  const CustomerHome({super.key, required this.customer});
 
   @override
   State<CustomerHome> createState() => _CustomerHomeState();
@@ -27,7 +35,7 @@ class _CustomerHomeState extends State<CustomerHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome'),
+        title: Text('Welcome, ${widget.customer.name}'),
         backgroundColor: Colors.blue,
         toolbarHeight: 72,
         centerTitle: false,

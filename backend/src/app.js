@@ -3,6 +3,7 @@ const cors = require('cors');
 require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const shopRoutes = require('./routes/shopRoutes');
+const customerAuthRoutes = require('./routes/customerAuthRoutes');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/Shops', shopRoutes);
+app.use('/api/customersAuth', customerAuthRoutes);
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Backend is running ✓', timestamp: new Date() });

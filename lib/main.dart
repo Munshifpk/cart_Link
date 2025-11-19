@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'Customer/login.dart';
 import 'Shops/login-Shops.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // MongoDB connection removed - now using backend API
+void main() {
+  FlutterError.onError = (details) {
+    FlutterError.dumpErrorToConsole(details);
+    // optionally send to a logger / print
+    print('FlutterError: ${details.exceptionAsString()}');
+  };
   runApp(const MyApp());
 }
 

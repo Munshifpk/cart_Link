@@ -1,7 +1,17 @@
-import 'package:cart_link/Customer/cust_home.dart';
+import 'package:cart_link/Customer/customer_home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'singup.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../services/customer_service.dart';
+
+final String _backendUrl = kIsWeb
+      ? 'http://localhost:5000/api/customersauth'
+      : 'http://10.0.2.2:5000/api/customersauth';
+
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,6 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscure = true;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -23,22 +34,135 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _verifyCredentials() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+
+    try {
+      final mobile = _mobileController.text.trim();
+      final password = _passwordController.text.trim();
+
+      print('🔍 Verifying credentials for mobile: $mobile');
+      print('📡 Connecting to: $_backendUrl/verify-credentials');
+
+      final response = await http
+          .post(
+            Uri.parse('$_backendUrl/verify-credentials'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'mobile': mobile, 'password': password}),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw Exception('Connection timeout'),
+          );
+
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['success'] == true) {
+          print('✅ Login successful');
+
+          // final token = data['token'];
+          final customer = data['owner'];
+          // print('data : $data');
+          // print(  '👤 Customer data: $customer');
+
+          if (mounted) {
+            // print('load home');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Welcome back, ${customer['customerName']}!'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+
+            Future.delayed(const Duration(milliseconds: 800), () {
+              if (mounted) {
+                
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => CustomerHome(
+                          customer: Customer(name: customer['customerName']))),
+                );
+              }
+            });
+          }
+        } else {
+          _showErrorDialog(
+            'Login Failed',
+            data['message'] ?? 'Invalid credentials',
+          );
+        }
+      } else if (response.statusCode == 401) {
+        final data = jsonDecode(response.body);
+        _showErrorDialog(
+          '❌ Authentication Error',
+          data['message'] ?? 'Invalid password',
+        );
+      } else if (response.statusCode == 404) {
+        final data = jsonDecode(response.body);
+        _showErrorDialog(
+          '❌ Account Not Found',
+          data['message'] ?? 'No account exists for this mobile number',
+        );
+      } else {
+        _showErrorDialog('Server Error', 'Error ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      _showErrorDialog(
+        'Connection Error',
+        'Failed to connect to backend:\n$e\n\nMake sure backend is running on http://localhost:5000',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+  void _showErrorDialog(String title, String message) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _onLogin() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Replace with real auth logic
-      _showMessage('Logging in ${_mobileController.text}');
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const CustomerHome()),
-      );
-    }
-  }
+  // void _onLogin() {
+  //   if (_formKey.currentState?.validate() ?? false) {
+  //     // Replace with real auth logic
+  //     _showMessage('Logging in ${_mobileController.text}');
+  //     Navigator.push(
+  //       context,
+  //       MaterialPageRoute(builder: (context) => const CustomerHome()),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +274,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 8),
                         ElevatedButton(
-                          onPressed: _onLogin,
+                          
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -159,11 +283,19 @@ class _LoginPageState extends State<LoginPage> {
                             backgroundColor: const Color(0xFFFFA500),
                             foregroundColor: Colors.white,
                           ),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
+                          onPressed: _loading ? null : _verifyCredentials,
+                                child: _loading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white,
+                                      )
+                                    : const Text(
+                                        'Login',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                         ),
                         const SizedBox(height: 16),
                         Row(
