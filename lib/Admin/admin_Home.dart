@@ -3,6 +3,7 @@ import 'shops_admin.dart';
 import 'orders_admin.dart';
 import 'users_admin.dart';
 import 'admin_theme.dart';
+import 'nottifications_Admin.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -135,17 +136,11 @@ class _AdminHomeState extends State<AdminHome> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none),
-            onPressed: () => <Future>{
-              // Action for notifications can be added here
+            onPressed: () {
               Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: Text('Notifications')),
-          body: Center(child: Text('Notifications - coming soon')),
-        ),
-      ),
-    ),
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsAdmin()),
+              );
             },
           ),
           IconButton(

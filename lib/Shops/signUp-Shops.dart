@@ -214,6 +214,15 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('Sign Up'),
+        backgroundColor: const Color(0xFF0D47A1),
+        foregroundColor: Colors.white,
+      ),
       backgroundColor: const Color.fromARGB(255, 176, 179, 175),
       body: SafeArea(
         child: Center(
