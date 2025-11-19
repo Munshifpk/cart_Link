@@ -17,7 +17,7 @@ class _AddProductPageState extends State<AddProductPage> {
   final _stockController = TextEditingController();
   final _skuController = TextEditingController();
   String? _category;
-  final List<String> _images = [];
+  // final List<String> _images = [];
   bool _isActive = true;
   bool _isFeatured = false;
   bool _loading = false;

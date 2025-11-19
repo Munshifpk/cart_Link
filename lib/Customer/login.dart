@@ -5,7 +5,7 @@ import 'singup.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../services/customer_service.dart';
+// import '../services/customer_service.dart';
 
 final String _backendUrl = kIsWeb
       ? 'http://localhost:5000/api/customersauth'
