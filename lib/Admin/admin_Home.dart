@@ -81,6 +81,7 @@ class _AdminHomeState extends State<AdminHome> {
       appBar: AppBar(
         title: const Text('Admin Panel'),
         backgroundColor: const Color(0xFF0D47A1),
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
