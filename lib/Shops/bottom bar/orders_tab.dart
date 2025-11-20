@@ -65,7 +65,7 @@ class OrdersTab extends StatelessWidget {
 class _OrdersList extends StatelessWidget {
   final List<Order> orders;
 
-  const _OrdersList({super.key, required this.orders});
+  const _OrdersList({required this.orders});
 
   @override
   Widget build(BuildContext context) {

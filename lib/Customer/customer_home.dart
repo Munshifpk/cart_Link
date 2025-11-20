@@ -1,8 +1,16 @@
 import 'package:cart_link/main.dart';
 import 'package:flutter/material.dart';
 
+class Customer {
+  final String name;
+  final String? email;
+
+  const Customer({required this.name, this.email});
+}
+
 class CustomerHome extends StatefulWidget {
-  const CustomerHome({super.key});
+  final Customer customer;
+  const CustomerHome({super.key, required this.customer});
 
   @override
   State<CustomerHome> createState() => _CustomerHomeState();
@@ -27,7 +35,7 @@ class _CustomerHomeState extends State<CustomerHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome'),
+        title: Text('Welcome, ${widget.customer.name}'),
         backgroundColor: Colors.blue,
         toolbarHeight: 72,
         centerTitle: false,
@@ -171,7 +179,7 @@ class _CustomerHomeState extends State<CustomerHome> {
 
 // Placeholder pages - replace with real implementations
 class _HomePage extends StatelessWidget {
-  const _HomePage({super.key});
+  const _HomePage();
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +233,7 @@ class _HomePage extends StatelessWidget {
 }
 
 class _CategoryPage extends StatelessWidget {
-  const _CategoryPage({super.key});
+  const _CategoryPage();
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +256,7 @@ class _CategoryPage extends StatelessWidget {
 }
 
 class _CartPage extends StatelessWidget {
-  const _CartPage({super.key});
+  const _CartPage();
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +281,7 @@ class _CartPage extends StatelessWidget {
 }
 
 class _ProfilePage extends StatelessWidget {
-  const _ProfilePage({super.key});
+  const _ProfilePage();
 
   @override
   Widget build(BuildContext context) {

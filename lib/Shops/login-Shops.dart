@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'bottom bar/home-Shops.dart';
+// import 'package:cart_link/Admin/shops_admin.dart';
 import 'signUp-Shops.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -69,7 +70,7 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
         if (data['success'] == true) {
           print('✅ Login successful');
 
-          final token = data['token'];
+          // final token = data['token'];
           final owner = data['owner'];
 
           if (mounted) {
@@ -146,6 +147,15 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('Login'),
+        backgroundColor: const Color(0xFF0D47A1),
+        foregroundColor: Colors.white,
+      ),
       backgroundColor: const Color.fromARGB(255, 176, 179, 175),
       body: SafeArea(
         child: Center(
@@ -224,10 +234,12 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Enter mobile number';
-                                if (v.trim().length < 7)
+                                }
+                                if (v.trim().length < 7) {
                                   return 'Enter a valid number';
+                                }
                                 return null;
                               },
                             ),
@@ -250,8 +262,9 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
                                 ),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty)
+                                if (v == null || v.isEmpty) {
                                   return 'Enter password';
+                                }
                                 if (v.length < 6) return 'Password too short';
                                 return null;
                               },

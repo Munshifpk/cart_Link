@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/shop_service.dart';
 
 class ShopsAdmin extends StatefulWidget {
   const ShopsAdmin({super.key});
@@ -8,104 +9,72 @@ class ShopsAdmin extends StatefulWidget {
 }
 
 class Shop {
+  String? id;
   String name;
-  String location;
-  String contact;
+  String address;
+  int mobile;
+  String? email;
+  String? ownerName;
+  String? businessType;
+  String? taxId;
+  DateTime? createdAt;
 
-  Shop({required this.name, required this.location, required this.contact});
+  Shop({
+    this.id,
+    required this.name,
+    required this.address,
+    required this.mobile,
+    this.email,
+    this.ownerName,
+    this.businessType,
+    this.taxId,
+    this.createdAt,
+  });
+
+  factory Shop.fromJson(Map<String, dynamic> json) {
+    return Shop(
+      id: json['_id'],
+      name: json['shopName'] ?? '',
+      address: json['address'] ?? '',
+      mobile: json['mobile'] ?? 0,
+      email: json['email'],
+      ownerName: json['ownerName'],
+      businessType: json['businessType'],
+      taxId: json['taxId'],
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+    );
+  }
 }
 
 class _ShopsAdminState extends State<ShopsAdmin> {
-  final List<Shop> _shops = [
-    Shop(name: 'Fresh Mart', location: 'Downtown', contact: '+919876543210'),
-    Shop(name: 'Tech World', location: 'City Center', contact: '+919812345678'),
-    Shop(name: 'Fashion Hub', location: 'Mall Road', contact: '+919834567890'),
-    Shop(
-      name: 'Green Grocers',
-      location: 'Market Street',
-      contact: '+919845612378',
-    ),
-    Shop(
-      name: 'Book Haven',
-      location: 'Library Lane',
-      contact: '+919856789012',
-    ),
-  ];
-
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
+  List<Shop> _shops = [];
+  bool _loading = true;
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    _locationController.dispose();
-    _contactController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadShops();
   }
 
-  void _showAddDialog() {
-    _nameController.clear();
-    _locationController.clear();
-    _contactController.clear();
-
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Shop'),
-        content: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Shop name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter name' : null,
-              ),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(labelText: 'Location'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter location' : null,
-              ),
-              TextFormField(
-                controller: _contactController,
-                decoration: const InputDecoration(labelText: 'Contact number'),
-                keyboardType: TextInputType.phone,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter contact' : null,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                setState(() {
-                  _shops.add(
-                    Shop(
-                      name: _nameController.text.trim(),
-                      location: _locationController.text.trim(),
-                      contact: _contactController.text.trim(),
-                    ),
-                  );
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _loadShops() async {
+    setState(() => _loading = true);
+    try {
+      final result = await ShopService.getAllShops();
+      if (mounted) {
+        if (result['success'] == true) {
+          final List<dynamic> shopsJson = result['data'] ?? [];
+          setState(() {
+            _shops = shopsJson.map((s) => Shop.fromJson(s)).toList();
+          });
+        } else {
+          _showErrorDialog('Error', result['message'] ?? 'Failed to load shops');
+        }
+      }
+    } catch (e) {
+      if (mounted) _showErrorDialog('Error', 'Failed to load shops: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _showShopDetails(Shop shop) {
@@ -117,16 +86,36 @@ class _ShopsAdminState extends State<ShopsAdmin> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Location: ${shop.location}'),
+            Text('Owner: ${shop.ownerName ?? 'N/A'}'),
             const SizedBox(height: 8),
-            Text('Contact: ${shop.contact}'),
+            Text('Location: ${shop.address}'),
+            const SizedBox(height: 8),
+            Text('Mobile: ${shop.mobile.toString()}'),
+            const SizedBox(height: 8),
+            Text('Email: ${shop.email ?? 'N/A'}'),
+            const SizedBox(height: 8),
+            Text('Type: ${shop.businessType ?? 'N/A'}'),
+            const SizedBox(height: 8),
+            Text('Tax ID: ${shop.taxId ?? 'N/A'}'),
+            const SizedBox(height: 8),
+            Text('Created At: ${shop.createdAt != null ? shop.createdAt!.toLocal().toString() : 'N/A'}'),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
         ],
       ),
     );
@@ -139,149 +128,82 @@ class _ShopsAdminState extends State<ShopsAdmin> {
         title: const Text('Shops'),
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadShops, tooltip: 'Refresh'),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        child: const Icon(Icons.add),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: _shops.isEmpty
-            ? const Center(child: Text('No shops yet'))
-            : Column(
-                children: [
-                  Expanded(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _shops.isEmpty
+              ? const Center(child: Text('No shops found'))
+              : LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
                     child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width,
-                          child: DataTable(
-                            headingRowColor: MaterialStateProperty.resolveWith(
-                              (states) => const Color(0xFFEEEEEE),
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: constraints.maxWidth,
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: DataTable(
+                          headingRowColor: MaterialStateProperty.resolveWith((states) => const Color(0xFF0D47A1)),
+                          headingRowHeight: 56,
+                          dataRowHeight: 70,
+                          columnSpacing: 20,
+                          columns: const [
+                            DataColumn(
+                              label: Text(
+                                'Shop Name',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                            columns: const [
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Location')),
-                              DataColumn(label: Text('Contact')),
-                              DataColumn(label: Text('Actions')),
-                            ],
-                            rows: List.generate(_shops.length, (index) {
-                              final s = _shops[index];
-                              return DataRow(
-                                cells: [
-                                  DataCell(Text(s.name)),
-                                  DataCell(Text(s.location)),
-                                  DataCell(Text(s.contact)),
-                                  DataCell(
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.info_outline),
-                                          tooltip: 'Details',
-                                          onPressed: () => _showShopDetails(s),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }),
-                          ),
+                            DataColumn(
+                              label: Text(
+                                'Owner',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Location',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Contact',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Info',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                          rows: List.generate(_shops.length, (index) {
+                            final s = _shops[index];
+                            return DataRow(cells: [
+                              DataCell(Text(s.name)),
+                              DataCell(Text(s.ownerName ?? '')),
+                              DataCell(Text(s.address)),
+                              DataCell(Text(s.mobile.toString())),
+                              DataCell(
+                                IconButton(
+                                  icon: const Icon(Icons.info_outline),
+                                  tooltip: 'Details',
+                                  onPressed: () => _showShopDetails(s),
+                                ),
+                              ),
+                            ]);
+                          }),
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  void _showEditDialog(int index) {
-    final shop = _shops[index];
-    _nameController.text = shop.name;
-    _locationController.text = shop.location;
-    _contactController.text = shop.contact;
-
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Shop'),
-        content: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Shop name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter name' : null,
-              ),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(labelText: 'Location'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter location' : null,
-              ),
-              TextFormField(
-                controller: _contactController,
-                decoration: const InputDecoration(labelText: 'Contact number'),
-                keyboardType: TextInputType.phone,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter contact' : null,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                setState(() {
-                  _shops[index] = Shop(
-                    name: _nameController.text.trim(),
-                    location: _locationController.text.trim(),
-                    contact: _contactController.text.trim(),
-                  );
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteShop(int index) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Shop'),
-        content: const Text('Are you sure you want to delete this shop?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() => _shops.removeAt(index));
-              Navigator.pop(context);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+                ),
     );
   }
 }

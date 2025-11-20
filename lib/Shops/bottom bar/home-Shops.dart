@@ -17,21 +17,13 @@ class ShopHomePage extends StatefulWidget {
 class _ShopHomePageState extends State<ShopHomePage> {
   int _currentIndex = 0;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_currentIndex < 0 || _currentIndex > 3) {
-      _currentIndex = 0;
-    }
-  }
-
   void _onPageChanged(int index) {
     setState(() => _currentIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -112,7 +104,11 @@ class _ShopHomePageState extends State<ShopHomePage> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          HomeTab(onNavigateToOrders: _onPageChanged),
+          HomeTab(
+            onNavigateToOrders: (index) {
+              _onPageChanged(index);
+            },
+          ),
           const ProductsTab(),
           const OrdersTab(),
           const ProfileTab(),

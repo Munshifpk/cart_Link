@@ -2,10 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'bottom bar/home-Shops.dart';
-import 'login-Shops.dart';
 import '../services/auth_service.dart';
 
 /// Simple AuthService implementation — replace endpoints with your real API.
@@ -217,346 +214,364 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('Sign Up'),
+        backgroundColor: const Color(0xFF0D47A1),
+        foregroundColor: Colors.white,
+      ),
       backgroundColor: const Color.fromARGB(255, 176, 179, 175),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 24,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color.fromARGB(255, 41, 96, 179),
-                            Color.fromARGB(255, 87, 138, 188),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: const [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: Colors.white24,
-                            child: Icon(
-                              Icons.storefront_outlined,
-                              size: 30,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Register Your Shop\nStart selling today',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          // Shop Name
-                          TextFormField(
-                            controller: _shopName,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: const InputDecoration(
-                              labelText: 'Shop name',
-                              prefixIcon: Icon(Icons.store),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter shop name'
-                                : null,
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Owner Name
-                          TextFormField(
-                            controller: _ownerName,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: const InputDecoration(
-                              labelText: 'Owner name',
-                              prefixIcon: Icon(Icons.person),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter owner name'
-                                : null,
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Mobile Number with Verification
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _mobile,
-                                  keyboardType: TextInputType.phone,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                  maxLength: 15,
-                                  decoration: InputDecoration(
-                                    labelText: 'Mobile number',
-                                    prefixIcon: const Icon(Icons.phone_android),
-                                    counterText: '',
-                                    border: const OutlineInputBorder(),
-                                    suffixIcon: _mobileVerified
-                                        ? const Icon(
-                                            Icons.check_circle,
-                                            color: Colors.green,
-                                          )
-                                        : null,
-                                  ),
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty)
-                                      return 'Enter mobile';
-                                    if (v.trim().length < 7)
-                                      return 'Invalid number';
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                height: 56,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0D47A1),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  onPressed: _checkingMobile
-                                      ? null
-                                      : _checkMobileAvailability,
-                                  child: _checkingMobile
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Verify',
-                                          style: TextStyle(color: Colors.white),
-                                        ),
-                                ),
-                              ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromARGB(255, 41, 96, 179),
+                              Color.fromARGB(255, 87, 138, 188),
                             ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          const SizedBox(height: 12),
-
-                          // Email
-                          TextFormField(
-                            controller: _email,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'Business email',
-                              prefixIcon: Icon(Icons.email_outlined),
-                              border: OutlineInputBorder(),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: const [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.white24,
+                              child: Icon(
+                                Icons.storefront_outlined,
+                                size: 30,
+                                color: Colors.white,
+                              ),
                             ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty)
-                                return 'Enter email';
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v))
-                                return 'Enter valid email';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Business Type
-                          DropdownButtonFormField<String>(
-                            initialValue: _businessType,
-                            items: _types
-                                .map(
-                                  (t) => DropdownMenuItem(
-                                    value: t,
-                                    child: Text(t),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Register Your Shop\nStart selling today',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            // Shop Name
+                            TextFormField(
+                              controller: _shopName,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                labelText: 'Shop name',
+                                prefixIcon: Icon(Icons.store),
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Enter shop name'
+                                  : null,
+                            ),
+                            const SizedBox(height: 12),
+          
+                            // Owner Name
+                            TextFormField(
+                              controller: _ownerName,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                labelText: 'Owner name',
+                                prefixIcon: Icon(Icons.person),
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Enter owner name'
+                                  : null,
+                            ),
+                            const SizedBox(height: 12),
+          
+                            // Mobile Number with Verification
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _mobile,
+                                    keyboardType: TextInputType.phone,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    maxLength: 15,
+                                    decoration: InputDecoration(
+                                      labelText: 'Mobile number',
+                                      prefixIcon: const Icon(Icons.phone_android),
+                                      counterText: '',
+                                      border: const OutlineInputBorder(),
+                                      suffixIcon: _mobileVerified
+                                          ? const Icon(
+                                              Icons.check_circle,
+                                              color: Colors.green,
+                                            )
+                                          : null,
+                                    ),
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) {
+                                        return 'Enter mobile';
+                                      }
+                                      if (v.trim().length < 7) {
+                                        return 'Invalid number';
+                                      }
+                                      return null;
+                                    },
                                   ),
-                                )
-                                .toList(),
-                            onChanged: (v) => setState(() => _businessType = v),
-                            decoration: const InputDecoration(
-                              labelText: 'Business type',
-                              prefixIcon: Icon(Icons.category_outlined),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) =>
-                                (v == null || v.isEmpty) ? 'Select type' : null,
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Address
-                          TextFormField(
-                            controller: _address,
-                            minLines: 2,
-                            maxLines: 4,
-                            decoration: const InputDecoration(
-                              labelText: 'Shop address',
-                              alignLabelWithHint: true,
-                              prefixIcon: Icon(Icons.location_on_outlined),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter address'
-                                : null,
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Tax ID (optional)
-                          TextFormField(
-                            controller: _taxId,
-                            decoration: const InputDecoration(
-                              labelText: 'Tax / GST ID (optional)',
-                              prefixIcon: Icon(Icons.receipt_long),
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Password
-                          TextFormField(
-                            controller: _password,
-                            obscureText: _obscure,
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscure
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
                                 ),
-                                onPressed: () =>
-                                    setState(() => _obscure = !_obscure),
-                              ),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.isEmpty)
-                                return 'Enter password';
-                              if (v.length < 6) return 'Minimum 6 characters';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Confirm Password
-                          TextFormField(
-                            controller: _confirmPassword,
-                            obscureText: _obscureConfirm,
-                            decoration: InputDecoration(
-                              labelText: 'Confirm password',
-                              prefixIcon: const Icon(Icons.lock),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureConfirm
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                                onPressed: () => setState(
-                                  () => _obscureConfirm = !_obscureConfirm,
-                                ),
-                              ),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.isEmpty)
-                                return 'Confirm password';
-                              if (v != _password.text)
-                                return 'Passwords do not match';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Signup Button
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0D47A1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              onPressed: _loading ? null : _submitSignUp,
-                              child: _loading
-                                  ? const CircularProgressIndicator(
-                                      color: Colors.white,
-                                    )
-                                  : const Text(
-                                      'Create my Shop',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0D47A1),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
+                                    onPressed: _checkingMobile
+                                        ? null
+                                        : _checkMobileAvailability,
+                                    child: _checkingMobile
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Verify',
+                                            style: TextStyle(color: Colors.white),
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Login Link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Already have an account?',
-                                style: TextStyle(color: Colors.black87),
+                            const SizedBox(height: 12),
+          
+                            // Email
+                            TextFormField(
+                              controller: _email,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: 'Business email',
+                                prefixIcon: Icon(Icons.email_outlined),
+                                border: OutlineInputBorder(),
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text(
-                                  'Login',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Enter email';
+                                }
+                                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
+                                  return 'Enter valid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+          
+                            // Business Type
+                            DropdownButtonFormField<String>(
+                              initialValue: _businessType,
+                              items: _types
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                      value: t,
+                                      child: Text(t),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() => _businessType = v),
+                              decoration: const InputDecoration(
+                                labelText: 'Business type',
+                                prefixIcon: Icon(Icons.category_outlined),
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) =>
+                                  (v == null || v.isEmpty) ? 'Select type' : null,
+                            ),
+                            const SizedBox(height: 12),
+          
+                            // Address
+                            TextFormField(
+                              controller: _address,
+                              minLines: 2,
+                              maxLines: 4,
+                              decoration: const InputDecoration(
+                                labelText: 'Shop address',
+                                alignLabelWithHint: true,
+                                prefixIcon: Icon(Icons.location_on_outlined),
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Enter address'
+                                  : null,
+                            ),
+                            const SizedBox(height: 12),
+          
+                            // Tax ID (optional)
+                            TextFormField(
+                              controller: _taxId,
+                              decoration: const InputDecoration(
+                                labelText: 'Tax / GST ID (optional)',
+                                prefixIcon: Icon(Icons.receipt_long),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+          
+                            // Password
+                            TextFormField(
+                              controller: _password,
+                              obscureText: _obscure,
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                border: const OutlineInputBorder(),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscure
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () =>
+                                      setState(() => _obscure = !_obscure),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Footer text
-                          Text(
-                            'Sign up to start listing products, run promotions and track orders — watch your sales grow.',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.grey.shade700,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'Enter password';
+                                }
+                                if (v.length < 6) return 'Minimum 6 characters';
+                                return null;
+                              },
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+          
+                            // Confirm Password
+                            TextFormField(
+                              controller: _confirmPassword,
+                              obscureText: _obscureConfirm,
+                              decoration: InputDecoration(
+                                labelText: 'Confirm password',
+                                prefixIcon: const Icon(Icons.lock),
+                                border: const OutlineInputBorder(),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureConfirm
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _obscureConfirm = !_obscureConfirm,
+                                  ),
+                                ),
+                              ),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'Confirm password';
+                                }
+                                if (v != _password.text) {
+                                  return 'Passwords do not match';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+          
+                            // Signup Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0D47A1),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                onPressed: _loading ? null : _submitSignUp,
+                                child: _loading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white,
+                                      )
+                                    : const Text(
+                                        'Create my Shop',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+          
+                            // Login Link
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Already have an account?',
+                                  style: TextStyle(color: Colors.black87),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text(
+                                    'Login',
+                                    style: TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+          
+                            // Footer text
+                            Text(
+                              'Sign up to start listing products, run promotions and track orders — watch your sales grow.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
