@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'admin_theme.dart';
+import '../theme_data.dart';
 
 class OrdersAdmin extends StatefulWidget {
   const OrdersAdmin({super.key});
@@ -98,7 +98,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Orders'),
-        backgroundColor: AdminTheme.primary,
+        backgroundColor: ThemeColors.primary,
         foregroundColor: Colors.white,
       ),
       body: LayoutBuilder(
@@ -113,7 +113,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               ),
               child: DataTable(
                 headingRowColor: WidgetStateProperty.resolveWith(
-                  (states) => AdminTheme.primary,
+                  (states) => ThemeColors.primary,
                 ),
                 headingRowHeight: 56,
                 dataRowHeight: 70,

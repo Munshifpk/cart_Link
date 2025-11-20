@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'bottom bar/home-Shops.dart';
+import '../services/auth_state.dart';
 // import 'package:cart_link/Admin/shops_admin.dart';
 import 'signUp-Shops.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -72,6 +73,11 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
 
           // final token = data['token'];
           final owner = data['owner'];
+
+          // Save owner into AuthState so other pages can access owner id
+          try {
+            AuthState.setOwner(owner as Map<String, dynamic>?);
+          } catch (_) {}
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
