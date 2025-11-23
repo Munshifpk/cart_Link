@@ -94,7 +94,10 @@ class _LoginPageState extends State<LoginPage> {
                         email: customer['email'],
                         mobile: customer['mobile'] is int
                             ? customer['mobile']
-                            : (int.tryParse(customer['mobile']?.toString() ?? '') ?? null),
+                            : (int.tryParse(
+                                    customer['mobile']?.toString() ?? '',
+                                  ) ??
+                                  null),
                         address: customer['address'],
                         createdAt: customer['createdAt'] != null
                             ? DateTime.tryParse(customer['createdAt'])
@@ -347,7 +350,6 @@ class _LoginPageState extends State<LoginPage> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
-    String? value,
   }) {
     return TextFormField(
       controller: controller,
