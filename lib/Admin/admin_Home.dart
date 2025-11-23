@@ -123,7 +123,7 @@ class _AdminHomeState extends State<AdminHome> {
       {'icon': Icons.people, 'title': 'Users'},
       {'icon': Icons.inventory, 'title': 'Products'},
       {'icon': Icons.bar_chart, 'title': 'Analytics'},
-      
+
       {'icon': Icons.campaign_outlined, 'title': 'Announcements'},
       {'icon': Icons.feedback, 'title': 'Feedback'},
       // {'icon': Icons.support_agent, 'title': 'Support'},
@@ -148,14 +148,14 @@ class _AdminHomeState extends State<AdminHome> {
             onPressed: () => <Future>{
               // Action for notifications can be added here
               Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: Text('Settings')),
-          body: Center(child: Text('Settings - coming soon')),
-        ),
-      ),
-    ),
+                context,
+                MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(title: Text('Settings')),
+                    body: Center(child: Text('Settings - coming soon')),
+                  ),
+                ),
+              ),
             },
           ),
         ],
