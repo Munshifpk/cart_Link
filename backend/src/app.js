@@ -4,6 +4,7 @@ require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const shopRoutes = require('./routes/shopRoutes');
 const customerAuthRoutes = require('./routes/customerAuthRoutes');
+const customersRoutes = require('./routes/customerRoutes');
 const productRoutes = require('./routes/productRoutes');
 
 const app = express();
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/Shops', shopRoutes);
 app.use('/api/customersAuth', customerAuthRoutes);
+app.use('/api/customers', customersRoutes);
 app.use('/api/products', productRoutes);
 
 app.get('/api/health', (req, res) => {

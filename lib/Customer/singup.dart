@@ -75,13 +75,17 @@ class _SignUpPageState extends State<SignUpPage> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-              builder: (context) => CustomerHome(
-                  customer: Customer(name: _nameController.text))),
+            builder: (context) =>
+                CustomerHome(customer: Customer(name: _nameController.text)),
+          ),
           (Route<dynamic> route) => false,
         );
       } else {
         print(' Registration failed: ${result['message']}');
-        _showMessage(result['message'] ?? 'An unknown error occurred.', isError: true);
+        _showMessage(
+          result['message'] ?? 'An unknown error occurred.',
+          isError: true,
+        );
       }
     } catch (e, st) {
       // Catch unexpected errors and show message without crashing the UI
@@ -144,10 +148,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         const Text(
                           'Join our community of shoppers',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
                         const SizedBox(height: 24),
                         _buildTextFormField(
@@ -165,7 +166,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           prefixIcon: Icons.phone_android_outlined,
                           keyboardType: TextInputType.phone,
                           inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
+                            FilteringTextInputFormatter.digitsOnly,
                           ],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -188,8 +189,8 @@ class _SignUpPageState extends State<SignUpPage> {
                               return 'Enter email';
                             }
                             if (!RegExp(
-                                    r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+$")
-                                .hasMatch(v)) {
+                              r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+$",
+                            ).hasMatch(v)) {
                               return 'Enter a valid email';
                             }
                             return null;
@@ -208,7 +209,8 @@ class _SignUpPageState extends State<SignUpPage> {
                                   : Icons.visibility_off_outlined,
                             ),
                             onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword),
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                           validator: (v) {
                             if (v == null || v.isEmpty) {
@@ -232,9 +234,10 @@ class _SignUpPageState extends State<SignUpPage> {
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
                             ),
-                            onPressed: () => setState(() =>
-                                _obscureConfirmPassword =
-                                    !_obscureConfirmPassword),
+                            onPressed: () => setState(
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                            ),
                           ),
                           validator: (v) {
                             if (v == null || v.isEmpty) {
@@ -248,11 +251,10 @@ class _SignUpPageState extends State<SignUpPage> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: _location,
+                          initialValue: _location,
                           decoration: InputDecoration(
                             labelText: 'Select Location',
-                            prefixIcon:
-                                const Icon(Icons.location_on_outlined),
+                            prefixIcon: const Icon(Icons.location_on_outlined),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -301,7 +303,9 @@ class _SignUpPageState extends State<SignUpPage> {
                               : const Text(
                                   'Sign Up',
                                   style: TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.bold),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                         ),
                         const SizedBox(height: 16),
@@ -353,9 +357,7 @@ class _SignUpPageState extends State<SignUpPage> {
         labelText: labelText,
         prefixIcon: Icon(prefixIcon),
         suffixIcon: suffixIcon,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.grey[100],
       ),

@@ -1,4 +1,8 @@
+// import 'dart:convert';
+// import 'package:cart_link/Customer/customer_home.dart';
+import 'package:cart_link/services/customer_service.dart';
 import 'package:flutter/material.dart';
+// import 'package:http/http.dart' as http;
 import '../theme_data.dart';
 
 class UsersAdmin extends StatefulWidget {
@@ -10,95 +14,106 @@ class UsersAdmin extends StatefulWidget {
 
 class User {
   final String id;
-  final String name;
-  final String location;
+  final String customerName;
+  final String email;
+  final int mobile;
+  final String address;
+  DateTime? createdAt;
   final String profileUrl; // Optional, can be empty
-  final int totalOrders;
-  final String info;
+  // int totalOrders;
+  // String info;
 
   User({
     required this.id,
-    required this.name,
-    required this.location,
+    required this.customerName,
+    required this.email,
+    required this.mobile,
+    required this.address,
+    this.createdAt,
     this.profileUrl = '',
-    required this.totalOrders,
-    required this.info,
+    // this.totalOrders,
+    // this.info,
   });
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['_id'],
+      customerName: json['customerName'] ?? '',
+      address: json['address'] ?? '',
+      mobile: json['mobile'] ?? 0,
+      email: json['email'],
+      // totalOrders: json['totalOrders'],
+      // info: json['info'],
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : null,
+    );
+  }
 }
 
 class _UsersAdminState extends State<UsersAdmin> {
-  final List<User> _users = [
-    User(
-      id: 'USR-001',
-      name: 'Asha Patel',
-      location: 'Mumbai',
-      profileUrl: '',
-      totalOrders: 12,
-      info: 'Joined: 2023-02-12\nPreferred: Grocery',
-    ),
-    User(
-      id: 'USR-002',
-      name: 'Rahul Kumar',
-      location: 'Delhi',
-      profileUrl: '',
-      totalOrders: 5,
-      info: 'Joined: 2024-01-05\nPreferred: Electronics',
-    ),
-    User(
-      id: 'USR-003',
-      name: 'Meera Singh',
-      location: 'Bengaluru',
-      profileUrl: '',
-      totalOrders: 8,
-      info: 'Joined: 2022-11-20\nPreferred: Fashion',
-    ),
-    User(
-      id: 'USR-004',
-      name: 'Karan Rao',
-      location: 'Chennai',
-      profileUrl: '',
-      totalOrders: 3,
-      info: 'Joined: 2024-06-02\nPreferred: Vegetables',
-    ),
-    User(
-      id: 'USR-005',
-      name: 'Lina George',
-      location: 'Kochi',
-      profileUrl: '',
-      totalOrders: 20,
-      info: 'Joined: 2021-08-14\nPreferred: Books',
-    ),
-  ];
+  List<User> _customers = [];
+  bool _loading = true;
 
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _infoController = TextEditingController();
+  // Change this base URL depending on where your backend runs.
+  // On Android emulator use 10.0.2.2, on desktop use localhost.
+  // final String _baseUrl = 'http://10.0.2.2:5000';
+
+  // Note: Add-user UI removed. Data is loaded from backend only.
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _locationController.dispose();
-    _infoController.dispose();
+    // No controllers to dispose (add-user removed)
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomers();
+  }
+
+  Future<void> _loadCustomers() async {
+    setState(() => _loading = true);
+    try {
+      final result = await CustomerService.getAllCustomers();
+      if (mounted) {
+        if (result['success'] == true) {
+          print('Customer loadede');
+          final List<dynamic> customerJson = result['data'] ?? [];
+          setState(() {
+            _customers = customerJson.map((s) => User.fromJson(s)).toList();
+            print(_customers);
+          });
+        } else {
+          _showErrorDialog(
+            'Error',
+            result['message'] ?? 'Failed to load customer',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) _showErrorDialog('Error', 'Failed to load customer: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _showInfo(User user) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(user.name),
+        title: Text(user.customerName),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('User ID: ${user.id}'),
             const SizedBox(height: 8),
-            Text('Location: ${user.location}'),
-            const SizedBox(height: 8),
-            Text('Total Orders: ${user.totalOrders}'),
-            const SizedBox(height: 8),
-            Text('Info:\n${user.info}'),
+            Text('Location: ${user.address}'),
+            // const SizedBox(height: 8),
+            // Text('Total Orders: ${user.totalOrders}'),
+            // const SizedBox(height: 8),
+            // Text('Info:\n${user.info}'),
           ],
         ),
         actions: [
@@ -111,70 +126,21 @@ class _UsersAdminState extends State<UsersAdmin> {
     );
   }
 
-  void _showAddDialog() {
-    _nameController.clear();
-    _locationController.clear();
-    _infoController.clear();
-
+  void _showErrorDialog(String title, String message) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add User'),
-        content: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter name' : null,
-              ),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(labelText: 'Location'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter location' : null,
-              ),
-              TextFormField(
-                controller: _infoController,
-                decoration: const InputDecoration(labelText: 'Info'),
-                maxLines: 2,
-              ),
-            ],
-          ),
-        ),
+        title: Text(title),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                final newId =
-                    'USR-${(_users.length + 1).toString().padLeft(3, '0')}';
-                setState(() {
-                  _users.add(
-                    User(
-                      id: newId,
-                      name: _nameController.text.trim(),
-                      location: _locationController.text.trim(),
-                      totalOrders: 0,
-                      info: _infoController.text.trim(),
-                    ),
-                  );
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Add'),
+            child: const Text('OK'),
           ),
         ],
       ),
     );
-  }
+  } // Add-user functionality removed: users are managed via backend
 
   @override
   Widget build(BuildContext context) {
@@ -184,117 +150,103 @@ class _UsersAdminState extends State<UsersAdmin> {
         backgroundColor: ThemeColors.primary,
         foregroundColor: Colors.white,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        backgroundColor: ThemeColors.accent,
-        child: const Icon(Icons.add),
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: constraints.maxWidth,
-                  minHeight: constraints.maxHeight,
-                ),
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight,
-                  child: DataTable(
-                    headingRowColor: MaterialStateProperty.resolveWith(
-                      (states) => ThemeColors.primary,
-                    ),
-                    headingRowHeight: 56,
-                    dataRowHeight: 70,
-                    columnSpacing: 20,
-                    columns: const [
-                      DataColumn(
-                        label: Text(
-                          'User ID',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+      // Add button removed: users are added via backend
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: constraints.maxWidth,
+                        minHeight: constraints.maxHeight,
                       ),
-                      DataColumn(
-                        label: Text(
-                          'Profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                      child: SizedBox(
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.resolveWith(
+                            (states) => ThemeColors.primary,
                           ),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Location',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Total Orders',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Info',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    rows: List.generate(_users.length, (index) {
-                      final u = _users[index];
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(u.id)),
-                          DataCell(
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Colors.blue.shade200,
-                                  child: Text(
-                                    u.name.isNotEmpty ? u.name[0] : '?',
+                          headingRowHeight: 56,
+                          dataRowHeight: 70,
+                          columnSpacing: 20,
+                          columns: const [
+                            DataColumn(
+                              label: Text(
+                                'User ID',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'User Name',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Location',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Mobile',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Info',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                          rows: List.generate(_customers.length, (index) {
+                            final u = _customers[index];
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(u.id)),
+                                DataCell(Text(u.customerName)),
+                                DataCell(Text(u.address)),
+                                // Mobile shown here to match the header count
+                                DataCell(Text(u.mobile.toString())),
+                                DataCell(
+                                  IconButton(
+                                    icon: const Icon(Icons.info_outline),
+                                    tooltip: 'Info',
+                                    onPressed: () => _showInfo(u),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Text(u.name),
                               ],
-                            ),
-                          ),
-                          DataCell(Text(u.location)),
-                          DataCell(Text(u.totalOrders.toString())),
-                          DataCell(
-                            IconButton(
-                              icon: const Icon(Icons.info_outline),
-                              tooltip: 'Info',
-                              onPressed: () => _showInfo(u),
-                            ),
-                          ),
-                        ],
-                      );
-                    }),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }

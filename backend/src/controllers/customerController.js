@@ -216,3 +216,16 @@ exports.checkEmailExists = async (req, res) => {
         });
     }
 };
+
+// List all customers (public)
+exports.listAll = async (req, res) => {
+    try {
+        const customers = await Customer.find().lean();
+        console.log('Customers listed:', customers); 
+        return res.json({ success: true, data: customers });
+        
+    } catch (err) {
+        console.error('listAll error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
