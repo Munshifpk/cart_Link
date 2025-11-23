@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'admin_theme.dart';
+import '../theme_data.dart';
 
 class NotificationsAdmin extends StatefulWidget {
   const NotificationsAdmin({super.key});
@@ -45,7 +45,7 @@ class _NotificationsAdminState extends State<NotificationsAdmin> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
-        backgroundColor: AdminTheme.primary,
+        backgroundColor: ThemeColors.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -59,7 +59,7 @@ class _NotificationsAdminState extends State<NotificationsAdmin> {
           ),
         ],
       ),
-      backgroundColor: AdminTheme.scaffoldBackground,
+      backgroundColor: ThemeColors.scaffoldBackground,
       body: _notifications.isEmpty
           ? const Center(
               child: Column(
@@ -83,7 +83,7 @@ class _NotificationsAdminState extends State<NotificationsAdmin> {
                   elevation: 2,
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: notification['isRead'] ? Colors.grey.shade300 : AdminTheme.accent,
+                      backgroundColor: notification['isRead'] ? Colors.grey.shade300 : ThemeColors.accent,
                       foregroundColor: notification['isRead'] ? Colors.grey.shade700 : Colors.white,
                       child: Icon(notification['icon']),
                     ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'product_aded.dart';
+import '../services/product_service.dart';
+import '../services/auth_state.dart';
 
 class AddProductPage extends StatefulWidget {
   const AddProductPage({super.key});
@@ -44,19 +46,37 @@ class _AddProductPageState extends State<AddProductPage> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
+    // Build payload
+    final payload = {
+      'name': _nameController.text,
+      'description': _descController.text,
+      'price': double.tryParse(_priceController.text) ?? 0.0,
+      'stock': int.tryParse(_stockController.text) ?? 0,
+      'sku': _skuController.text,
+      'category': _category,
+      'isActive': _isActive,
+      'isFeatured': _isFeatured,
+      'images': [],
+      // include ownerId if present
+      'ownerId': AuthState.currentOwner != null ? AuthState.currentOwner!['_id'] : null,
+    };
 
-    // TODO: Implement product upload
-    Future.delayed(const Duration(seconds: 1), () {
+    ProductService.createProduct(payload).then((res) {
+      if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product added successfully!')),
-      );
-      // In _submit() method after successful addition
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const ProductAddedSuccess()),
-      );
-      //Navigator.pop(context);
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product added successfully!')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ProductAddedSuccess()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? 'Failed to add product')),
+        );
+      }
     });
   }
 

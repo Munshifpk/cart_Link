@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'shops_admin.dart';
 import 'orders_admin.dart';
 import 'users_admin.dart';
-import 'admin_theme.dart';
+import '../theme_data.dart';
 import 'nottifications_Admin.dart';
 
 class AdminHome extends StatefulWidget {
@@ -14,8 +14,8 @@ class AdminHome extends StatefulWidget {
 
 class _AdminHomeState extends State<AdminHome> {
   // Use shared admin theme colors
-  static final Color _kPrimary = AdminTheme.primary;
-  static final Color _kAccent = AdminTheme.accent;
+  static final Color _kPrimary = ThemeColors.primary;
+  static final Color _kAccent = ThemeColors.accent;
 
   void _openSection(String name) {
     if (name == 'Shops') {
@@ -131,7 +131,7 @@ class _AdminHomeState extends State<AdminHome> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Panel'),
-        backgroundColor: AdminTheme.primary,
+        backgroundColor: ThemeColors.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -160,7 +160,7 @@ class _AdminHomeState extends State<AdminHome> {
           ),
         ],
       ),
-      backgroundColor: AdminTheme.scaffoldBackground,
+      backgroundColor: ThemeColors.scaffoldBackground,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
