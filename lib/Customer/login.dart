@@ -8,10 +8,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // import '../services/customer_service.dart';
 
 final String _backendUrl = kIsWeb
-      ? 'http://localhost:5000/api/customersauth'
-      : 'http://10.0.2.2:5000/api/customersauth';
-
-
+    ? 'http://localhost:5000/api/customersauth'
+    : 'http://10.0.2.2:5000/api/customersauth';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -86,12 +84,24 @@ class _LoginPageState extends State<LoginPage> {
 
             Future.delayed(const Duration(milliseconds: 800), () {
               if (mounted) {
-                
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => CustomerHome(
-                          customer: Customer(name: customer['customerName']))),
+                    builder: (context) => CustomerHome(
+                      customer: Customer(
+                        id: customer['_id']?.toString(),
+                        customerName: customer['customerName'] ?? '',
+                        email: customer['email'],
+                        mobile: customer['mobile'] is int
+                            ? customer['mobile']
+                            : (int.tryParse(customer['mobile']?.toString() ?? '') ?? null),
+                        address: customer['address'],
+                        createdAt: customer['createdAt'] != null
+                            ? DateTime.tryParse(customer['createdAt'])
+                            : null,
+                      ),
+                    ),
+                  ),
                 );
               }
             });
@@ -129,6 +139,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
+
   void _showErrorDialog(String title, String message) {
     if (!mounted) return;
 
@@ -215,10 +226,7 @@ class _LoginPageState extends State<LoginPage> {
                         const Text(
                           'Login to continue shopping',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
                         const SizedBox(height: 24),
                         _buildTextFormField(
@@ -251,7 +259,8 @@ class _LoginPageState extends State<LoginPage> {
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
                             ),
-                            onPressed: () => setState(() => _obscure = !_obscure),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
                           ),
                           validator: (v) {
                             if (v == null || v.isEmpty) {
@@ -274,7 +283,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 8),
                         ElevatedButton(
-                          
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -284,18 +292,18 @@ class _LoginPageState extends State<LoginPage> {
                             foregroundColor: Colors.white,
                           ),
                           onPressed: _loading ? null : _verifyCredentials,
-                                child: _loading
-                                    ? const CircularProgressIndicator(
-                                        color: Colors.white,
-                                      )
-                                    : const Text(
-                                        'Login',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                          child: _loading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : const Text(
+                                  'Login',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -305,7 +313,8 @@ class _LoginPageState extends State<LoginPage> {
                             TextButton(
                               onPressed: () => Navigator.of(context).push(
                                 MaterialPageRoute(
-                                    builder: (_) => const SignUpPage()),
+                                  builder: (_) => const SignUpPage(),
+                                ),
                               ),
                               child: const Text(
                                 'Sign up',
@@ -338,6 +347,7 @@ class _LoginPageState extends State<LoginPage> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    String? value,
   }) {
     return TextFormField(
       controller: controller,
@@ -349,9 +359,7 @@ class _LoginPageState extends State<LoginPage> {
         labelText: labelText,
         prefixIcon: Icon(prefixIcon),
         suffixIcon: suffixIcon,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.grey[100],
       ),

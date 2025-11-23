@@ -75,8 +75,9 @@ class _SignUpPageState extends State<SignUpPage> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                CustomerHome(customer: Customer(name: _nameController.text)),
+            builder: (context) => CustomerHome(
+              customer: Customer(customerName: _nameController.text),
+            ),
           ),
           (Route<dynamic> route) => false,
         );

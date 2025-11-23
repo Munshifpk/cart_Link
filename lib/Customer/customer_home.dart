@@ -1,11 +1,26 @@
 import 'package:cart_link/main.dart';
 import 'package:flutter/material.dart';
+import 'bottom bar/home_page.dart';
+import 'bottom bar/products_page.dart';
+import 'bottom bar/cart_page.dart';
+import 'bottom bar/profile_page.dart';
 
 class Customer {
-  final String name;
+  final String? id;
+  final String customerName;
   final String? email;
+  final int? mobile;
+  final String? address;
+  final DateTime? createdAt;
 
-  const Customer({required this.name, this.email});
+  const Customer({
+    this.id,
+    required this.customerName,
+    this.email,
+    this.mobile,
+    this.address,
+    this.createdAt,
+  });
 }
 
 class CustomerHome extends StatefulWidget {
@@ -19,11 +34,11 @@ class CustomerHome extends StatefulWidget {
 class _CustomerHomeState extends State<CustomerHome> {
   int _currentIndex = 0;
 
-  static const List<Widget> _pages = <Widget>[
-    _HomePage(),
-    _CategoryPage(),
-    _CartPage(),
-    _ProfilePage(),
+  List<Widget> get _pages => <Widget>[
+    CustomerHomePage(customer: widget.customer),
+    CustomerProductsPage(customer: widget.customer),
+    CustomerCartPage(customer: widget.customer),
+    CustomerProfilePage(customer: widget.customer),
   ];
 
   void _onTap(int index) {
@@ -35,7 +50,7 @@ class _CustomerHomeState extends State<CustomerHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Welcome, ${widget.customer.name}'),
+        title: Text('Welcome, ${widget.customer.customerName}'),
         backgroundColor: Colors.blue,
         toolbarHeight: 72,
         centerTitle: false,
@@ -163,8 +178,8 @@ class _CustomerHomeState extends State<CustomerHome> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.category),
-            label: 'Category',
+            icon: Icon(Icons.category_sharp),
+            label: 'Products',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
@@ -178,153 +193,153 @@ class _CustomerHomeState extends State<CustomerHome> {
 }
 
 // Placeholder pages - replace with real implementations
-class _HomePage extends StatelessWidget {
-  const _HomePage();
+// class _HomePage extends StatelessWidget {
+//   const _HomePage();
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      key: const PageStorageKey('home'),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Welcome back!',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            height: 140,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(child: Text('Promo banner / carousel')),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Recommended',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 3 / 2,
-            ),
-            itemCount: 4,
-            itemBuilder: (context, i) => Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(child: Text('Item ${i + 1}')),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return SingleChildScrollView(
+//       key: const PageStorageKey('home'),
+//       padding: const EdgeInsets.all(16),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           const Text(
+//             'Welcome back!',
+//             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+//           ),
+//           const SizedBox(height: 12),
+//           Container(
+//             height: 140,
+//             decoration: BoxDecoration(
+//               color: Colors.blue.shade100,
+//               borderRadius: BorderRadius.circular(12),
+//             ),
+//             child: const Center(child: Text('Promo banner / carousel')),
+//           ),
+//           const SizedBox(height: 16),
+//           const Text(
+//             'Recommended',
+//             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+//           ),
+//           const SizedBox(height: 8),
+//           GridView.builder(
+//             shrinkWrap: true,
+//             physics: const NeverScrollableScrollPhysics(),
+//             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//               crossAxisCount: 2,
+//               crossAxisSpacing: 8,
+//               mainAxisSpacing: 8,
+//               childAspectRatio: 3 / 2,
+//             ),
+//             itemCount: 4,
+//             itemBuilder: (context, i) => Container(
+//               decoration: BoxDecoration(
+//                 color: Colors.grey.shade200,
+//                 borderRadius: BorderRadius.circular(8),
+//               ),
+//               child: Center(child: Text('Item ${i + 1}')),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
-class _CategoryPage extends StatelessWidget {
-  const _CategoryPage();
+// class _ProductsPage extends StatelessWidget {
+//   const _ProductsPage();
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      key: const PageStorageKey('category'),
-      padding: const EdgeInsets.all(16),
-      children: List.generate(
-        8,
-        (i) => Card(
-          child: ListTile(
-            leading: CircleAvatar(child: Text('${i + 1}')),
-            title: Text('Category ${i + 1}'),
-            subtitle: const Text('Tap to view'),
-            onTap: () {},
-          ),
-        ),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return ListView(
+//       key: const PageStorageKey('category'),
+//       padding: const EdgeInsets.all(16),
+//       children: List.generate(
+//         8,
+//         (i) => Card(
+//           child: ListTile(
+//             leading: CircleAvatar(child: Text('${i + 1}')),
+//             title: Text('Category ${i + 1}'),
+//             subtitle: const Text('Tap to view'),
+//             onTap: () {},
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
-class _CartPage extends StatelessWidget {
-  const _CartPage();
+// class _CartPage extends StatelessWidget {
+//   const _CartPage();
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      key: const PageStorageKey('cart'),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.shopping_cart_outlined,
-            size: 64,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 12),
-          const Text('Your cart is empty', style: TextStyle(fontSize: 16)),
-          const SizedBox(height: 8),
-          ElevatedButton(onPressed: () => {}, child: const Text('Shop now')),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Center(
+//       key: const PageStorageKey('cart'),
+//       child: Column(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           const Icon(
+//             Icons.shopping_cart_outlined,
+//             size: 64,
+//             color: Colors.grey,
+//           ),
+//           const SizedBox(height: 12),
+//           const Text('Your cart is empty', style: TextStyle(fontSize: 16)),
+//           const SizedBox(height: 8),
+//           ElevatedButton(onPressed: () => {}, child: const Text('Shop now')),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
-class _ProfilePage extends StatelessWidget {
-  const _ProfilePage();
+// class _ProfilePage extends StatelessWidget {
+//   const _ProfilePage();
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      key: const PageStorageKey('profile'),
-      padding: const EdgeInsets.all(16),
-      children: [
-        const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 48)),
-        const SizedBox(height: 12),
-        const Center(
-          child: Text(
-            'John Doe',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Card(
-          child: ListTile(
-            title: const Text('Orders'),
-            leading: const Icon(Icons.list),
-            onTap: () {},
-          ),
-        ),
-        Card(
-          child: ListTile(
-            title: const Text('Settings'),
-            leading: const Icon(Icons.settings),
-            onTap: () {},
-          ),
-        ),
-        Card(
-          child: ListTile(
-            title: const Text('Logout'),
-            leading: const Icon(Icons.logout),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => HomePage()),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return ListView(
+//       key: const PageStorageKey('profile'),
+//       padding: const EdgeInsets.all(16),
+//       children: [
+//         const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 48)),
+//         const SizedBox(height: 12),
+//         const Center(
+//           child: Text(
+//             'John Doe',
+//             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+//           ),
+//         ),
+//         const SizedBox(height: 24),
+//         Card(
+//           child: ListTile(
+//             title: const Text('Orders'),
+//             leading: const Icon(Icons.list),
+//             onTap: () {},
+//           ),
+//         ),
+//         Card(
+//           child: ListTile(
+//             title: const Text('Settings'),
+//             leading: const Icon(Icons.settings),
+//             onTap: () {},
+//           ),
+//         ),
+//         Card(
+//           child: ListTile(
+//             title: const Text('Logout'),
+//             leading: const Icon(Icons.logout),
+//             onTap: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(builder: (context) => HomePage()),
+//               );
+//             },
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+// }
