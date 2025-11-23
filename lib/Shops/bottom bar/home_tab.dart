@@ -1,3 +1,4 @@
+import 'package:cart_link/Shops/add-Product.dart';
 import 'package:flutter/material.dart';
 
 class HomeTab extends StatelessWidget {
@@ -135,7 +136,14 @@ class HomeTab extends StatelessWidget {
                   _buildQuickAction(
                     icon: Icons.add_box_outlined,
                     label: 'Add\nProduct',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddProductPage(),
+                        ),
+                      );
+                    },
                   ),
                   _buildQuickAction(
                     icon: Icons.local_shipping_outlined,
