@@ -204,7 +204,7 @@ class _UsersAdminState extends State<UsersAdmin> {
                   width: constraints.maxWidth,
                   height: constraints.maxHeight,
                   child: DataTable(
-                    headingRowColor: MaterialStateProperty.resolveWith(
+                    headingRowColor: WidgetStateProperty.resolveWith(
                       (states) => ThemeColors.primary,
                     ),
                     headingRowHeight: 56,
