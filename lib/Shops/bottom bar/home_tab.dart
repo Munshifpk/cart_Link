@@ -1,4 +1,5 @@
 import 'package:cart_link/Shops/add-Product.dart';
+import 'package:cart_link/Shops/analytics/analytics_page.dart';
 import 'package:cart_link/Shops/daily_sales.dart';
 import 'package:flutter/material.dart';
 
@@ -46,7 +47,9 @@ class HomeTab extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: Colors.white.withAlpha((0.2 * 255).round()),
+                        backgroundColor: Colors.white.withAlpha(
+                          (0.2 * 255).round(),
+                        ),
                         child: const Icon(
                           Icons.storefront,
                           size: 32,
@@ -188,7 +191,14 @@ class HomeTab extends StatelessWidget {
                   _buildQuickAction(
                     icon: Icons.insights_outlined,
                     label: 'View\nAnalytics',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AnalyticsPage(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

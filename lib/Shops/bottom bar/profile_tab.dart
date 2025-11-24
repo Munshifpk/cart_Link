@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:cart_link/Shops/analytics/analytics_page.dart';
 import 'package:cart_link/Shops/daily_sales.dart';
+import 'package:cart_link/Shops/report_page.dart';
 import 'package:cart_link/main.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -231,6 +233,28 @@ class _ProfileTabState extends State<ProfileTab> {
             },
             icon: const Icon(Icons.trending_up),
             label: const Text('Total Sales'),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportPage()),
+              );
+            },
+            icon: const Icon(Icons.flag),
+            label: const Text('Reports'),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AnalyticsPage()),
+              );
+            },
+            icon: const Icon(Icons.analytics),
+            label: const Text('Analytics'),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(

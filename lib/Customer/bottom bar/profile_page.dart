@@ -1,4 +1,5 @@
 import 'package:cart_link/main.dart' as app_main;
+import 'package:cart_link/Customer/report_shops_page.dart';
 import 'package:flutter/material.dart';
 import '../customer_home.dart';
 import '../orders_history_page.dart';
@@ -56,6 +57,19 @@ class CustomerProfilePage extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const OrdersHistoryPage()),
+              );
+            },
+          ),
+        ),
+        Card(
+          child: ListTile(
+            title: const Text('Report Shop'),
+            leading: const Icon(Icons.flag),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const CustomerReportShopsPage(),
+                ),
               );
             },
           ),
