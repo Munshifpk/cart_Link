@@ -1,23 +1,20 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:http/http.dart' as http;
 
-const String _backendUrl = 'http://localhost:5000/api/customers';
+String get _backendBase {
+  if (kIsWeb) return 'http://localhost:5000';
+  if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
+  return 'http://localhost:5000';
+}
+
+String get _backendUrl => '$_backendBase/api/customers';
 
 class CustomerAuthService {
   /// Check if a mobile exists. Expected to return a map like:
   /// { 'success': true, 'exists': false, 'message': '...' }
   static Future<Map<String, dynamic>> checkMobileExists(String mobile) async {
-    // Local dev (Flutter web / desktop)
-    final uri = Uri(
-      scheme: 'http',
-      host: 'localhost',
-      port: 5000,
-      pathSegments: ['api', 'customersauth', 'check-mobile', mobile],
-    );
-    // Android emulator (uncomment if testing on Android emulator):
-    //final uri = Uri(scheme: 'http', host: '10.0.2.2', port: 5000, pathSegments: ['api','auth','check-mobile', mobile]);
-    // Real device on LAN (replace with your machine IP):
-    // final uri = Uri(scheme: 'http', host: '192.168.x.x', port: 5000, pathSegments: ['api','auth','check-mobile', mobile]);
+    final uri = Uri.parse('$_backendBase/api/customersauth/check-mobile/$mobile');
     try {
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
@@ -50,18 +47,7 @@ class CustomerAuthService {
     required String password,
     required String location,
   }) async {
-    final uri = Uri(
-      scheme: 'http',
-      host: 'localhost',
-      port: 5000,
-      pathSegments: ['api', 'customersAuth', 'register'],
-    );
-    // Android emulator:
-    // final uri = Uri(scheme: 'http', host: '10.0.2.2', port: 5000, pathSegments: ['api','auth','register']);
-    // Physical device (replace with your machine IP):
-    // final uri = Uri(scheme: 'http', host: '192.168.x.x', port: 5000, pathSegments: ['api','auth','register']);
-    // If your backend is hosted with HTTPS:
-    // final uri = Uri.https('your-domain.com', '/api/auth/register');
+    final uri = Uri.parse('$_backendBase/api/customersAuth/register');
     final body = {
       'customerName': customerName,
       'mobile': mobile,
@@ -70,13 +56,14 @@ class CustomerAuthService {
       'location': location,
     };
     try {
-      final res = await http
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 15));
+      // debug
+      // ignore: avoid_print
+      print('CustomerAuthService.register -> $uri');
+      final res = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 15));
 
       // Debug: log server response for easier diagnosis
       try {
@@ -116,9 +103,11 @@ class CustomerAuthService {
 class CustomerService {
   static Future<Map<String, dynamic>> getAllCustomers() async {
     try {
-      final resp = await http
-          .get(Uri.parse(_backendUrl))
-          .timeout(const Duration(seconds: 10));
+      final uri = Uri.parse(_backendUrl);
+      // debug
+      // ignore: avoid_print
+      print('CustomerService.getAllCustomers -> $uri');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final body = json.decode(resp.body);
         return {'success': true, 'data': body['data'] ?? []};

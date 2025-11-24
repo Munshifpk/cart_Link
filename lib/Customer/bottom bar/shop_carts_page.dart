@@ -85,7 +85,7 @@ class _ShopCartsPageState extends State<ShopCartsPage> {
                   ? const Center(child: Text('No carts yet. Tap + to add one.'))
                   : ListView.separated(
                       itemCount: _carts.length,
-                      separatorBuilder: (_, __) => const Divider(),
+                      separatorBuilder: (_, _) => const Divider(),
                       itemBuilder: (context, i) {
                         final c = _carts[i];
                         return ListTile(

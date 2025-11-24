@@ -46,7 +46,7 @@ class HomeTab extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundColor: Colors.white.withAlpha((0.2 * 255).round()),
                         child: const Icon(
                           Icons.storefront,
                           size: 32,
@@ -213,7 +213,7 @@ class HomeTab extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: 5,
-                separatorBuilder: (_, __) => const Divider(),
+                separatorBuilder: (_, _) => const Divider(),
                 itemBuilder: (context, index) {
                   return ListTile(
                     leading: CircleAvatar(
@@ -268,7 +268,7 @@ class HomeTab extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

@@ -4,6 +4,7 @@ import 'orders_admin.dart';
 import 'users_admin.dart';
 import '../theme_data.dart';
 import 'nottifications_Admin.dart';
+import 'products_admin.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -41,6 +42,13 @@ class _AdminHomeState extends State<AdminHome> {
       );
       return;
     }
+    if (name == 'Products') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProductAdminPage()),
+      );
+      return;
+    }
 
     // Fallback: show a simple placeholder page for other sections
     final pagename = ('$name Admin');
@@ -65,15 +73,15 @@ class _AdminHomeState extends State<AdminHome> {
         onTap: () => _openSection(title),
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [color, color.withOpacity(0.85)],
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0D47A1), Color(0xFF1565C0)],
               begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              end: Alignment.bottomRight,   
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withAlpha((0.08 * 255).round()),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -85,11 +93,11 @@ class _AdminHomeState extends State<AdminHome> {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withAlpha((0.2 * 255).round()),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
+                      color: Colors.black.withAlpha((0.12 * 255).round()),
                       blurRadius: 6,
                       offset: Offset(0, 2),
                     ),

@@ -101,7 +101,7 @@ class _CartDetailPageState extends State<CartDetailPage> {
                   ? const Center(child: Text('No items in cart'))
                   : ListView.separated(
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => const Divider(),
+                      separatorBuilder: (_, _) => const Divider(),
                       itemBuilder: (context, i) {
                         final it = items[i];
                         return ListTile(

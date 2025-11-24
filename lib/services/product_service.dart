@@ -1,7 +1,16 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:http/http.dart' as http;
 
-const String _backendUrl = 'http://localhost:5000/api/products';
+String get _backendBase {
+  // Android emulator uses 10.0.2.2 to reach host machine localhost
+  	if (kIsWeb) return 'http://localhost:5000';
+  	if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
+  // iOS simulator and desktop use localhost
+  return 'http://localhost:5000';
+}
+
+String get _backendUrl => '$_backendBase/api/products';
 
 class ProductService {
   // Fetch products; if ownerId provided backend will filter by owner
@@ -10,7 +19,9 @@ class ProductService {
       final uri = Uri.parse(_backendUrl).replace(
         queryParameters: ownerId != null ? {'ownerId': ownerId} : null,
       );
-
+      // debug: print the final request URL so it's visible in logs
+      // ignore: avoid_print
+      print('ProductService.getProducts -> $uri');
       final resp = await http.get(uri).timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final body = json.decode(resp.body);

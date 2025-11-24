@@ -168,7 +168,8 @@ class _ShopsAdminState extends State<ShopsAdmin> {
                         (states) => const Color(0xFF0D47A1),
                       ),
                       headingRowHeight: 56,
-                      dataRowHeight: 70,
+                      dataRowMinHeight: 70,
+                      dataRowMaxHeight: 70,
                       columnSpacing: 20,
                       columns: const [
                         DataColumn(

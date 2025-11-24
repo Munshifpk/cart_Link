@@ -54,7 +54,7 @@ class OrdersHistoryPage extends StatelessWidget {
       body: ListView.separated(
         padding: const EdgeInsets.all(12.0),
         itemCount: orders.length,
-        separatorBuilder: (_, __) => const Divider(),
+        separatorBuilder: (_, _) => const Divider(),
         itemBuilder: (context, index) {
           final order = orders[index];
           final status = order['status'] as String;
@@ -67,7 +67,7 @@ class OrdersHistoryPage extends StatelessWidget {
           return Card(
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: statusColor.withOpacity(0.2),
+                backgroundColor: statusColor.withAlpha((0.2 * 255).round()),
                 child: Icon(
                   status == 'Delivered'
                       ? Icons.check_circle

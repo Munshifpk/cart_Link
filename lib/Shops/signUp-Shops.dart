@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'bottom bar/home-Shops.dart';
+import 'bottom bar/home-shops.dart';
 import '../services/auth_service.dart';
 
 /// Simple AuthService implementation — replace endpoints with your real API.

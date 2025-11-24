@@ -180,7 +180,8 @@ class _ProductsTabState extends State<ProductsTab> {
                           headingRowColor: WidgetStateProperty.all(ThemeColors.primary),
                           headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color:Colors.white),
                           dataTextStyle: const TextStyle(color: Colors.black87),
-                          dataRowHeight: 52,
+                          dataRowMinHeight: 52,
+                          dataRowMaxHeight: 52,
                           columnSpacing: 24,
                           dividerThickness: 1,
                         

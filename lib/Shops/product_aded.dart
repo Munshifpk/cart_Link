@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'bottom bar/home-Shops.dart';
+import 'bottom bar/home-shops.dart';
 
 class ProductAddedSuccess extends StatefulWidget {
   const ProductAddedSuccess({super.key});

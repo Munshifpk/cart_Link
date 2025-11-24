@@ -49,10 +49,12 @@ class User {
     );
   }
 }
+ 
 
 class _UsersAdminState extends State<UsersAdmin> {
   List<User> _customers = [];
   bool _loading = true;
+ 
 
   // Change this base URL depending on where your backend runs.
   // On Android emulator use 10.0.2.2, on desktop use localhost.
@@ -78,11 +80,11 @@ class _UsersAdminState extends State<UsersAdmin> {
       final result = await CustomerService.getAllCustomers();
       if (mounted) {
         if (result['success'] == true) {
-          print('Customer loadede');
+          // print('Customer loadede');
           final List<dynamic> customerJson = result['data'] ?? [];
           setState(() {
             _customers = customerJson.map((s) => User.fromJson(s)).toList();
-            print(_customers);
+            // print(_customers);
           });
         } else {
           _showErrorDialog(
@@ -155,94 +157,88 @@ class _UsersAdminState extends State<UsersAdmin> {
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
               builder: (context, constraints) {
+                // Horizontal scroll outside, vertical scroll inside so table can grow
                 return SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: constraints.maxWidth,
-                        minHeight: constraints.maxHeight,
-                      ),
-                      child: SizedBox(
-                        width: constraints.maxWidth,
-                        height: constraints.maxHeight,
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.resolveWith(
-                            (states) => ThemeColors.primary,
-                          ),
-                          headingRowHeight: 56,
-                          dataRowHeight: 70,
-                          columnSpacing: 20,
-                          columns: const [
-                            DataColumn(
-                              label: Text(
-                                'User ID',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'User Name',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'Location',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'Mobile',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'Info',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                          rows: List.generate(_customers.length, (index) {
-                            final u = _customers[index];
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(u.id)),
-                                DataCell(Text(u.customerName)),
-                                DataCell(Text(u.address)),
-                                // Mobile shown here to match the header count
-                                DataCell(Text(u.mobile.toString())),
-                                DataCell(
-                                  IconButton(
-                                    icon: const Icon(Icons.info_outline),
-                                    tooltip: 'Info',
-                                    onPressed: () => _showInfo(u),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    // Only enforce minimum width so the table can grow vertically
+                    // and the outer vertical SingleChildScrollView will scroll.
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: DataTable(
+                        headingRowColor: WidgetStateProperty.resolveWith(
+                          (states) => ThemeColors.primary,
                         ),
+                        headingRowHeight: 56,
+                        dataRowMinHeight: 70,
+                        dataRowMaxHeight: 70,
+                        columnSpacing: 20,
+                        columns: const [
+                          DataColumn(
+                            label: Text(
+                              'User ID',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'User Name',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Location',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Mobile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Info',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                        rows: List.generate(_customers.length, (index) {
+                          final u = _customers[index];
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(u.id)),
+                              DataCell(Text(u.customerName)),
+                              DataCell(Text(u.address)),
+                              // Mobile shown here to match the header count
+                              DataCell(Text(u.mobile.toString())),
+                              DataCell(
+                                IconButton(
+                                  icon: const Icon(Icons.info_outline),
+                                  tooltip: 'Info',
+                                  onPressed: () => _showInfo(u),
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
                       ),
-                    ),
                   ),
                 );
               },

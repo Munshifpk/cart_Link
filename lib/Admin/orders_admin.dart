@@ -116,7 +116,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                   (states) => ThemeColors.primary,
                 ),
                 headingRowHeight: 56,
-                dataRowHeight: 70,
+                dataRowMinHeight: 70,
+                dataRowMaxHeight: 70,
                 columnSpacing: 20,
                 columns: const [
                   DataColumn(
