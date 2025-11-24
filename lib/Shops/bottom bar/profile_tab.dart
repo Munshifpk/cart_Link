@@ -1,7 +1,8 @@
 import 'dart:io';
 
+import 'package:cart_link/Shops/daily_sales.dart';
+import 'package:cart_link/main.dart';
 import 'package:flutter/material.dart';
-import '../transaction_history_page.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -220,42 +221,24 @@ class _ProfileTabState extends State<ProfileTab> {
             ),
           ),
           const SizedBox(height: 12),
-          Card(
-            color: Colors.blue.shade50,
-            child: ListTile(
-              leading: const Icon(Icons.receipt_long, color: Colors.blue),
-              title: const Text(
-                'Transaction History',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: const Text('View recent transactions and details'),
-              trailing: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const TransactionHistoryPage(),
-                    ),
-                  );
-                },
-                child: const Text('Open'),
-              ),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const TransactionHistoryPage(),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () {
-              // Placeholder for logout or other actions
-              ScaffoldMessenger.of(
+              Navigator.push(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('Logged out')));
+                MaterialPageRoute(builder: (_) => const DailySalesPage()),
+              );
+            },
+            icon: const Icon(Icons.trending_up),
+            label: const Text('Total Sales'),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomePage()),
+                (route) => false,
+              );
             },
             icon: const Icon(Icons.logout),
             label: const Text('Logout'),

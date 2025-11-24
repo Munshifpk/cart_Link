@@ -124,7 +124,7 @@ class _CartDetailPageState extends State<CartDetailPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Total: ' + '\$' + _total.toStringAsFixed(2),
+                      'Total: \$${_total.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

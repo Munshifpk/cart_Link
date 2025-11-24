@@ -1,6 +1,6 @@
 import 'package:cart_link/Shops/add-Product.dart';
+import 'package:cart_link/Shops/daily_sales.dart';
 import 'package:flutter/material.dart';
-import '../transaction_history_page.dart';
 
 class HomeTab extends StatelessWidget {
   final Function(int) onNavigateToOrders;
@@ -124,11 +124,14 @@ class HomeTab extends StatelessWidget {
                   );
                   if (index == 0) {
                     return InkWell(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const TransactionHistoryPage(),
-                        ),
-                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DailySalesPage(),
+                          ),
+                        );
+                      },
                       child: card,
                     );
                   } else if (index == 1) {
