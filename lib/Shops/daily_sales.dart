@@ -11,7 +11,7 @@ class _DailySalesPageState extends State<DailySalesPage> {
   // Filter state
   bool _showCompletedOnly = false;
   String _selectedPeriod =
-      'all'; // 'all', 'weekly', 'monthly', 'yearly', 'custom'
+      'today'; // 'today', 'all', 'weekly', 'monthly', 'yearly', 'custom'
   DateTime? _startDate;
   DateTime? _endDate;
 
