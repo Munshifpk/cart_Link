@@ -1,6 +1,7 @@
 import 'package:cart_link/main.dart' as app_main;
 import 'package:flutter/material.dart';
 import '../customer_home.dart';
+import '../orders_history_page.dart';
 
 class CustomerProfilePage extends StatelessWidget {
   final Customer? customer;
@@ -19,7 +20,10 @@ class CustomerProfilePage extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 40,
-          child: Text(name.isNotEmpty ? name[0] : '?', style: const TextStyle(fontSize: 32)),
+          child: Text(
+            name.isNotEmpty ? name[0] : '?',
+            style: const TextStyle(fontSize: 32),
+          ),
         ),
         const SizedBox(height: 12),
         Center(
@@ -49,7 +53,11 @@ class CustomerProfilePage extends StatelessWidget {
           child: ListTile(
             title: const Text('Orders'),
             leading: const Icon(Icons.list),
-            onTap: () {},
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const OrdersHistoryPage()),
+              );
+            },
           ),
         ),
         Card(

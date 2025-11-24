@@ -108,6 +108,9 @@ class _ShopHomePageState extends State<ShopHomePage> {
             onNavigateToOrders: (index) {
               _onPageChanged(index);
             },
+            onNavigateToProducts: (index) {
+              _onPageChanged(index);
+            },
           ),
           const ProductsTab(),
           const OrdersTab(),

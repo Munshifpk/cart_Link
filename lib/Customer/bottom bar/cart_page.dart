@@ -1,28 +1,47 @@
 import 'package:flutter/material.dart';
 import '../customer_home.dart';
+import 'shop_carts_page.dart';
 
-class CustomerCartPage extends StatelessWidget {
+class CustomerCartPage extends StatefulWidget {
   final Customer? customer;
   const CustomerCartPage({super.key, this.customer});
 
   @override
+  State<CustomerCartPage> createState() => _CustomerCartPageState();
+}
+
+class _CustomerCartPageState extends State<CustomerCartPage> {
+  @override
   Widget build(BuildContext context) {
-    return Center(
+    // Show list of example shops and navigate to their carts
+    final shops = [
+      'ExampleShop1',
+      'ExampleShop2',
+      'ExampleShop3',
+      'ExampleShop4',
+      'ExampleShop5',
+    ];
+    return ListView.builder(
       key: const PageStorageKey('cart'),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.shopping_cart_outlined,
-            size: 64,
-            color: Colors.grey,
+      padding: const EdgeInsets.all(12),
+      itemCount: shops.length,
+      itemBuilder: (context, i) {
+        final shop = shops[i];
+        return Card(
+          child: ListTile(
+            title: Text(shop),
+            subtitle: const Text('Tap to manage carts for this shop'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ShopCartsPage(shopName: shop),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 12),
-          const Text('Your cart is empty', style: TextStyle(fontSize: 16)),
-          const SizedBox(height: 8),
-          ElevatedButton(onPressed: () => {}, child: const Text('Shop now')),
-        ],
-      ),
+        );
+      },
     );
   }
 }

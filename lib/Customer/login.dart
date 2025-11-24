@@ -95,9 +95,8 @@ class _LoginPageState extends State<LoginPage> {
                         mobile: customer['mobile'] is int
                             ? customer['mobile']
                             : (int.tryParse(
-                                    customer['mobile']?.toString() ?? '',
-                                  ) ??
-                                  null),
+                                customer['mobile']?.toString() ?? '',
+                              )),
                         address: customer['address'],
                         createdAt: customer['createdAt'] != null
                             ? DateTime.tryParse(customer['createdAt'])

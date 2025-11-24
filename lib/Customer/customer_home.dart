@@ -1,4 +1,3 @@
-import 'package:cart_link/main.dart';
 import 'package:flutter/material.dart';
 import 'bottom bar/home_page.dart';
 import 'bottom bar/products_page.dart';

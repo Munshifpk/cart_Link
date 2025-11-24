@@ -1,10 +1,16 @@
 import 'package:cart_link/Shops/add-Product.dart';
 import 'package:flutter/material.dart';
+import '../transaction_history_page.dart';
 
 class HomeTab extends StatelessWidget {
   final Function(int) onNavigateToOrders;
+  final Function(int) onNavigateToProducts;
 
-  const HomeTab({super.key, required this.onNavigateToOrders});
+  const HomeTab({
+    super.key,
+    required this.onNavigateToOrders,
+    required this.onNavigateToProducts,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +85,7 @@ class HomeTab extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemBuilder: (BuildContext context, int index) {
-                  return _buildStatCard(
+                  final card = _buildStatCard(
                     title: index == 0
                         ? 'Today\'s Sales'
                         : index == 1
@@ -116,6 +122,27 @@ class HomeTab extends StatelessWidget {
                         ? Colors.blue
                         : Colors.purple,
                   );
+                  if (index == 0) {
+                    return InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TransactionHistoryPage(),
+                        ),
+                      ),
+                      child: card,
+                    );
+                  } else if (index == 1) {
+                    return InkWell(
+                      onTap: () => onNavigateToOrders(2),
+                      child: card,
+                    );
+                  } else if (index == 2) {
+                    return InkWell(
+                      onTap: () => onNavigateToProducts(1),
+                      child: card,
+                    );
+                  }
+                  return card;
                 },
                 separatorBuilder: (BuildContext context, int index) {
                   return const SizedBox(height: 2);
