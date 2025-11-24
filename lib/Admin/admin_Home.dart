@@ -73,15 +73,15 @@ class _AdminHomeState extends State<AdminHome> {
         onTap: () => _openSection(title),
         child: Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0D47A1), Color(0xFF1565C0)],
+            gradient: LinearGradient(
+              colors: [color.withOpacity(0.95), color.withOpacity(0.75)],
               begin: Alignment.topLeft,
-              end: Alignment.bottomRight,   
+              end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha((0.08 * 255).round()),
+                color: Colors.black.withAlpha((0.10 * 255).round()),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
