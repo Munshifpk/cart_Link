@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../services/product_service.dart';
 import '../../theme_data.dart';
 import 'dart:convert';
-import 'dart:math';
 
 class CustomerProductsPage extends StatefulWidget {
   
@@ -116,47 +115,7 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                             child: AspectRatio(
                               aspectRatio: 1.1,
                               child: imagesList.isNotEmpty
-                                  ? Stack(
-                                      children: [
-                                        // swipeable main image
-                                        PageView.builder(
-                                          itemCount: imagesList.length,
-                                          itemBuilder: (ctx, i) {
-                                            final src = imagesList[i];
-                                            return _buildImageFromSource(src, index);
-                                          },
-                                        ),
-                                        // small stacked thumbnails on top-right
-                                        if (imagesList.length > 1)
-                                          Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: SizedBox(
-                                              height: 40,
-                                              width: min(40.0 * imagesList.length, 120.0),
-                                              child: Stack(
-                                                children: List.generate(
-                                                  min(3, imagesList.length),
-                                                  (i) {
-                                                    final thumb = imagesList[i];
-                                                    return Positioned(
-                                                      left: i * 18.0,
-                                                      child: ClipRRect(
-                                                        borderRadius: BorderRadius.circular(6),
-                                                        child: SizedBox(
-                                                          width: 40,
-                                                          height: 40,
-                                                          child: _buildImageFromSource(thumb, index, fit: BoxFit.cover),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    )
+                                  ? _buildImageFromSource(imagesList[0], index)
                                   : _placeholder(index),
                             ),
                           ),
