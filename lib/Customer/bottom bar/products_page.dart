@@ -162,10 +162,11 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
   }
 
   Widget _placeholder(int index) {
-    final color = ThemeColors.primary.withOpacity(0.08);
+    final col = ThemeColors.primary;
+    final color = col.withValues(alpha: 0.08);
     return Container(
       color: color,
-      child: Center(child: Icon(Icons.image, color: ThemeColors.primary.withOpacity(0.6))),
+      child: Center(child: Icon(Icons.image, color: col.withValues(alpha: 0.6))),
     );
   }
 
@@ -185,7 +186,7 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
         src,
         fit: fit,
         alignment: Alignment.center,
-        errorBuilder: (_, __, ___) => _placeholder(index),
+        errorBuilder: (_, _, _) => _placeholder(index),
       ),
     );
   }
