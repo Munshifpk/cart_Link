@@ -1,6 +1,7 @@
 import 'package:cart_link/Shops/analytics/cancelled_orders_page.dart';
 import 'package:cart_link/Shops/analytics/compleated_orders_page.dart';
 import 'package:cart_link/Shops/analytics/pending_orders_page.dart';
+import 'package:cart_link/Shops/analytics/ready_to_delivery_page.dart';
 import 'package:cart_link/Shops/analytics/orders_analytics.dart';
 import 'package:flutter/material.dart';
 
@@ -18,6 +19,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     'completedOrders': 142,
     'cancelledOrders': 8,
     'pendingOrders': 6,
+    'readyToDeliver': 4,
     'totalSales': 45280,
     'confirmedOrders': 148,
     'refundedOrders': 5,
@@ -117,11 +119,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ),
                 ),
 
-                _buildStatCard(
-                  title: 'Returned',
-                  value: _analyticsData['returnedOrders'].toString(),
-                  icon: Icons.assignment_return,
-                  color: Colors.amber,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ReadyToDeliveryPage(),
+                      ),
+                    );
+                  },
+                  child: _buildStatCard(
+                    title: 'Ready to Deliver',
+                    value: (_analyticsData['readyToDeliver'] ?? 0).toString(),
+                    icon: Icons.local_shipping,
+                    color: Colors.teal,
+                  ),
                 ),
                 _buildStatCard(
                   title: 'Total Sales',
@@ -236,21 +248,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ),
                   const Divider(),
                   _buildDetailRow(
-                    'Average Order Value',
-                    _averageOrderValue(),
-                    Colors.blue,
-                  ),
-                  const Divider(),
-                  _buildDetailRow(
-                    'Refund Rate',
-                    _percent('refundedOrders'),
+                    'Pending Orders',
+                    _percent('pendingOrders'),
                     Colors.orange,
                   ),
+
                   const Divider(),
                   _buildDetailRow(
-                    'Return Rate',
-                    _percent('returnedOrders'),
-                    Colors.amber,
+                    'Ready to Delivery Rate',
+                    _percent('ready to delivery'),
+                    Colors.lightGreen,
                   ),
                 ],
               ),
