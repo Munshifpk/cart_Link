@@ -85,100 +85,6 @@ class HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Stats Grid
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemBuilder: (BuildContext context, int index) {
-                  final card = _buildStatCard(
-                    title: index == 0
-                        ? 'Today\'s Sales'
-                        : index == 1
-                        ? 'Orders'
-                        : index == 2
-                        ? 'Products'
-                        : index == 3
-                        ? 'Customers'
-                        : 'Offered products',
-                    value: index == 0
-                        ? '₹12,450'
-                        : index == 1
-                        ? '24'
-                        : index == 2
-                        ? '156'
-                        : index == 3
-                        ? '1.2K'
-                        : '4',
-                    trend: index == 0
-                        ? '+12%'
-                        : index == 1
-                        ? '+3'
-                        : index == 2
-                        ? 'Active'
-                        : index == 3
-                        ? '+5%'
-                        : 'Active',
-                    icon: index == 0
-                        ? Icons.currency_rupee
-                        : index == 1
-                        ? Icons.shopping_bag_outlined
-                        : index == 2
-                        ? Icons.inventory_2_outlined
-                        : index == 3
-                        ? Icons.people_outline
-                        : Icons.discount_outlined,
-                    color: index == 0
-                        ? Colors.green
-                        : index == 1
-                        ? Colors.orange
-                        : index == 2
-                        ? Colors.blue
-                        : Colors.purple,
-                  );
-                  if (index == 0) {
-                    return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const DailySalesPage(),
-                          ),
-                        );
-                      },
-                      child: card,
-                    );
-                  } else if (index == 1) {
-                    return InkWell(
-                      onTap: () => onNavigateToOrders(2),
-                      child: card,
-                    );
-                  } else if (index == 2) {
-                    return InkWell(
-                      onTap: () => onNavigateToProducts(1),
-                      child: card,
-                    );
-                  } else if (index == 4) {
-                    return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const OfferedProductsPage(),
-                          ),
-                        );
-                      },
-                      child: card,
-                    );
-                  }
-                  return card;
-                },
-                separatorBuilder: (BuildContext context, int index) {
-                  return const SizedBox(height: 2);
-                },
-                itemCount: 5,
-              ),
-              const SizedBox(height: 24),
-
               // Quick Actions
               const Text(
                 'Quick Actions',
@@ -231,6 +137,99 @@ class HomeTab extends StatelessWidget {
                     },
                   ),
                 ],
+              ),
+              const SizedBox(height: 24),
+              // Stats Grid
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemBuilder: (BuildContext context, int index) {
+                  final card = _buildStatCard(
+                    title: index == 0
+                        ? 'Today\'s Sales'
+                        : index == 1
+                        ? 'Orders'
+                        : index == 2
+                        ? 'Products'
+                        : index == 3
+                        ? 'Offered products'
+                        : 'Customers',
+                    value: index == 0
+                        ? '₹12,450'
+                        : index == 1
+                        ? '24'
+                        : index == 2
+                        ? '156'
+                        : index == 3
+                        ? '4'
+                        : '1.2K',
+                    trend: index == 0
+                        ? '+12%'
+                        : index == 1
+                        ? '+3'
+                        : index == 2
+                        ? 'Active'
+                        : index == 3
+                        ? 'Active'
+                        : '+5%',
+                    icon: index == 0
+                        ? Icons.currency_rupee
+                        : index == 1
+                        ? Icons.shopping_bag_outlined
+                        : index == 2
+                        ? Icons.inventory_2_outlined
+                        : index == 3
+                        ? Icons.discount_outlined
+                        : Icons.people_outline,
+                    color: index == 0
+                        ? Colors.green
+                        : index == 1
+                        ? Colors.orange
+                        : index == 2
+                        ? Colors.blue
+                        : Colors.purple,
+                  );
+                  if (index == 0) {
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DailySalesPage(),
+                          ),
+                        );
+                      },
+                      child: card,
+                    );
+                  } else if (index == 1) {
+                    return InkWell(
+                      onTap: () => onNavigateToOrders(2),
+                      child: card,
+                    );
+                  } else if (index == 2) {
+                    return InkWell(
+                      onTap: () => onNavigateToProducts(1),
+                      child: card,
+                    );
+                  } else if (index == 3) {
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const OfferedProductsPage(),
+                          ),
+                        );
+                      },
+                      child: card,
+                    );
+                  }
+                  return card;
+                },
+                separatorBuilder: (BuildContext context, int index) {
+                  return const SizedBox(height: 2);
+                },
+                itemCount: 5,
               ),
               const SizedBox(height: 24),
 
