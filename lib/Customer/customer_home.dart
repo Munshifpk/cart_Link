@@ -3,6 +3,7 @@ import 'bottom bar/home_page.dart';
 import 'bottom bar/products_page.dart';
 import 'bottom bar/cart_page.dart';
 import 'bottom bar/profile_page.dart';
+import '../theme_data.dart';
 
 class Customer {
   final String? id;
@@ -35,7 +36,7 @@ class _CustomerHomeState extends State<CustomerHome> {
 
   List<Widget> get _pages => <Widget>[
     CustomerHomePage(customer: widget.customer),
-    CustomerProductsPage(customer: widget.customer),
+    CustomerProductsPage(),
     CustomerCartPage(customer: widget.customer),
     CustomerProfilePage(customer: widget.customer),
   ];
@@ -50,7 +51,8 @@ class _CustomerHomeState extends State<CustomerHome> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Welcome, ${widget.customer.customerName}'),
-        backgroundColor: Colors.blue,
+        backgroundColor: ThemeColors.primary,
+        foregroundColor: ThemeColors.textColorWhite,
         toolbarHeight: 72,
         centerTitle: false,
         elevation: 2,
@@ -73,7 +75,7 @@ class _CustomerHomeState extends State<CustomerHome> {
                     },
                     child: Row(
                       children: const [
-                        Icon(Icons.location_on, color: Colors.deepOrange),
+                        Icon(Icons.location_on, color: ThemeColors.accent),
                         SizedBox(width: 6),
                         Text('Your Location', style: TextStyle(fontSize: 14)),
                         SizedBox(width: 8),
