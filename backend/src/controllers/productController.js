@@ -3,7 +3,7 @@ const Product = require('../models/Product');
 
 exports.createProduct = async (req, res) => {
     try {
-        const { name, description, price, stock, sku, category, isActive, isFeatured, images, ownerId } = req.body;
+        const { name, description, price, mrp, stock, sku, category, isActive, isFeatured, images, ownerId } = req.body;
 
         if (!name || !description || price == null || stock == null) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -13,6 +13,7 @@ exports.createProduct = async (req, res) => {
             name,
             description,
             price: Number(price),
+            mrp: mrp != null ? Number(mrp) : undefined,
             stock: Number(stock),
             sku,
             category,

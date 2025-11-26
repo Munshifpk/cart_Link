@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../add-Product.dart';
+import '../add-product.dart';
 import '../settings.dart';
 import '../nottification.dart';
 import 'home_tab.dart';

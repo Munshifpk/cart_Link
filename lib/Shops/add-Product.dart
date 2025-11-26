@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'product_aded.dart';
 import '../services/product_service.dart';
 import '../services/auth_state.dart';
@@ -16,6 +18,7 @@ class _AddProductPageState extends State<AddProductPage> {
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
   final _priceController = TextEditingController();
+  final _mrpController = TextEditingController();
   final _stockController = TextEditingController();
   final _skuController = TextEditingController();
   String? _category;
@@ -23,6 +26,7 @@ class _AddProductPageState extends State<AddProductPage> {
   bool _isActive = true;
   bool _isFeatured = false;
   bool _loading = false;
+  final List<XFile> _pickedImages = [];
 
   final List<String> _categories = [
     'Groceries',
@@ -38,30 +42,59 @@ class _AddProductPageState extends State<AddProductPage> {
     _nameController.dispose();
     _descController.dispose();
     _priceController.dispose();
+    _mrpController.dispose();
     _stockController.dispose();
     _skuController.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_pickedImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least 1 image')),
+      );
+      return;
+    }
+    if (_pickedImages.length > 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 10 images allowed')),
+      );
+      return;
+    }
     setState(() => _loading = true);
-    // Build payload
+
+    // Collect base64-encoded images
+    final List<String> imagesData = [];
+    for (final x in _pickedImages) {
+      try {
+        final bytes = await x.readAsBytes();
+        final b64 = base64Encode(bytes);
+        final path = x.path.toLowerCase();
+        final mime = path.endsWith('.png') ? 'image/png' : 'image/jpeg';
+        imagesData.add('data:$mime;base64,$b64');
+      } catch (_) {
+        // ignore individual image errors
+      }
+    }
+
     final payload = {
       'name': _nameController.text,
       'description': _descController.text,
       'price': double.tryParse(_priceController.text) ?? 0.0,
+      'mrp': double.tryParse(_mrpController.text) ?? double.tryParse(_priceController.text) ?? 0.0,
       'stock': int.tryParse(_stockController.text) ?? 0,
       'sku': _skuController.text,
       'category': _category,
       'isActive': _isActive,
       'isFeatured': _isFeatured,
-      'images': [],
+      'images': imagesData,
       // include ownerId if present
       'ownerId': AuthState.currentOwner != null ? AuthState.currentOwner!['_id'] : null,
     };
 
-    ProductService.createProduct(payload).then((res) {
+    try {
+      final res = await ProductService.createProduct(payload);
       if (!mounted) return;
       setState(() => _loading = false);
       if (res['success'] == true) {
@@ -77,7 +110,13 @@ class _AddProductPageState extends State<AddProductPage> {
           SnackBar(content: Text(res['message'] ?? 'Failed to add product')),
         );
       }
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error submitting product: $e')),
+      );
+    }
   }
 
   @override
@@ -174,54 +213,120 @@ class _AddProductPageState extends State<AddProductPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Image picker with enhanced design
-                  AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Colors.blue.shade50, Colors.white],
+                  // Image picker with enhanced design and thumbnails
+                  GestureDetector(
+                    onTap: _pickedImages.length < 10 ? _pickImages : null,
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Colors.blue.shade50, Colors.white],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue.shade100),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.shade100),
-                      ),
-                      child: InkWell(
-                        onTap: () {
-                          // TODO: Implement image picker
-                        },
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade100,
-                                shape: BoxShape.circle,
+                        child: _pickedImages.isEmpty
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade100,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.add_photo_alternate_outlined,
+                                      size: 48,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Add Stunning Product Photos',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Add 1-10 images (${_pickedImages.length}/10 selected)',
+                                    style: TextStyle(color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: SizedBox(
+                                      height: 110,
+                                      child: ListView.separated(
+                                        scrollDirection: Axis.horizontal,
+                                        shrinkWrap: true,
+                                        itemBuilder: (c, i) {
+                                        final x = _pickedImages[i];
+                                        return Stack(
+                                          alignment: Alignment.topRight,
+                                          children: [
+                                            FutureBuilder<Widget>(
+                                              future: _buildThumbnail(x),
+                                              builder: (ctx, snap) {
+                                                if (!mounted) return const SizedBox.shrink();
+                                                if (snap.connectionState ==
+                                                    ConnectionState.done &&
+                                                    snap.hasData) {
+                                                  return snap.data!;
+                                                }
+                                                return Container(
+                                                  width: 100,
+                                                  height: 100,
+                                                  color: Colors.grey.shade200,
+                                                  child: const Center(
+                                                      child: CircularProgressIndicator()),
+                                                );
+                                              },
+                                            ),
+                                            GestureDetector(
+                                              onTap: () {
+                                                if (!mounted) return;
+                                                setState(() {
+                                                  _pickedImages.removeAt(i);
+                                                });
+                                              },
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.shade600,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                padding: const EdgeInsets.all(4),
+                                                child: const Icon(Icons.close,
+                                                    color: Colors.white, size: 16),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                        separatorBuilder: (_, __) =>
+                                            const SizedBox(width: 8),
+                                        itemCount: _pickedImages.length,
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      '${_pickedImages.length}/10 images selected',
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: Icon(
-                                Icons.add_photo_alternate_outlined,
-                                size: 48,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Add Stunning Product Photos',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Great photos increase sales by 40%!',
-                              style: TextStyle(color: Colors.grey.shade600),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ),
@@ -332,6 +437,23 @@ class _AddProductPageState extends State<AddProductPage> {
                               ),
                             ),
                             const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _mrpController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d+\.?\d{0,2}'),
+                                ),
+                              ],
+                              decoration: const InputDecoration(
+                                labelText: 'MRP (List Price)',
+                                prefixText: '₹',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Enter MRP' : null,
+                            ),
+                            const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -344,7 +466,7 @@ class _AddProductPageState extends State<AddProductPage> {
                                       ),
                                     ],
                                     decoration: const InputDecoration(
-                                      labelText: 'Price',
+                                      labelText: 'Selling Price',
                                       prefixText: '₹',
                                       border: OutlineInputBorder(),
                                     ),
@@ -501,5 +623,50 @@ class _AddProductPageState extends State<AddProductPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final List<XFile>? imgs = await picker.pickMultiImage(imageQuality: 85);
+      if (imgs != null && imgs.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _pickedImages.clear();
+          _pickedImages.addAll(imgs);
+        });
+      }
+    } catch (e) {
+      // ignore picker errors; show minimal feedback
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick images: $e')),
+      );
+    }
+  }
+
+  Future<Widget> _buildThumbnail(XFile x) async {
+    try {
+      final bytes = await x.readAsBytes();
+      return Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.grey.shade200,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.memory(bytes, fit: BoxFit.cover, width: 120, height: 120),
+        ),
+      );
+    } catch (_) {
+      return Container(
+        width: 120,
+        height: 120,
+        color: Colors.grey.shade200,
+        child: const Icon(Icons.broken_image),
+      );
+    }
   }
 }

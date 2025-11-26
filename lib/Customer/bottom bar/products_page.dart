@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/product_service.dart';
 import '../../theme_data.dart';
+import 'dart:convert';
+import 'dart:math';
 
 class CustomerProductsPage extends StatefulWidget {
   
@@ -25,8 +27,28 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
     final res = await ProductService.getProducts();
     if (res['success'] == true) {
       final List<dynamic> data = res['data'] ?? [];
+      // sanitize incoming data: convert possible JS interop objects to plain Dart types
+      final sanitized = data.map<Map<String, dynamic>>((raw) {
+        final m = Map<String, dynamic>.from(raw as Map);
+        // normalize images to list of strings
+        final imgs = m['images'];
+        if (imgs is Iterable) {
+          m['images'] = imgs.map((x) => x == null ? '' : x.toString()).toList();
+        }
+        // normalize shop to a map of strings
+        final shop = m['shop'];
+        if (shop is Map) {
+          try {
+            m['shop'] = Map<String, dynamic>.from(shop.map((k, v) => MapEntry(k.toString(), v)));
+          } catch (_) {
+            m['shop'] = {'name': shop.toString()};
+          }
+        }
+        return m;
+      }).toList();
+
       setState(() {
-        _products = data.map((e) => e as Map<String, dynamic>).toList();
+        _products = sanitized;
       });
     } else {
       if (mounted) {
@@ -59,7 +81,7 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                   crossAxisCount: cols,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.68,
+                  childAspectRatio: 0.65,
                 ),
                 itemCount: _products.length,
                 itemBuilder: (context, index) {
@@ -73,11 +95,11 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                   final price = (p['price'] ?? 0).toDouble();
                   final mrp = (p['mrp'] ?? p['listPrice'] ?? price).toDouble();
                   final rating = (p['rating'] ?? p['avgRating'] ?? 0).toDouble();
-                  final image = () {
+                  final imagesList = () {
                     final imgs = p['images'];
-                    if (imgs is List && imgs.isNotEmpty) return imgs.first.toString();
-                    if (p['image'] != null) return p['image'].toString();
-                    return ''; 
+                    if (imgs is List && imgs.isNotEmpty) return imgs.map((e) => e.toString()).toList();
+                    if (p['image'] != null) return [p['image'].toString()];
+                    return <String>[];
                   }();
 
                   return Card(
@@ -88,39 +110,86 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // image area
-                          AspectRatio(
-                            aspectRatio: 16 / 10,
-                            child: image.isNotEmpty
-                                ? Image.network(image, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder(index))
-                                : _placeholder(index),
+                          // image area (~75% of card) with multiple-image support
+                          Expanded(
+                            flex: 3,
+                            child: AspectRatio(
+                              aspectRatio: 1.1,
+                              child: imagesList.isNotEmpty
+                                  ? Stack(
+                                      children: [
+                                        // swipeable main image
+                                        PageView.builder(
+                                          itemCount: imagesList.length,
+                                          itemBuilder: (ctx, i) {
+                                            final src = imagesList[i];
+                                            return _buildImageFromSource(src, index);
+                                          },
+                                        ),
+                                        // small stacked thumbnails on top-right
+                                        if (imagesList.length > 1)
+                                          Positioned(
+                                            top: 8,
+                                            right: 8,
+                                            child: SizedBox(
+                                              height: 40,
+                                              width: min(40.0 * imagesList.length, 120.0),
+                                              child: Stack(
+                                                children: List.generate(
+                                                  min(3, imagesList.length),
+                                                  (i) {
+                                                    final thumb = imagesList[i];
+                                                    return Positioned(
+                                                      left: i * 18.0,
+                                                      child: ClipRRect(
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        child: SizedBox(
+                                                          width: 40,
+                                                          height: 40,
+                                                          child: _buildImageFromSource(thumb, index, fit: BoxFit.cover),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    )
+                                  : _placeholder(index),
+                            ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    _buildRating(rating),
-                                    const SizedBox(width: 8),
-                                    Text(rating > 0 ? rating.toStringAsFixed(1) : 'New', style: const TextStyle(fontSize: 12)),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    if (mrp > price)
-                                      Text('₹${mrp.toStringAsFixed(0)}', style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey, fontSize: 12)),
-                                    if (mrp > price) const SizedBox(width: 8),
-                                    Text('₹${price.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(shopName.isNotEmpty ? shopName : '—', style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                              ],
+                          Expanded(
+                            flex: 1,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      _buildRating(rating),
+                                      const SizedBox(width: 2),
+                                      Text(rating > 0 ? rating.toStringAsFixed(1) : 'New', style: const TextStyle(fontSize: 9)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      if (mrp > price)
+                                        Text('₹${mrp.toStringAsFixed(0)}', style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey, fontSize: 9)),
+                                      if (mrp > price) const SizedBox(width: 2),
+                                      Text('₹${price.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(shopName.isNotEmpty ? shopName : '—', style: const TextStyle(color: Colors.black54, fontSize: 8), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -138,6 +207,27 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
     return Container(
       color: color,
       child: Center(child: Icon(Icons.image, color: ThemeColors.primary.withOpacity(0.6))),
+    );
+  }
+
+  Widget _buildImageFromSource(String src, int index, {BoxFit fit = BoxFit.cover}) {
+    if (src.trim().startsWith('data:')) {
+      try {
+        final parts = src.split(',');
+        final b64 = parts.length > 1 ? parts.last : '';
+          final bytes = base64Decode(b64);
+          return Center(child: Image.memory(bytes, fit: fit, alignment: Alignment.center));
+      } catch (_) {
+        return _placeholder(index);
+      }
+    }
+    return Center(
+      child: Image.network(
+        src,
+        fit: fit,
+        alignment: Alignment.center,
+        errorBuilder: (_, __, ___) => _placeholder(index),
+      ),
     );
   }
 

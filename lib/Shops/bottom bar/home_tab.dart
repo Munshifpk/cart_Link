@@ -1,4 +1,4 @@
-import 'package:cart_link/Shops/add-Product.dart';
+import 'package:cart_link/Shops/add-product.dart';
 import 'package:cart_link/Shops/analytics/analytics_page.dart';
 import 'package:cart_link/Shops/daily_sales.dart';
 import 'package:flutter/material.dart';
