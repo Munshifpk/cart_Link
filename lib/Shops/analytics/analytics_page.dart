@@ -1,4 +1,6 @@
-import 'package:cart_link/Shops/analytics/confirmed_orders_page.dart';
+import 'package:cart_link/Shops/analytics/cancelled_orders_page.dart';
+import 'package:cart_link/Shops/analytics/compleated_orders_page.dart';
+import 'package:cart_link/Shops/analytics/pending_orders_page.dart';
 import 'package:cart_link/Shops/analytics/orders_analytics.dart';
 import 'package:flutter/material.dart';
 
@@ -75,36 +77,46 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     );
                   },
                   child: _buildStatCard(
-                    title: 'Confirmed',
-                    value: _analyticsData['confirmedOrders'].toString(),
+                    title: 'Completed',
+                    value: (_analyticsData['completedOrders'] ?? 0).toString(),
                     icon: Icons.check_circle,
                     color: Colors.green,
                   ),
                 ),
-                _buildStatCard(
-                  title: 'Completed',
-                  value: _analyticsData['completedOrders'].toString(),
-                  icon: Icons.done_all,
-                  color: Colors.teal,
+
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CancelledOrdersPage(),
+                      ),
+                    );
+                  },
+                  child: _buildStatCard(
+                    title: 'Cancelled',
+                    value: (_analyticsData['cancelledOrders'] ?? 0).toString(),
+                    icon: Icons.cancel,
+                    color: Colors.red,
+                  ),
                 ),
-                _buildStatCard(
-                  title: 'Cancelled',
-                  value: _analyticsData['cancelledOrders'].toString(),
-                  icon: Icons.cancel,
-                  color: Colors.red,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PendingOrdersPage(),
+                      ),
+                    );
+                  },
+                  child: _buildStatCard(
+                    title: 'Pending',
+                    value: (_analyticsData['pendingOrders'] ?? 0).toString(),
+                    icon: Icons.schedule,
+                    color: Colors.orange,
+                  ),
                 ),
-                _buildStatCard(
-                  title: 'Pending',
-                  value: _analyticsData['pendingOrders'].toString(),
-                  icon: Icons.schedule,
-                  color: Colors.orange,
-                ),
-                _buildStatCard(
-                  title: 'Refunded',
-                  value: _analyticsData['refundedOrders'].toString(),
-                  icon: Icons.undo,
-                  color: Colors.purple,
-                ),
+
                 _buildStatCard(
                   title: 'Returned',
                   value: _analyticsData['returnedOrders'].toString(),
@@ -213,31 +225,31 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 children: [
                   _buildDetailRow(
                     'Completion Rate',
-                    '${((_analyticsData['completedOrders']! / _analyticsData['totalOrders']!) * 100).toStringAsFixed(1)}%',
+                    _percent('completedOrders'),
                     Colors.green,
                   ),
                   const Divider(),
                   _buildDetailRow(
                     'Cancellation Rate',
-                    '${((_analyticsData['cancelledOrders']! / _analyticsData['totalOrders']!) * 100).toStringAsFixed(1)}%',
+                    _percent('cancelledOrders'),
                     Colors.red,
                   ),
                   const Divider(),
                   _buildDetailRow(
                     'Average Order Value',
-                    '₹${(_analyticsData['totalSales']! / _analyticsData['totalOrders']!).toStringAsFixed(0)}',
+                    _averageOrderValue(),
                     Colors.blue,
                   ),
                   const Divider(),
                   _buildDetailRow(
                     'Refund Rate',
-                    '${((_analyticsData['refundedOrders']! / _analyticsData['totalOrders']!) * 100).toStringAsFixed(1)}%',
+                    _percent('refundedOrders'),
                     Colors.orange,
                   ),
                   const Divider(),
                   _buildDetailRow(
                     'Return Rate',
-                    '${((_analyticsData['returnedOrders']! / _analyticsData['totalOrders']!) * 100).toStringAsFixed(1)}%',
+                    _percent('returnedOrders'),
                     Colors.amber,
                   ),
                 ],
@@ -292,6 +304,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         ),
       ),
     );
+  }
+
+  String _percent(String key) {
+    final total = _analyticsData['totalOrders'] ?? 0;
+    final value = _analyticsData[key] ?? 0;
+    if (total == 0) return '0.0%';
+    return '${((value / total) * 100).toStringAsFixed(1)}%';
+  }
+
+  String _averageOrderValue() {
+    final total = _analyticsData['totalOrders'] ?? 0;
+    final sales = _analyticsData['totalSales'] ?? 0;
+    if (total == 0) return '₹0';
+    return '₹${(sales / total).toStringAsFixed(0)}';
   }
 
   Widget _buildDetailRow(String label, String value, Color color) {

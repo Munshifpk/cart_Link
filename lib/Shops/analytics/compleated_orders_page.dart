@@ -331,7 +331,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
               mainAxisSpacing: 12,
               children: [
                 _buildSummaryCard(
-                  title: 'Total Confirmed',
+                  title: 'Total Completed',
                   value: _totalOrders.toString(),
                   icon: Icons.check_circle,
                   color: Colors.green,
@@ -358,7 +358,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Confirmed Orders Details',
+              'Completed Orders Details',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
