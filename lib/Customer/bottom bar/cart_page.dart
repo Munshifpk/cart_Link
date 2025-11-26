@@ -148,7 +148,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                       Padding(
                         padding: const EdgeInsets.all(12),
                         child: Row(
@@ -172,7 +172,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
       ],

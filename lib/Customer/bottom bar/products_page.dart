@@ -282,10 +282,12 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        if (i < full)
+        if (i < full) {
           return const Icon(Icons.star, color: Colors.amber, size: 14);
-        if (i == full && half)
+        }
+        if (i == full && half) {
           return const Icon(Icons.star_half, color: Colors.amber, size: 14);
+        }
         return const Icon(Icons.star_border, color: Colors.amber, size: 14);
       }),
     );
