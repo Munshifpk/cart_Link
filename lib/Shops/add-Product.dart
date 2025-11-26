@@ -82,7 +82,10 @@ class _AddProductPageState extends State<AddProductPage> {
       'name': _nameController.text,
       'description': _descController.text,
       'price': double.tryParse(_priceController.text) ?? 0.0,
-      'mrp': double.tryParse(_mrpController.text) ?? double.tryParse(_priceController.text) ?? 0.0,
+      'mrp':
+          double.tryParse(_mrpController.text) ??
+          double.tryParse(_priceController.text) ??
+          0.0,
       'stock': int.tryParse(_stockController.text) ?? 0,
       'sku': _skuController.text,
       'category': _category,
@@ -90,7 +93,9 @@ class _AddProductPageState extends State<AddProductPage> {
       'isFeatured': _isFeatured,
       'images': imagesData,
       // include ownerId if present
-      'ownerId': AuthState.currentOwner != null ? AuthState.currentOwner!['_id'] : null,
+      'ownerId': AuthState.currentOwner != null
+          ? AuthState.currentOwner!['_id']
+          : null,
     };
 
     try {
@@ -113,9 +118,9 @@ class _AddProductPageState extends State<AddProductPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error submitting product: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error submitting product: $e')));
     }
   }
 
@@ -256,7 +261,9 @@ class _AddProductPageState extends State<AddProductPage> {
                                   const SizedBox(height: 8),
                                   Text(
                                     'Add 1-10 images (${_pickedImages.length}/10 selected)',
-                                    style: TextStyle(color: Colors.grey.shade600),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                    ),
                                   ),
                                 ],
                               )
@@ -270,48 +277,57 @@ class _AddProductPageState extends State<AddProductPage> {
                                         scrollDirection: Axis.horizontal,
                                         shrinkWrap: true,
                                         itemBuilder: (c, i) {
-                                        final x = _pickedImages[i];
-                                        return Stack(
-                                          alignment: Alignment.topRight,
-                                          children: [
-                                            FutureBuilder<Widget>(
-                                              future: _buildThumbnail(x),
-                                              builder: (ctx, snap) {
-                                                if (!mounted) return const SizedBox.shrink();
-                                                if (snap.connectionState ==
-                                                    ConnectionState.done &&
-                                                    snap.hasData) {
-                                                  return snap.data!;
-                                                }
-                                                return Container(
-                                                  width: 100,
-                                                  height: 100,
-                                                  color: Colors.grey.shade200,
-                                                  child: const Center(
-                                                      child: CircularProgressIndicator()),
-                                                );
-                                              },
-                                            ),
-                                            GestureDetector(
-                                              onTap: () {
-                                                if (!mounted) return;
-                                                setState(() {
-                                                  _pickedImages.removeAt(i);
-                                                });
-                                              },
-                                              child: Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.red.shade600,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                padding: const EdgeInsets.all(4),
-                                                child: const Icon(Icons.close,
-                                                    color: Colors.white, size: 16),
+                                          final x = _pickedImages[i];
+                                          return Stack(
+                                            alignment: Alignment.topRight,
+                                            children: [
+                                              FutureBuilder<Widget>(
+                                                future: _buildThumbnail(x),
+                                                builder: (ctx, snap) {
+                                                  if (!mounted)
+                                                    return const SizedBox.shrink();
+                                                  if (snap.connectionState ==
+                                                          ConnectionState
+                                                              .done &&
+                                                      snap.hasData) {
+                                                    return snap.data!;
+                                                  }
+                                                  return Container(
+                                                    width: 100,
+                                                    height: 100,
+                                                    color: Colors.grey.shade200,
+                                                    child: const Center(
+                                                      child:
+                                                          CircularProgressIndicator(),
+                                                    ),
+                                                  );
+                                                },
                                               ),
-                                            ),
-                                          ],
-                                        );
-                                      },
+                                              GestureDetector(
+                                                onTap: () {
+                                                  if (!mounted) return;
+                                                  setState(() {
+                                                    _pickedImages.removeAt(i);
+                                                  });
+                                                },
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red.shade600,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.close,
+                                                    color: Colors.white,
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
                                         separatorBuilder: (_, __) =>
                                             const SizedBox(width: 8),
                                         itemCount: _pickedImages.length,
@@ -322,7 +338,10 @@ class _AddProductPageState extends State<AddProductPage> {
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
                                       '${_pickedImages.length}/10 images selected',
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -450,8 +469,7 @@ class _AddProductPageState extends State<AddProductPage> {
                                 prefixText: '₹',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (v) =>
-                                  v!.isEmpty ? 'Enter MRP' : null,
+                              validator: (v) => v!.isEmpty ? 'Enter MRP' : null,
                             ),
                             const SizedBox(height: 16),
                             Row(
@@ -628,8 +646,8 @@ class _AddProductPageState extends State<AddProductPage> {
   Future<void> _pickImages() async {
     try {
       final ImagePicker picker = ImagePicker();
-      final List<XFile>? imgs = await picker.pickMultiImage(imageQuality: 85);
-      if (imgs != null && imgs.isNotEmpty) {
+      final List<XFile> imgs = await picker.pickMultiImage(imageQuality: 85);
+      if (imgs.isNotEmpty) {
         if (!mounted) return;
         setState(() {
           _pickedImages.clear();
@@ -639,9 +657,9 @@ class _AddProductPageState extends State<AddProductPage> {
     } catch (e) {
       // ignore picker errors; show minimal feedback
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick images: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to pick images: $e')));
     }
   }
 
@@ -657,7 +675,12 @@ class _AddProductPageState extends State<AddProductPage> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.memory(bytes, fit: BoxFit.cover, width: 120, height: 120),
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            width: 120,
+            height: 120,
+          ),
         ),
       );
     } catch (_) {

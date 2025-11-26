@@ -320,13 +320,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return '${((value / total) * 100).toStringAsFixed(1)}%';
   }
 
-  String _averageOrderValue() {
-    final total = _analyticsData['totalOrders'] ?? 0;
-    final sales = _analyticsData['totalSales'] ?? 0;
-    if (total == 0) return '₹0';
-    return '₹${(sales / total).toStringAsFixed(0)}';
-  }
-
   Widget _buildDetailRow(String label, String value, Color color) {
     return Padding(
       padding: const EdgeInsets.all(16),
