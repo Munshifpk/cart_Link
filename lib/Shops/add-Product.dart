@@ -284,8 +284,9 @@ class _AddProductPageState extends State<AddProductPage> {
                                               FutureBuilder<Widget>(
                                                 future: _buildThumbnail(x),
                                                 builder: (ctx, snap) {
-                                                  if (!mounted)
+                                                  if (!mounted) {
                                                     return const SizedBox.shrink();
+                                                  }
                                                   if (snap.connectionState ==
                                                           ConnectionState
                                                               .done &&

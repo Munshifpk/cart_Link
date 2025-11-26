@@ -1,6 +1,8 @@
 import 'package:cart_link/Shops/add-product.dart';
 import 'package:cart_link/Shops/analytics/analytics_page.dart';
+import 'package:cart_link/Shops/create_offer_page.dart';
 import 'package:cart_link/Shops/daily_sales.dart';
+import 'package:cart_link/Shops/offered_products_page.dart';
 import 'package:flutter/material.dart';
 
 class HomeTab extends StatelessWidget {
@@ -95,28 +97,36 @@ class HomeTab extends StatelessWidget {
                         ? 'Orders'
                         : index == 2
                         ? 'Products'
-                        : 'Customers',
+                        : index == 3
+                        ? 'Customers'
+                        : 'Offered products',
                     value: index == 0
                         ? '₹12,450'
                         : index == 1
                         ? '24'
                         : index == 2
                         ? '156'
-                        : '1.2K',
+                        : index == 3
+                        ? '1.2K'
+                        : '4',
                     trend: index == 0
                         ? '+12%'
                         : index == 1
                         ? '+3'
                         : index == 2
                         ? 'Active'
-                        : '+5%',
+                        : index == 3
+                        ? '+5%'
+                        : 'Active',
                     icon: index == 0
                         ? Icons.currency_rupee
                         : index == 1
                         ? Icons.shopping_bag_outlined
                         : index == 2
                         ? Icons.inventory_2_outlined
-                        : Icons.people_outline,
+                        : index == 3
+                        ? Icons.people_outline
+                        : Icons.discount_outlined,
                     color: index == 0
                         ? Colors.green
                         : index == 1
@@ -147,13 +157,25 @@ class HomeTab extends StatelessWidget {
                       onTap: () => onNavigateToProducts(1),
                       child: card,
                     );
+                  } else if (index == 4) {
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const OfferedProductsPage(),
+                          ),
+                        );
+                      },
+                      child: card,
+                    );
                   }
                   return card;
                 },
                 separatorBuilder: (BuildContext context, int index) {
                   return const SizedBox(height: 2);
                 },
-                itemCount: 4,
+                itemCount: 5,
               ),
               const SizedBox(height: 24),
 
@@ -186,8 +208,16 @@ class HomeTab extends StatelessWidget {
                   _buildQuickAction(
                     icon: Icons.discount_outlined,
                     label: 'Create\nOffer',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CreateOfferPage(),
+                        ),
+                      );
+                    },
                   ),
+
                   _buildQuickAction(
                     icon: Icons.insights_outlined,
                     label: 'View\nAnalytics',

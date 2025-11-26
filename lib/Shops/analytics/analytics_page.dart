@@ -4,6 +4,7 @@ import 'package:cart_link/Shops/analytics/pending_orders_page.dart';
 import 'package:cart_link/Shops/analytics/ready_to_delivery_page.dart';
 import 'package:cart_link/Shops/analytics/orders_analytics.dart';
 import 'package:flutter/material.dart';
+import 'package:cart_link/Shops/offer_sales_page.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -21,6 +22,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     'pendingOrders': 6,
     'readyToDeliver': 4,
     'totalSales': 45280,
+    'offerTotalSales': 8650,
     'confirmedOrders': 148,
     'refundedOrders': 5,
     'returnedOrders': 3,
@@ -83,6 +85,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     value: (_analyticsData['completedOrders'] ?? 0).toString(),
                     icon: Icons.check_circle,
                     color: Colors.green,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OfferSalesPage()),
+                    );
+                  },
+                  child: _buildStatCard(
+                    title: 'Offer Sales',
+                    value: '₹${_analyticsData['offerTotalSales']}',
+                    icon: Icons.discount,
+                    color: Colors.deepOrange,
                   ),
                 ),
 
@@ -165,61 +181,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: List.generate(_orderTrend.length, (index) {
-                          final trend = _orderTrend[index];
-                          final maxOrders = _orderTrend
-                              .map((t) => t['orders'] as int)
-                              .reduce((a, b) => a > b ? a : b);
-                          final barHeight =
-                              (trend['orders'] as int).toDouble() /
-                              maxOrders *
-                              150;
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: barHeight,
-                                  width: 30,
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.7),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${trend['orders']}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Text(
-                                  trend['date'],
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '₹${trend['sales']}',
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
+                    _buildOrderTrendChart(),
                   ],
                 ),
               ),
@@ -308,6 +270,108 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderTrendChart() {
+    final trends = _orderTrend;
+    if (trends.isEmpty) return const SizedBox.shrink();
+    final maxOrders = trends
+        .map((t) => (t['orders'] as int))
+        .reduce((a, b) => a > b ? a : b);
+
+    return SizedBox(
+      height: 220,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(trends.length, (index) {
+            final trend = trends[index];
+            final orders = (trend['orders'] as int);
+            final sales = trend['sales'];
+            final barHeight = maxOrders > 0 ? (orders / maxOrders) * 150 : 0.0;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    '$orders',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      // background guide lines
+                      Container(
+                        width: 40,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Column(
+                          children: List.generate(
+                            4,
+                            (i) => Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(
+                                      color: Colors.grey.withOpacity(0.12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // actual bar
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 350),
+                        width: 40,
+                        height: barHeight,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.blue.shade400,
+                              Colors.blue.shade200,
+                            ],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    trend['date'],
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹$sales',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ),
       ),
     );
