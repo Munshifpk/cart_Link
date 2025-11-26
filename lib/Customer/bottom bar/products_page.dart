@@ -92,9 +92,10 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                         .toString();
                     final shopName = () {
                       final shop = p['shop'];
-                      if (shop is Map)
+                      if (shop is Map) {
                         return (shop['shopName'] ?? shop['name'] ?? '')
                             .toString();
+                      }
                       return (p['shopName'] ?? '').toString();
                     }();
                     final price = (p['price'] ?? 0).toDouble();
@@ -104,8 +105,9 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                         .toDouble();
                     final imagesList = () {
                       final imgs = p['images'];
-                      if (imgs is List && imgs.isNotEmpty)
+                      if (imgs is List && imgs.isNotEmpty) {
                         return imgs.map((e) => e.toString()).toList();
+                      }
                       if (p['image'] != null) return [p['image'].toString()];
                       return <String>[];
                     }();
@@ -272,10 +274,12 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        if (i < full)
+        if (i < full) {
           return const Icon(Icons.star, color: Colors.amber, size: 14);
-        if (i == full && half)
+        }
+        if (i == full && half) {
           return const Icon(Icons.star_half, color: Colors.amber, size: 14);
+        }
         return const Icon(Icons.star_border, color: Colors.amber, size: 14);
       }),
     );
