@@ -84,8 +84,7 @@ class _LoginPageState extends State<LoginPage> {
 
             Future.delayed(const Duration(milliseconds: 800), () {
               if (mounted) {
-                Navigator.pushReplacement(
-                  context,
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (context) => CustomerHome(
                       customer: Customer(
@@ -104,6 +103,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+                  (Route<dynamic> route) => false,
                 );
               }
             });
@@ -313,7 +313,7 @@ class _LoginPageState extends State<LoginPage> {
                           children: [
                             const Text("Don't have an account?"),
                             TextButton(
-                              onPressed: () => Navigator.of(context).push(
+                              onPressed: () => Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
                                   builder: (_) => const SignUpPage(),
                                 ),

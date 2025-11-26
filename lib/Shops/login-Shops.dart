@@ -90,9 +90,10 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
 
             Future.delayed(const Duration(milliseconds: 800), () {
               if (mounted) {
-                Navigator.pushReplacement(
+                Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => const ShopHomePage()),
+                  (Route<dynamic> route) => false,
                 );
               }
             });
