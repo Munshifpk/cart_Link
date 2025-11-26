@@ -4,6 +4,7 @@ import 'package:cart_link/Shops/analytics/pending_orders_page.dart';
 import 'package:cart_link/Shops/analytics/ready_to_delivery_page.dart';
 import 'package:cart_link/Shops/analytics/orders_analytics.dart';
 import 'package:flutter/material.dart';
+import 'package:cart_link/shared/notification_actions.dart';
 import 'package:cart_link/Shops/offer_sales_page.dart';
 
 class AnalyticsPage extends StatefulWidget {
@@ -41,7 +42,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Analytics'), elevation: 0),
+      appBar: AppBar(
+        title: const Text('Analytics'),
+        elevation: 0,
+        actions: const [NotificationActions()],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

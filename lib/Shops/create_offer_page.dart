@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cart_link/shared/notification_actions.dart';
 
 class CreateOfferPage extends StatefulWidget {
   const CreateOfferPage({super.key});
@@ -63,7 +64,10 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Offer')),
+      appBar: AppBar(
+        title: const Text('Create Offer'),
+        actions: const [NotificationActions()],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

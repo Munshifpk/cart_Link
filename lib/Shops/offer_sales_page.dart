@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cart_link/shared/notification_actions.dart';
 
 class OfferSalesPage extends StatefulWidget {
   const OfferSalesPage({super.key});
@@ -87,8 +88,9 @@ class _OfferSalesPageState extends State<OfferSalesPage> {
     return _orders.where((o) {
       final DateTime d = o['date'] as DateTime;
       // product filter
-      if (_selectedProduct != 'All' && o['productName'] != _selectedProduct)
+      if (_selectedProduct != 'All' && o['productName'] != _selectedProduct) {
         return false;
+      }
 
       switch (_selectedPeriod) {
         case 'Daily':
@@ -123,7 +125,10 @@ class _OfferSalesPageState extends State<OfferSalesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Offer Sales')),
+      appBar: AppBar(
+        title: const Text('Offer Sales'),
+        actions: const [NotificationActions()],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
@@ -186,7 +191,7 @@ class _OfferSalesPageState extends State<OfferSalesPage> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '₹${_totalOfferSales}',
+                          '₹$_totalOfferSales',
                           style: const TextStyle(
                             fontSize: 18,
                             color: Colors.green,

@@ -4,6 +4,8 @@ import 'bottom bar/products_page.dart';
 import 'bottom bar/cart_page.dart';
 import 'bottom bar/profile_page.dart';
 import '../theme_data.dart';
+import 'package:cart_link/shared/notification_actions.dart';
+import 'shops_page.dart';
 
 class Customer {
   final String? id;
@@ -37,6 +39,7 @@ class _CustomerHomeState extends State<CustomerHome> {
   List<Widget> get _pages => <Widget>[
     CustomerHomePage(customer: widget.customer),
     CustomerProductsPage(),
+    const ShopsPage(),
     CustomerCartPage(customer: widget.customer),
     CustomerProfilePage(customer: widget.customer),
   ];
@@ -68,7 +71,7 @@ class _CustomerHomeState extends State<CustomerHome> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  // Location
+                  // Location (left side)
                   InkWell(
                     onTap: () {
                       // TODO: open location picker
@@ -78,7 +81,6 @@ class _CustomerHomeState extends State<CustomerHome> {
                         Icon(Icons.location_on, color: ThemeColors.accent),
                         SizedBox(width: 6),
                         Text('Your Location', style: TextStyle(fontSize: 14)),
-                        SizedBox(width: 8),
                       ],
                     ),
                   ),
@@ -88,6 +90,7 @@ class _CustomerHomeState extends State<CustomerHome> {
                     child: Center(
                       child: Container(
                         height: 44,
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade200,
@@ -115,31 +118,8 @@ class _CustomerHomeState extends State<CustomerHome> {
                     ),
                   ),
 
-                  // Notification button
-                  const SizedBox(width: 12),
-                  Stack(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          // TODO: open notifications
-                        },
-                        icon: const Icon(Icons.notifications_none),
-                      ),
-                      // small badge
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // Notification / updates actions (top right)
+                  const NotificationActions(),
                 ],
               ),
             ),
@@ -182,6 +162,7 @@ class _CustomerHomeState extends State<CustomerHome> {
             icon: Icon(Icons.category_sharp),
             label: 'Products',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Shops'),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
             label: 'Cart',

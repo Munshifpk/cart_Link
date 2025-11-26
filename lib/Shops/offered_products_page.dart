@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cart_link/Shops/create_offer_page.dart';
+import 'package:cart_link/shared/notification_actions.dart';
 
 class OfferedProductsPage extends StatefulWidget {
   const OfferedProductsPage({super.key});
@@ -202,18 +203,7 @@ class _OfferedProductsPageState extends State<OfferedProductsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Offered Products'),
-        actions: [
-          IconButton(
-            tooltip: 'Create Offer',
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CreateOfferPage()),
-              );
-            },
-          ),
-        ],
+        actions: const [NotificationActions(), SizedBox(width: 8)],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
