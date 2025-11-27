@@ -214,11 +214,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Welcome back!',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
           // Categories Section
           const Text(
             'Categories',
@@ -226,7 +221,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: 60,
+            height: 35,
             child: _categories.isEmpty
                 ? const Center(child: Text('No categories available'))
                 : ListView.builder(
@@ -272,7 +267,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Recommended',
+            'Recommended Products',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
