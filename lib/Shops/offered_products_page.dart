@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cart_link/Shops/create_offer_page.dart';
 import 'package:cart_link/shared/notification_actions.dart';
 
 class OfferedProductsPage extends StatefulWidget {
@@ -341,16 +340,7 @@ class _OfferedProductsPageState extends State<OfferedProductsPage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreateOfferPage()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Create Offer'),
-      ),
+      // Create Offer FAB removed
     );
   }
 }

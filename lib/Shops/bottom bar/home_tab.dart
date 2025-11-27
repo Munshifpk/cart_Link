@@ -1,6 +1,7 @@
 import 'package:cart_link/Shops/add-product.dart';
 import 'package:cart_link/Shops/analytics/analytics_page.dart';
 import 'package:cart_link/Shops/create_offer_page.dart';
+import 'package:cart_link/Shops/event_offers_page.dart';
 import 'package:cart_link/Shops/daily_sales.dart';
 import 'package:cart_link/Shops/offered_products_page.dart';
 import 'package:flutter/material.dart';
@@ -111,14 +112,30 @@ class HomeTab extends StatelessWidget {
                     label: 'Process\nOrders',
                     onTap: () => onNavigateToOrders(2),
                   ),
+
+                  // New quick action: open Create Offer page
                   _buildQuickAction(
-                    icon: Icons.discount_outlined,
+                    icon: Icons.post_add,
                     label: 'Create\nOffer',
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => const CreateOfferPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Event Offers quick action (apply to complete product sets or selected products)
+                  _buildQuickAction(
+                    icon: Icons.event_available,
+                    label: 'Event\nOffers',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EventOffersPage(),
                         ),
                       );
                     },
