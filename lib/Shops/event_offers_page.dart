@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/product_service.dart';
+import '../services/auth_state.dart';
 
 class EventOffersPage extends StatefulWidget {
   const EventOffersPage({super.key});
@@ -28,25 +30,48 @@ class _EventOffersPageState extends State<EventOffersPage> {
   ];
 
   // Sample products (same as in CreateOfferPage)
-  final List<Map<String, dynamic>> _products = [
-    {
-      'name': 'Wireless Headphones 🎧',
-      'price': 2999,
-      'mrp': 4999,
-      'icon': '🎧',
-    },
-    {'name': 'Bluetooth Speaker 🔊', 'price': 1499, 'mrp': 2999, 'icon': '🔊'},
-    {'name': 'Phone Case 📱', 'price': 299, 'mrp': 599, 'icon': '📱'},
-    {'name': 'Laptop Stand 💻', 'price': 799, 'mrp': 1299, 'icon': '💻'},
-    {'name': 'USB-C Cable', 'price': 199, 'mrp': 499, 'icon': '🔌'},
-    {'name': 'Screen Protector', 'price': 99, 'mrp': 299, 'icon': '🛡️'},
-  ];
+  List<Map<String, dynamic>> _products = [];
+  bool _isLoadingProducts = false;
 
   String _selectedEvent = '';
   Set<String> _selectedProducts = {};
   DateTime? _eventStartDate;
   DateTime? _eventEndDate;
   List<Map<String, dynamic>> _publishedOffers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts() async {
+    setState(() => _isLoadingProducts = true);
+    // Get current shop owner ID from AuthState
+    final ownerId = AuthState.currentOwner?['_id'] as String?;
+    if (ownerId == null) {
+      setState(() => _isLoadingProducts = false);
+      return;
+    }
+    final result = await ProductService.getProducts(ownerId: ownerId);
+    if (result['success'] && result['data'] is List) {
+      final fetchedProducts = (result['data'] as List)
+          .map(
+            (p) => {
+              'name': p['name'] ?? 'Unknown',
+              'price': p['price'] ?? 0,
+              'mrp': p['mrp'] ?? p['price'] ?? 0,
+            },
+          )
+          .toList();
+      setState(() {
+        _products = fetchedProducts;
+        _isLoadingProducts = false;
+      });
+    } else {
+      setState(() => _isLoadingProducts = false);
+    }
+  }
 
   @override
   void dispose() {

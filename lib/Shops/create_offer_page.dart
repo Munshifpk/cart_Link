@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/product_service.dart';
+import '../services/auth_state.dart';
 
 class CreateOfferPage extends StatefulWidget {
   const CreateOfferPage({super.key});
@@ -77,7 +79,6 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
   final _formKey = GlobalKey<FormState>();
   // Allow selecting particular products (multi-select)
   final Set<String> _selectedProducts = {};
-  String? _product;
   final TextEditingController _productController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
@@ -86,12 +87,42 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
       TextEditingController();
   DateTime? _startDateTime;
   DateTime? _endDateTime;
-  final List<Map<String, dynamic>> _products = [
-    {'name': 'Wireless Headphones', 'price': 2499, 'mrp': 4999, 'icon': '🎧'},
-    {'name': 'Bluetooth Speaker', 'price': 1999, 'mrp': 3999, 'icon': '🔊'},
-    {'name': 'Phone Case', 'price': 399, 'mrp': 999, 'icon': '📱'},
-    {'name': 'Laptop Stand', 'price': 899, 'mrp': 1799, 'icon': '💻'},
-  ];
+  List<Map<String, dynamic>> _products = [];
+  bool _isLoadingProducts = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts() async {
+    setState(() => _isLoadingProducts = true);
+    // Get current shop owner ID from AuthState
+    final ownerId = AuthState.currentOwner?['_id'] as String?;
+    if (ownerId == null) {
+      setState(() => _isLoadingProducts = false);
+      return;
+    }
+    final result = await ProductService.getProducts(ownerId: ownerId);
+    if (result['success'] && result['data'] is List) {
+      final fetchedProducts = (result['data'] as List)
+          .map(
+            (p) => {
+              'name': p['name'] ?? 'Unknown',
+              'price': p['price'] ?? 0,
+              'mrp': p['mrp'] ?? p['price'] ?? 0,
+            },
+          )
+          .toList();
+      setState(() {
+        _products = fetchedProducts;
+        _isLoadingProducts = false;
+      });
+    } else {
+      setState(() => _isLoadingProducts = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -202,7 +233,6 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
                 );
                 if (found.isNotEmpty) {
                   setState(() {
-                    _product = found['name'] as String?;
                     _productController.text = found['name'] ?? '';
                     _priceController.text = (found['price'] ?? '').toString();
                   });
@@ -224,7 +254,6 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
               TextFormField(
                 controller: _productController,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
-                onChanged: (v) => _product = v,
                 validator: (v) {
                   if ((v == null || v.isEmpty) && _selectedProducts.isEmpty) {
                     return 'Enter product or add via search';
