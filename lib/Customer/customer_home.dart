@@ -6,6 +6,7 @@ import 'bottom bar/profile_page.dart';
 import '../theme_data.dart';
 import 'package:cart_link/shared/notification_actions.dart';
 import 'bottom bar/shops_page.dart';
+import 'location_page.dart';
 
 class Customer {
   final String? id;
@@ -40,6 +41,7 @@ class _CustomerHomeState extends State<CustomerHome> {
     CustomerHomePage(customer: widget.customer),
     CustomerProductsPage(),
     const ShopsPage(),
+    const LocationPage(),
     CustomerCartPage(customer: widget.customer),
     CustomerProfilePage(customer: widget.customer),
   ];
@@ -74,7 +76,7 @@ class _CustomerHomeState extends State<CustomerHome> {
                   // Location (left side)
                   InkWell(
                     onTap: () {
-                      // TODO: open location picker
+                      setState(() => _currentIndex = 3);
                     },
                     child: Row(
                       children: const [
@@ -158,11 +160,12 @@ class _CustomerHomeState extends State<CustomerHome> {
         unselectedItemColor: Colors.grey.shade600,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Shops'),
           BottomNavigationBarItem(
             icon: Icon(Icons.category_sharp),
             label: 'Products',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Shops'),
+
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
             label: 'Cart',
