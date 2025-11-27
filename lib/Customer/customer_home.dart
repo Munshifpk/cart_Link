@@ -6,7 +6,6 @@ import 'bottom bar/profile_page.dart';
 import '../theme_data.dart';
 import 'package:cart_link/shared/notification_actions.dart';
 import 'bottom bar/shops_page.dart';
-import 'location_page.dart';
 
 class Customer {
   final String? id;
@@ -39,9 +38,8 @@ class _CustomerHomeState extends State<CustomerHome> {
 
   List<Widget> get _pages => <Widget>[
     CustomerHomePage(customer: widget.customer),
-    CustomerProductsPage(),
     const ShopsPage(),
-    const LocationPage(),
+    CustomerProductsPage(),
     CustomerCartPage(customer: widget.customer),
     CustomerProfilePage(customer: widget.customer),
   ];
@@ -66,27 +64,13 @@ class _CustomerHomeState extends State<CustomerHome> {
       // Move previous "app bar" elements here, below the AppBar
       body: Column(
         children: [
-          // top controls (location, search, notifications)
+          // top controls (search, notifications)
           SafeArea(
             bottom: false,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  // Location (left side)
-                  InkWell(
-                    onTap: () {
-                      setState(() => _currentIndex = 3);
-                    },
-                    child: Row(
-                      children: const [
-                        Icon(Icons.location_on, color: ThemeColors.accent),
-                        SizedBox(width: 6),
-                        Text('Your Location', style: TextStyle(fontSize: 14)),
-                      ],
-                    ),
-                  ),
-
                   // Search bar (expanded centered)
                   Expanded(
                     child: Center(
@@ -165,7 +149,6 @@ class _CustomerHomeState extends State<CustomerHome> {
             icon: Icon(Icons.category_sharp),
             label: 'Products',
           ),
-
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
             label: 'Cart',

@@ -17,7 +17,6 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
-  String? _location;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -63,7 +62,6 @@ class _SignUpPageState extends State<SignUpPage> {
         mobile: mobileParsed,
         email: _emailController.text,
         password: _passwordController.text,
-        location: _location!,
       );
 
       if (!mounted) return;
@@ -251,36 +249,6 @@ class _SignUpPageState extends State<SignUpPage> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: _location,
-                          decoration: InputDecoration(
-                            labelText: 'Select Location',
-                            prefixIcon: const Icon(Icons.location_on_outlined),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'Location A',
-                              child: Text('Location A'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Location B',
-                              child: Text('Location B'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Location C',
-                              child: Text('Location C'),
-                            ),
-                          ],
-                          onChanged: (v) => setState(() => _location = v),
-                          validator: (v) => (v == null || v.isEmpty)
-                              ? 'Select a location'
-                              : null,
-                        ),
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _onSignUp,
