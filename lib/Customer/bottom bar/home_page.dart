@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:async';
 import '../customer_home.dart';
 import 'shops_page.dart';
 import '../shop_products_page.dart';
@@ -22,8 +21,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   List<String> _categories = [];
   List<Map<String, dynamic>> _recommendedProducts = [];
   bool _loadingProducts = false;
-  Timer? _imageRotationTimer;
-  int _currentImageIndex = 0;
 
   @override
   void initState() {
@@ -33,7 +30,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
   @override
   void dispose() {
-    _imageRotationTimer?.cancel();
     super.dispose();
   }
 
@@ -89,16 +85,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           _loadingProducts = false;
         });
 
-        // Start image rotation timer (change every 30 seconds)
-        _imageRotationTimer?.cancel();
-        _imageRotationTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-          setState(() {
-            _currentImageIndex =
-                (_currentImageIndex + 1) % _recommendedProducts.length;
-          });
-          // Reload products to get new random selection
-          _loadRecommendedProducts();
-        });
+        // Automatic periodic refresh removed — recommended products set once
       } else {
         setState(() => _loadingProducts = false);
       }
