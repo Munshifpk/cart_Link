@@ -6,4 +6,5 @@ class ThemeColors {
   static const Color accent = Color(0xFFFFA500);
   static const Color textColorWhite = Color(0xFFFFFFFF);
   static const Color scaffoldBackground = Color(0xFFF3F6FB);
+  static const Color greenButton = Color(0xFF4CAF50);
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'shop_products_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../shop_products_page.dart';
 
 class ShopsPage extends StatefulWidget {
   const ShopsPage({super.key});
@@ -9,207 +11,93 @@ class ShopsPage extends StatefulWidget {
 }
 
 class _ShopsPageState extends State<ShopsPage> {
-  // Example shops
-  final List<Map<String, dynamic>> shops = [
-    {
-      'id': 1,
-      'name': 'TechZone',
-      'category': 'Electronics',
-      'rating': 4.8,
-      'reviews': 1250,
-      'icon': '📱',
-      'description': 'Premium electronics and gadgets',
-      'products': [
-        {
-          'name': 'Wireless Earbuds',
-          'price': 2499,
-          'mrp': 4999,
-          'image': '🎧',
-          'rating': 4.5,
-        },
-        {
-          'name': 'USB-C Cable',
-          'price': 299,
-          'mrp': 599,
-          'image': '🔌',
-          'rating': 4.7,
-        },
-        {
-          'name': 'Phone Stand',
-          'price': 399,
-          'mrp': 899,
-          'image': '📱',
-          'rating': 4.6,
-        },
-        {
-          'name': 'Screen Protector',
-          'price': 199,
-          'mrp': 499,
-          'image': '🛡️',
-          'rating': 4.4,
-        },
-      ],
-    },
-    {
-      'id': 2,
-      'name': 'SoundMart',
-      'category': 'Audio',
-      'rating': 4.6,
-      'reviews': 890,
-      'icon': '🔊',
-      'description': 'High-quality audio equipment',
-      'products': [
-        {
-          'name': 'Bluetooth Speaker',
-          'price': 1999,
-          'mrp': 3999,
-          'image': '🔊',
-          'rating': 4.7,
-        },
-        {
-          'name': 'Headphones',
-          'price': 3499,
-          'mrp': 6999,
-          'image': '🎧',
-          'rating': 4.8,
-        },
-        {
-          'name': 'Audio Cable',
-          'price': 249,
-          'mrp': 549,
-          'image': '🔌',
-          'rating': 4.3,
-        },
-        {
-          'name': 'Microphone',
-          'price': 2999,
-          'mrp': 5999,
-          'image': '🎤',
-          'rating': 4.6,
-        },
-      ],
-    },
-    {
-      'id': 3,
-      'name': 'GadgetHub',
-      'category': 'Smart Devices',
-      'rating': 4.7,
-      'reviews': 2100,
-      'icon': '⌚',
-      'description': 'Smart devices and wearables',
-      'products': [
-        {
-          'name': 'Smart Watch',
-          'price': 4999,
-          'mrp': 9999,
-          'image': '⌚',
-          'rating': 4.7,
-        },
-        {
-          'name': 'Fitness Band',
-          'price': 1999,
-          'mrp': 3999,
-          'image': '📊',
-          'rating': 4.5,
-        },
-        {
-          'name': 'Smart Ring',
-          'price': 2999,
-          'mrp': 5999,
-          'image': '💍',
-          'rating': 4.6,
-        },
-        {
-          'name': 'Portable Charger',
-          'price': 899,
-          'mrp': 1999,
-          'image': '🔋',
-          'rating': 4.8,
-        },
-      ],
-    },
-    {
-      'id': 4,
-      'name': 'PhotoPro',
-      'category': 'Photography',
-      'rating': 4.9,
-      'reviews': 567,
-      'icon': '📷',
-      'description': 'Professional photography gear',
-      'products': [
-        {
-          'name': 'Camera Lens',
-          'price': 8999,
-          'mrp': 14999,
-          'image': '📷',
-          'rating': 4.9,
-        },
-        {
-          'name': 'Tripod Stand',
-          'price': 1499,
-          'mrp': 2999,
-          'image': '📸',
-          'rating': 4.6,
-        },
-        {
-          'name': 'Ring Light',
-          'price': 2499,
-          'mrp': 4999,
-          'image': '💡',
-          'rating': 4.7,
-        },
-        {
-          'name': 'Camera Bag',
-          'price': 1999,
-          'mrp': 3999,
-          'image': '👜',
-          'rating': 4.5,
-        },
-      ],
-    },
-    {
-      'id': 5,
-      'name': 'AccessoryHub',
-      'category': 'Accessories',
-      'rating': 4.5,
-      'reviews': 3450,
-      'icon': '🎒',
-      'description': 'Phone and laptop accessories',
-      'products': [
-        {
-          'name': 'Phone Case',
-          'price': 399,
-          'mrp': 999,
-          'image': '📱',
-          'rating': 4.6,
-        },
-        {
-          'name': 'Laptop Bag',
-          'price': 1299,
-          'mrp': 2499,
-          'image': '🎒',
-          'rating': 4.7,
-        },
-        {
-          'name': 'Mouse Pad',
-          'price': 249,
-          'mrp': 599,
-          'image': '🖱️',
-          'rating': 4.4,
-        },
-        {
-          'name': 'Keyboard',
-          'price': 1999,
-          'mrp': 3999,
-          'image': '⌨️',
-          'rating': 4.8,
-        },
-      ],
-    },
-  ];
+  bool _loading = true;
+  List<Map<String, dynamic>> shops = [];
+  Map<String, int> productCounts = {}; // Store product count per shop
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShops();
+  }
+
+  Future<void> _loadShops() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:5000/api/Shops'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final shopList = (data['data'] as List? ?? [])
+            .map<Map<String, dynamic>>((shop) => Map<String, dynamic>.from(shop))
+            .toList();
+        
+        // Fetch product counts for each shop
+        for (var shop in shopList) {
+          final shopId = shop['_id'] ?? '';
+          if (shopId.isNotEmpty) {
+            await _fetchProductCount(shopId);
+          }
+        }
+        
+        setState(() {
+          shops = shopList;
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to load shops: ${response.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading shops: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _fetchProductCount(String shopId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:5000/api/products?ownerId=$shopId'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final products = data['data'] as List? ?? [];
+        setState(() {
+          productCounts[shopId] = products.length;
+        });
+      }
+    } catch (e) {
+      // Silently fail for product count
+      print('Error fetching product count for shop $shopId: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Popular Shops'), elevation: 1),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (shops.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Popular Shops'), elevation: 1),
+        body: const Center(child: Text('No shops available')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Popular Shops'), elevation: 1),
       body: ListView.builder(
@@ -218,6 +106,11 @@ class _ShopsPageState extends State<ShopsPage> {
         itemCount: shops.length,
         itemBuilder: (context, index) {
           final shop = shops[index];
+          final shopName = shop['shopName'] ?? shop['name'] ?? 'Shop';
+          final shopId = shop['_id'] ?? shop['id'] ?? '';
+          final rating = (shop['rating'] ?? 4.5).toDouble();
+          final reviews = shop['reviews'] ?? 0;
+
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: InkWell(
@@ -245,10 +138,10 @@ class _ShopsPageState extends State<ShopsPage> {
                             color: Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Center(
+                          child: const Center(
                             child: Text(
-                              shop['icon'] ?? '🏪',
-                              style: const TextStyle(fontSize: 32),
+                              '🏪',
+                              style: TextStyle(fontSize: 32),
                             ),
                           ),
                         ),
@@ -259,7 +152,7 @@ class _ShopsPageState extends State<ShopsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                shop['name'] ?? 'Shop',
+                                shopName,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -267,7 +160,7 @@ class _ShopsPageState extends State<ShopsPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                shop['category'] ?? '',
+                                shop['category'] ?? 'General',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey.shade600,
@@ -283,7 +176,7 @@ class _ShopsPageState extends State<ShopsPage> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${shop['rating']} (${shop['reviews']} reviews)',
+                                    '$rating ($reviews reviews)',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey.shade600,
@@ -309,7 +202,7 @@ class _ShopsPageState extends State<ShopsPage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
-                      shop['description'] ?? '',
+                      shop['description'] ?? 'Visit this shop',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -318,13 +211,13 @@ class _ShopsPageState extends State<ShopsPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // Product preview (showing first 4 products)
+                  // Product preview
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
                         Text(
-                          '${(shop['products'] as List?)?.length ?? 0} products',
+                          '${productCounts[shopId] ?? 0} products',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.blue.shade600,

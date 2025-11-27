@@ -1,12 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../customer_home.dart';
-import '../shops_page.dart';
+import 'shops_page.dart';
+import '../shop_products_page.dart';
 
-class CustomerHomePage extends StatelessWidget {
+class CustomerHomePage extends StatefulWidget {
   final Customer? customer;
   const CustomerHomePage({super.key, this.customer});
 
-  Widget _buildShopCard(String name, String icon, double rating) {
+  @override
+  State<CustomerHomePage> createState() => _CustomerHomePageState();
+}
+
+class _CustomerHomePageState extends State<CustomerHomePage> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _shops = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShops();
+  }
+
+  Future<void> _loadShops() async {
+    try {
+      final resp = await http.get(Uri.parse('http://localhost:5000/api/Shops')).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final list = (data['data'] as List? ?? []).map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s)).toList();
+        // Fetch product counts for each shop in parallel
+        final futures = list.map((shop) async {
+          final shopId = shop['_id']?.toString() ?? '';
+          int count = 0;
+          if (shopId.isNotEmpty) {
+            try {
+              final resp2 = await http.get(Uri.parse('http://localhost:5000/api/products?ownerId=$shopId')).timeout(const Duration(seconds: 10));
+              if (resp2.statusCode == 200) {
+                final pData = jsonDecode(resp2.body);
+                final products = (pData['data'] as List? ?? []);
+                count = products.length;
+              }
+            } catch (_) {
+              count = 0;
+            }
+          }
+          shop['productCount'] = count;
+          return shop;
+        }).toList();
+
+        final enriched = await Future.wait(futures);
+        // sort by productCount desc and limit to top 6
+        enriched.sort((a, b) => (b['productCount'] as int).compareTo(a['productCount'] as int));
+        final top = enriched.take(6).toList();
+        setState(() {
+          _shops = top;
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Widget _buildShopCardFromData(Map<String, dynamic> shop) {
+    final name = (shop['shopName'] ?? shop['name'] ?? 'Shop').toString();
+    final icon = shop['icon'] ?? '🏪';
+    final rating = (shop['rating'] ?? 0).toString();
+    final count = shop['productCount'] ?? 0;
+
     return Container(
       width: 120,
       margin: const EdgeInsets.only(right: 12),
@@ -17,12 +81,15 @@ class CustomerHomePage extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
-          // Navigate to shop - handled via ShopsPage
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ShopProductsPage(shop: shop)),
+          );
         },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(icon, style: const TextStyle(fontSize: 36)),
+            Text(icon.toString(), style: const TextStyle(fontSize: 36)),
             const SizedBox(height: 8),
             Text(
               name,
@@ -31,6 +98,11 @@ class CustomerHomePage extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: 6),
+            Text(
+              '$count products',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -38,7 +110,7 @@ class CustomerHomePage extends StatelessWidget {
                 const Icon(Icons.star, size: 12, color: Colors.amber),
                 const SizedBox(width: 2),
                 Text(
-                  '$rating',
+                  rating,
                   style: const TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
@@ -57,7 +129,6 @@ class CustomerHomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // top-right notification/actions removed as requested
           const Text(
             'Welcome back!',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -117,16 +188,15 @@ class CustomerHomePage extends StatelessWidget {
           const SizedBox(height: 8),
           SizedBox(
             height: 160,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _buildShopCard('TechZone', '📱', 4.8),
-                _buildShopCard('SoundMart', '🔊', 4.6),
-                _buildShopCard('GadgetHub', '⌚', 4.7),
-                _buildShopCard('PhotoPro', '📷', 4.9),
-                _buildShopCard('AccessoryHub', '🎒', 4.5),
-              ],
-            ),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: List.generate(
+                      _shops.isNotEmpty ? (_shops.length < 5 ? _shops.length : 5) : 0,
+                      (i) => _buildShopCardFromData(_shops[i]),
+                    ),
+                  ),
           ),
         ],
       ),

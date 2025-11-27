@@ -136,6 +136,7 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                                       'discount': ((1 - (price / mrp)) * 100)
                                           .toInt(),
                                       'validTill': 'Dec 31, 2025',
+                                      'images': imagesList,
                                     },
                                   ),
                                 ),

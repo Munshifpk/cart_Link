@@ -5,7 +5,7 @@ import 'bottom bar/cart_page.dart';
 import 'bottom bar/profile_page.dart';
 import '../theme_data.dart';
 import 'package:cart_link/shared/notification_actions.dart';
-import 'shops_page.dart';
+import 'bottom bar/shops_page.dart';
 
 class Customer {
   final String? id;

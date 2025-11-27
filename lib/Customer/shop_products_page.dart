@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'product_purchase_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ShopProductsPage extends StatefulWidget {
   final Map<String, dynamic> shop;
@@ -10,19 +12,102 @@ class ShopProductsPage extends StatefulWidget {
 }
 
 class _ShopProductsPageState extends State<ShopProductsPage> {
+  bool _loading = true;
+  List<Map<String, dynamic>> products = [];
+
+  Widget _buildImageFromProduct(Map<String, dynamic> product, {BoxFit fit = BoxFit.cover}) {
+    String? src;
+    final imgs = product['images'];
+    if (imgs is List && imgs.isNotEmpty) {
+      src = imgs.first?.toString() ?? '';
+    } else if (product['image'] != null) {
+      src = product['image'].toString();
+    }
+
+    if (src == null || src.trim().isEmpty) {
+      return const Center(child: Icon(Icons.image, size: 40, color: Colors.grey));
+    }
+
+    if (src.trim().startsWith('data:')) {
+      try {
+        final parts = src.split(',');
+        final b64 = parts.length > 1 ? parts.last : '';
+        final bytes = base64Decode(b64);
+        return Image.memory(bytes, fit: fit, width: double.infinity, height: double.infinity, alignment: Alignment.center);
+      } catch (_) {
+        return const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey));
+      }
+    }
+
+    return Image.network(
+      src,
+      fit: fit,
+      width: double.infinity,
+      height: double.infinity,
+      alignment: Alignment.center,
+      errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final shopId = widget.shop['_id'] ?? '';
+      if (shopId.isEmpty) {
+        setState(() => _loading = false);
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('http://localhost:5000/api/products?ownerId=$shopId'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final productList = (data['data'] as List? ?? [])
+            .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
+            .toList();
+        setState(() {
+          products = productList;
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading products: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final products = List<Map<String, dynamic>>.from(
-      (widget.shop['products'] ?? []) as List,
-    );
-    final shopName = widget.shop['name'] ?? 'Shop';
-    final shopIcon = widget.shop['icon'] ?? '🏪';
+    final shopName = widget.shop['shopName'] ?? widget.shop['name'] ?? 'Shop';
+
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: Text(shopName), elevation: 1),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(shopName), elevation: 1),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final cols = constraints.maxWidth < 600 ? 2 : 3;
+          // Determine number of columns dynamically based on available width.
+          // Aim for ~180px card width; always have at least 2 columns on small screens.
+          int cols = (constraints.maxWidth / 180).floor();
+          if (cols < 2) cols = 2;
           return Padding(
             padding: const EdgeInsets.all(12),
             child: products.isEmpty
@@ -30,8 +115,6 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(shopIcon, style: const TextStyle(fontSize: 48)),
-                        const SizedBox(height: 16),
                         const Text(
                           'No products available',
                           style: TextStyle(fontSize: 16, color: Colors.grey),
@@ -49,12 +132,11 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      final name = product['name'] ?? 'Product';
-                      final price = (product['price'] ?? 0).toInt();
-                      final mrp = (product['mrp'] ?? price).toInt();
-                      final discount = ((1 - (price / mrp)) * 100).toInt();
-                      final image = product['image'] ?? '📦';
-                      final rating = (product['rating'] ?? 0).toDouble();
+                      final name = product['name'] ?? product['productName'] ?? 'Product';
+                      final price = (product['price'] ?? 0).toDouble();
+                      final mrp = (product['mrp'] ?? price).toDouble();
+                      final discount = mrp > price ? ((1 - (price / mrp)) * 100).toInt() : 0;
+                      final rating = (product['rating'] ?? product['avgRating'] ?? 0).toDouble();
 
                       return Card(
                         clipBehavior: Clip.antiAlias,
@@ -70,9 +152,10 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                                   offer: {
                                     'product': name,
                                     'shop': shopName,
-                                    'price': price,
+                                    'price': price.toInt(),
                                     'discount': discount,
                                     'validTill': 'Dec 31, 2025',
+                                    'images': product['images'] ?? [],
                                   },
                                 ),
                               ),
@@ -83,13 +166,11 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                             children: [
                               Expanded(
                                 flex: 3,
-                                child: Container(
-                                  color: Colors.blue.shade50,
-                                  child: Center(
-                                    child: Text(
-                                      image,
-                                      style: const TextStyle(fontSize: 40),
-                                    ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    color: Colors.blue.shade50,
+                                    child: _buildImageFromProduct(product, fit: BoxFit.cover),
                                   ),
                                 ),
                               ),
@@ -120,7 +201,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                                           ),
                                           const SizedBox(width: 2),
                                           Text(
-                                            '$rating',
+                                            rating > 0 ? rating.toStringAsFixed(1) : 'New',
                                             style: const TextStyle(
                                               fontSize: 10,
                                               color: Colors.grey,
@@ -132,7 +213,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                                       Row(
                                         children: [
                                           Text(
-                                            '₹$price',
+                                            '₹${price.toInt()}',
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
@@ -140,15 +221,16 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                                             ),
                                           ),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            '₹$mrp',
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              decoration:
-                                                  TextDecoration.lineThrough,
-                                              color: Colors.grey,
+                                          if (mrp > price)
+                                            Text(
+                                              '₹${mrp.toInt()}',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                decoration:
+                                                    TextDecoration.lineThrough,
+                                                color: Colors.grey,
+                                              ),
                                             ),
-                                          ),
                                         ],
                                       ),
                                       if (discount > 0) ...[
