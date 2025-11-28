@@ -93,7 +93,6 @@ class _ShopsAdminState extends State<ShopsAdmin> {
           children: [
             Text('Owner: ${shop.ownerName ?? 'N/A'}'),
             const SizedBox(height: 8),
-            Text('Location: ${shop.address}'),
             const SizedBox(height: 8),
             Text('Mobile: ${shop.mobile.toString()}'),
             const SizedBox(height: 8),
@@ -190,15 +189,7 @@ class _ShopsAdminState extends State<ShopsAdmin> {
                             ),
                           ),
                         ),
-                        DataColumn(
-                          label: Text(
-                            'Location',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+
                         DataColumn(
                           label: Text(
                             'Contact',
@@ -224,7 +215,7 @@ class _ShopsAdminState extends State<ShopsAdmin> {
                           cells: [
                             DataCell(Text(s.name)),
                             DataCell(Text(s.ownerName ?? '')),
-                            DataCell(Text(s.address)),
+                            // Contact
                             DataCell(Text(s.mobile.toString())),
                             DataCell(
                               IconButton(
