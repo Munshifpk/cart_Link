@@ -69,7 +69,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       setState(() => _loadingProducts = true);
       final resp = await http
           .get(Uri.parse('http://localhost:5000/api/products'))
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final products = (data['data'] as List? ?? [])
@@ -79,6 +79,32 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
         // Shuffle and take 8 random products
         products.shuffle();
         final randomProducts = products.take(8).toList();
+
+        // Fetch shops once to map ownerId -> shopName
+        try {
+          final shopsResp = await http.get(Uri.parse('http://localhost:5000/api/Shops')).timeout(const Duration(seconds: 10));
+          if (shopsResp.statusCode == 200) {
+            final shopsData = jsonDecode(shopsResp.body);
+            final shopsList = (shopsData['data'] as List? ?? [])
+                .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
+                .toList();
+            final Map<String, String> shopNames = {};
+            for (var s in shopsList) {
+              final id = (s['_id'] ?? s['id'] ?? '').toString();
+              final n = (s['shopName'] ?? s['name'] ?? '').toString();
+              if (id.isNotEmpty) shopNames[id] = n;
+            }
+            // assign shopName to products if missing
+            for (var p in randomProducts) {
+              final ownerId = (p['ownerId'] ?? p['owner'] ?? p['owner_id'] ?? '').toString();
+              if ((p['shopName'] == null || p['shopName'].toString().isEmpty) && ownerId.isNotEmpty) {
+                p['shopName'] = shopNames[ownerId] ?? p['shopName'] ?? 'Shop';
+              }
+            }
+          }
+        } catch (_) {
+          // ignore shops fetch errors; products keep whatever shopName they have
+        }
 
         setState(() {
           _recommendedProducts = randomProducts;
@@ -92,6 +118,11 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
     } catch (e) {
       print('Error loading recommended products: $e');
       setState(() => _loadingProducts = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load recommended products: $e')),
+        );
+      }
     }
   }
 
@@ -206,14 +237,52 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
     );
   }
 
+  // Helper: get first image URL/base64 from a product map and render it
+  Widget _buildImageForProduct(Map<String, dynamic> product) {
+    String? src;
+    final imgs = product['images'];
+    if (imgs is List && imgs.isNotEmpty) {
+      src = imgs.first?.toString() ?? '';
+    } else if (product['image'] != null) {
+      src = product['image'].toString();
+    }
+
+    if (src == null || src.trim().isEmpty) {
+      return const Center(child: Icon(Icons.shopping_bag, size: 40, color: Colors.grey));
+    }
+
+    if (src.trim().startsWith('data:')) {
+      try {
+        final parts = src.split(',');
+        final b64 = parts.length > 1 ? parts.last : '';
+        final bytes = base64Decode(b64);
+        return Center(child: Image.memory(bytes, fit: BoxFit.contain, width: double.infinity, height: double.infinity, alignment: Alignment.center));
+      } catch (_) {
+        return const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey));
+      }
+    }
+
+    return Center(
+      child: Image.network(
+        src,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+        alignment: Alignment.center,
+        errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      key: const PageStorageKey('home'),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Scaffold(
+      body: SingleChildScrollView(
+        key: const PageStorageKey('home'),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Categories Section
           const Text(
             'Categories',
@@ -273,97 +342,132 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           const SizedBox(height: 8),
           _loadingProducts
               ? const Center(child: CircularProgressIndicator())
-              : GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 3 / 4,
-                  ),
-                  itemCount: _recommendedProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = _recommendedProducts[index];
-                    final name = product['name'] ?? 'Product';
-                    final price = product['price'] ?? 0;
-                    final shopName = product['shopName'] ?? 'Shop';
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductPurchasePage(offer: product),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Dynamic column count based on screen width
+                    int cols = 2;
+                    if (constraints.maxWidth >= 600) cols = 3;
+                    if (constraints.maxWidth >= 900) cols = 4;
+                    if (constraints.maxWidth >= 1200) cols = 5;
+
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: cols,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: 0.65,
+                      ),
+                      itemCount: _recommendedProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = _recommendedProducts[index];
+                        final name = product['name'] ?? 'Product';
+                        final price = product['price'] ?? 0;
+                        final mrp = product['mrp'] ?? product['listPrice'] ?? price;
+                        final double p = (price is num) ? price.toDouble() : double.tryParse(price.toString()) ?? 0.0;
+                        final double m = (mrp is num) ? mrp.toDouble() : double.tryParse(mrp.toString()) ?? p;
+                        final int discount = (m > 0 && m > p) ? (((m - p) / m) * 100).round() : 0;
+                        final shopName = product['shopName'] ?? 'Shop';
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProductPurchasePage(offer: product),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.grey.shade200),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(8),
+                                        topRight: Radius.circular(8),
+                                      ),
+                                    ),
+                                    child: _buildImageForProduct(product),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '₹${p.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (m > p)
+                                            Text(
+                                              '₹${m.toStringAsFixed(0)}',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                                decoration: TextDecoration.lineThrough,
+                                              ),
+                                            ),
+                                          const Spacer(),
+                                          if (discount > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade100,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                '-${discount}%',
+                                                style: const TextStyle(fontSize: 11, color: Colors.red),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        shopName.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Colors.grey.shade200),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(8),
-                                    topRight: Radius.circular(8),
-                                  ),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.shopping_bag,
-                                    size: 40,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    name.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '₹$price',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    shopName.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     );
                   },
                 ),
@@ -403,6 +507,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           ),
         ],
       ),
+    ),
     );
   }
 }
