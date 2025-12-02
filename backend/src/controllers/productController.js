@@ -71,3 +71,34 @@ exports.deleteProduct = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 };
+
+exports.updateProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: 'Invalid product ID' });
+        }
+
+        const { name, description, price, mrp, stock, sku, category, isActive, isFeatured, images } = req.body;
+
+        const update = {};
+        if (name !== undefined) update.name = name;
+        if (description !== undefined) update.description = description;
+        if (price !== undefined) update.price = Number(price);
+        if (mrp !== undefined) update.mrp = Number(mrp);
+        if (stock !== undefined) update.stock = Number(stock);
+        if (sku !== undefined) update.sku = sku;
+        if (category !== undefined) update.category = category;
+        if (isActive !== undefined) update.isActive = !!isActive;
+        if (isFeatured !== undefined) update.isFeatured = !!isFeatured;
+        if (images !== undefined && Array.isArray(images)) update.images = images;
+
+        const updated = await Product.findByIdAndUpdate(id, update, { new: true });
+        if (!updated) return res.status(404).json({ success: false, message: 'Product not found' });
+
+        return res.json({ success: true, message: 'Product updated', data: updated });
+    } catch (err) {
+        console.error('updateProduct error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
