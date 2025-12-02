@@ -8,13 +8,13 @@ const signToken = (customer) => {
 
 exports.register = async (req, res) => {
     try {
-        const { customerName, mobile, email, password, location, } = req.body;
+        const { customerName, mobile, email, password } = req.body;
 
         // Validate required fields
-        if (!customerName || !mobile || !password || !location) {
+        if (!customerName || !mobile || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Name, mobile, password, and location are required'
+                message: 'Name, mobile, and password are required'
             });
         }
 
@@ -60,8 +60,6 @@ exports.register = async (req, res) => {
             mobile,
             email,
             password,
-            address: location, // Use 'address' field as defined in the Customer model
-
         });
 
         await customer.save();
