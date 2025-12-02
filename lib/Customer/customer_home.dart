@@ -86,6 +86,7 @@ class _CustomerHomeState extends State<CustomerHome> {
 
   Future<void> _getLocationFromCoordinates(double lat, double lng) async {
     try {
+      print('[LOCATION] Reverse geocoding: $lat, $lng');
       // Using nominatim (OpenStreetMap) for reverse geocoding
       final resp = await http.get(
         Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1'),
@@ -101,15 +102,29 @@ class _CustomerHomeState extends State<CustomerHome> {
         final country = address['country'] ?? '';
         final postcode = address['postcode'] ?? '';
         
+        print('[LOCATION] Reverse geocode successful: $city, $district, $state');
+        
         final locationDisplay = _buildLocationDisplay(city, district, state, country, postcode);
+  
+        print('\n========== LOCATION FROM GPS ==========');
+        print('Coordinates: ($lat, $lng)');
+        print('Formatted Address: ${locationDisplay['full']}');
+        print('City: $city');
+        print('District: $district');
+        print('State: $state');
+        print('Country: $country');
+        print('Pincode: $postcode');
+        print('=====================================\n');
         
         setState(() {
           _selectedLocation = locationDisplay['full'] ?? '';
           _selectedPincode = postcode.toString();
         });
+      } else {
+        print('[LOCATION] Reverse geocode failed with status: ${resp.statusCode}');
       }
     } catch (e) {
-      print('Error getting location: $e');
+      print('[LOCATION] Error getting location: $e');
     }
   }
 
@@ -360,19 +375,21 @@ class _CustomerHomeState extends State<CustomerHome> {
           setState(() {
             _selectedLocation = location;
             _selectedPincode = pincode;
+            locationController.text = location; // Update text box with selected location
           });
           Navigator.pop(dialogContext);
         },
         onSave: (location) {
           setState(() {
             _selectedLocation = location.isNotEmpty ? location : 'Select Location';
+            locationController.text = _selectedLocation; // Update text box with saved location
           });
           Navigator.pop(dialogContext);
         },
         onGetCurrentLocation: (lat, lng) async {
           await _getLocationFromCoordinates(lat, lng);
           if (mounted) {
-            locationController.text = _selectedLocation;
+            locationController.text = _selectedLocation; // Always update text box after getting location
           }
         },
         searchLocations: (query) async {
@@ -392,30 +409,39 @@ class _CustomerHomeState extends State<CustomerHome> {
             const Icon(Icons.location_on, size: 20, color: Colors.white),
             const SizedBox(width: 8),
             Expanded(
-              child: GestureDetector(
-                onTap: _showLocationPicker,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Location',
-                      style: TextStyle(fontSize: 12, color: Colors.white70),
-                    ),
-                    Text(
-                      _selectedLocation,
-                      style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (_selectedPincode.isNotEmpty)
-                      Text(
-                        _selectedPincode,
-                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Location',
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                  GestureDetector(
+                    onTap: _showLocationPicker,
+                    child: AbsorbPointer(
+                      child: TextField(
+                        controller: TextEditingController(text: _selectedLocation),
+                        readOnly: true,
+                        style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          hintText: 'Select Location',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                         maxLines: 1,
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                  if (_selectedPincode.isNotEmpty)
+                    Text(
+                      _selectedPincode,
+                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      maxLines: 1,
+                    ),
+                ],
               ),
             ),
           ],
@@ -572,7 +598,7 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Select Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          title: const Text('Select Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),),
           backgroundColor: ThemeColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
@@ -654,8 +680,12 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                       ),
                       onPressed: () async {
                         try {
+                          print('[GPS] Requesting location permission...');
                           final permission = await Geolocator.requestPermission();
+                          print('[GPS] Permission result: $permission');
+                          
                           if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+                            print('[GPS] Location permission denied');
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Location permission denied')),
@@ -664,18 +694,23 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                             return;
                           }
 
+                          print('[GPS] Getting current position...');
                           final position = await Geolocator.getCurrentPosition(
                             desiredAccuracy: LocationAccuracy.high,
                           );
+                          print('[GPS] Position obtained: ${position.latitude}, ${position.longitude}');
 
                           await widget.onGetCurrentLocation(position.latitude, position.longitude);
                           if (mounted) {
+                            // Parent callback updates the shared controller's text.
+                            // Do not clear it here — only clear suggestions and rebuild
+                            // the dialog so the new text appears in the field.
                             setState(() {
-                              widget.locationController.text = '';
                               _suggestions = [];
                             });
                           }
                         } catch (e) {
+                          print('[GPS] Error: $e');
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error: $e')),
