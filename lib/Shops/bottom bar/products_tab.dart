@@ -76,9 +76,9 @@ class _ProductsTabState extends State<ProductsTab> {
 
   void _editProduct(Product product) {
     // TODO: Implement navigation to an edit product page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Editing ${product.name}')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Editing ${product.name}')));
   }
 
   void _deleteProduct(Product product) {
@@ -101,14 +101,17 @@ class _ProductsTabState extends State<ProductsTab> {
 
               if (result['success'] == true) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${product.name} deleted successfully')),
+                  SnackBar(
+                    content: Text('${product.name} deleted successfully'),
+                  ),
                 );
                 _refreshProducts();
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                      content: Text(result['message'] ?? 'Failed to delete'),
-                      backgroundColor: Colors.red),
+                    content: Text(result['message'] ?? 'Failed to delete'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
@@ -121,9 +124,9 @@ class _ProductsTabState extends State<ProductsTab> {
 
   void _showProductInfo(Product product) {
     // TODO: Implement navigation to a product details page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Showing info for ${product.name}')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Showing info for ${product.name}')));
   }
 
   @override
@@ -157,13 +160,15 @@ class _ProductsTabState extends State<ProductsTab> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
+                      constraints: BoxConstraints(
+                        minWidth: MediaQuery.of(context).size.width,
+                      ),
                       child: Theme(
                         data: Theme.of(context).copyWith(
                           colorScheme: Theme.of(context).colorScheme.copyWith(
-                                primary: ThemeColors.primary,
-                                secondary: ThemeColors.accent,
-                              ),
+                            primary: ThemeColors.primary,
+                            secondary: ThemeColors.accent,
+                          ),
                           // dataTableTheme: DataTableThemeData(
                           //   headingRowColor: WidgetStateProperty.all(ThemeColors.primary.withOpacity(0.08)),
                           //   headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color:Colors.white),
@@ -177,44 +182,80 @@ class _ProductsTabState extends State<ProductsTab> {
                         ),
                         child: DataTable(
                           headingRowHeight: 56,
-                          headingRowColor: WidgetStateProperty.all(ThemeColors.primary),
-                          headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color:Colors.white),
+                          headingRowColor: WidgetStateProperty.all(
+                            ThemeColors.primary,
+                          ),
+                          headingTextStyle: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                           dataTextStyle: const TextStyle(color: Colors.black87),
                           dataRowMinHeight: 52,
                           dataRowMaxHeight: 52,
                           columnSpacing: 24,
                           dividerThickness: 1,
-                        
+
                           columns: const [
                             DataColumn(label: Text('Name')),
-                            DataColumn(label: Text('Available Stock'), numeric: true),
+                            DataColumn(
+                              label: Text('Available Stock'),
+                              numeric: true,
+                            ),
                             DataColumn(label: Text('Price'), numeric: true),
                             DataColumn(label: Text('Actions')),
                           ],
                           rows: products.map((product) {
                             return DataRow(
                               cells: [
-                                DataCell(SizedBox(width: 200, child: Text(product.name))),
-                                DataCell(Container(alignment: Alignment.centerRight, child: Text(product.stock.toString()))),
-                                DataCell(Container(alignment: Alignment.centerRight, child: Text('₹${product.price.toStringAsFixed(0)}'))),
+                                DataCell(
+                                  SizedBox(
+                                    width: 200,
+                                    child: Text(product.name),
+                                  ),
+                                ),
+                                DataCell(
+                                  Container(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(product.stock.toString()),
+                                  ),
+                                ),
+                                DataCell(
+                                  Container(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      '₹${product.price.toStringAsFixed(0)}',
+                                    ),
+                                  ),
+                                ),
                                 DataCell(
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.edit_outlined, color: ThemeColors.primary),
+                                        icon: const Icon(
+                                          Icons.edit_outlined,
+                                          color: ThemeColors.primary,
+                                        ),
                                         tooltip: 'Edit',
                                         onPressed: () => _editProduct(product),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.red,
+                                        ),
                                         tooltip: 'Delete',
-                                        onPressed: () => _deleteProduct(product),
+                                        onPressed: () =>
+                                            _deleteProduct(product),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.info_outline, color: ThemeColors.accent),
+                                        icon: const Icon(
+                                          Icons.info_outline,
+                                          color: ThemeColors.accent,
+                                        ),
                                         tooltip: 'Info',
-                                        onPressed: () => _showProductInfo(product),
+                                        onPressed: () =>
+                                            _showProductInfo(product),
                                       ),
                                     ],
                                   ),
