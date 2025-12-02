@@ -451,7 +451,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           bytes,
           fit: BoxFit.cover,
           alignment: Alignment.center,
-          errorBuilder: (_, __, ___) => const Center(
+          errorBuilder: (_, _, _) => const Center(
             child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
           ),
         );
@@ -466,7 +466,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       imageUrl,
       fit: BoxFit.cover,
       alignment: Alignment.center,
-      errorBuilder: (_, __, ___) => const Center(
+      errorBuilder: (_, _, _) => const Center(
         child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
       ),
     );
