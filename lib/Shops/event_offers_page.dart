@@ -31,6 +31,7 @@ class _EventOffersPageState extends State<EventOffersPage> {
 
   // Sample products (same as in CreateOfferPage)
   List<Map<String, dynamic>> _products = [];
+  // ignore: unused_field
   bool _isLoadingProducts = false;
 
   String _selectedEvent = '';

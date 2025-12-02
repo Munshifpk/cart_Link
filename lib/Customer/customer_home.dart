@@ -322,7 +322,7 @@ class _CustomerHomeState extends State<CustomerHome> {
         final suggestions = data
             .where((item) {
               // Filter: match query text, no geographic restrictions
-              final address = item['address'] as Map<String, dynamic>? ?? {};
+              // final address = item['address'] as Map<String, dynamic>? ?? {};
               final displayName = (item['display_name'] ?? '').toString().toLowerCase();
               
               return displayName.contains(queryLower);
@@ -330,7 +330,7 @@ class _CustomerHomeState extends State<CustomerHome> {
             .map<Map<String, String>>((item) {
               final address = item['address'] as Map<String, dynamic>? ?? {};
               final displayName = item['display_name'] ?? '';
-              final name = item['name'] ?? '';
+              // final name = item['name'] ?? '';
               final city = address['city'] ?? address['town'] ?? address['village'] ?? '';
               final district = address['district'] ?? address['county'] ?? address['administrative_area_level_2'] ?? address['administrative_area_level_3'] ?? '';
               final state = address['state'] ?? '';

@@ -88,6 +88,7 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
   DateTime? _startDateTime;
   DateTime? _endDateTime;
   List<Map<String, dynamic>> _products = [];
+  // ignore: unused_field
   bool _isLoadingProducts = false;
 
   @override
