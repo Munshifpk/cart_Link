@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'product_purchase_page.dart';
 import 'shop_products_page.dart';
+import '../theme_data.dart';
 
 class CategoryProductsPage extends StatefulWidget {
   final String category;
@@ -21,6 +22,17 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   void initState() {
     super.initState();
     _loadCategoryData();
+  }
+
+  int _getGridCrossAxisCount(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 600) {
+      return 2; // Small screens (phones)
+    } else if (screenWidth < 900) {
+      return 3; // Tablets
+    } else {
+      return 4; // Large screens (desktops)
+    }
   }
 
   Future<void> _loadCategoryData() async {
@@ -86,7 +98,12 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.category} Products'), elevation: 1),
+      appBar: AppBar(
+        title: Text('${widget.category} Products'),
+        foregroundColor: ThemeColors.textColorWhite,
+        elevation: 1,
+        backgroundColor: ThemeColors.primary,
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -180,13 +197,12 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 3 / 4,
-                          ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _getGridCrossAxisCount(context),
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: 3 / 4,
+                      ),
                       itemCount: _categoryProducts.length,
                       itemBuilder: (context, index) {
                         final product = _categoryProducts[index];
