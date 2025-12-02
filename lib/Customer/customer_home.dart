@@ -9,6 +9,35 @@ import 'bottom bar/shops_page.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
+
+// Google Maps API key must be provided at build/run time using --dart-define
+// Example: flutter run -d chrome --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY
+const String kGoogleMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY', defaultValue: '');
+
+/// Map of known villages/towns to their correct districts
+/// Useful for rural areas where geocoding data is incomplete (works across India)
+const Map<String, String> kVillageDistrictMap = {
+  'chattiparambu': 'Malappuram',
+  'ernad': 'Malappuram',
+  'kunnamkulam': 'Thrissur',
+  'taliparamba': 'Kannur',
+  'kottapuram': 'Thrissur',
+  'ottapalam': 'Palakkad',
+  'kodungalloor': 'Ernakulam',
+  'payyannur': 'Kannur',
+  'neendakara': 'Kollam',
+  'kilimanoor': 'Thiruvananthapuram',
+  'chathannoor': 'Kollam',
+  'alappuzha': 'Alappuzha',
+  'changanacherry': 'Kottayam',
+};
+
+/// Get district for a place name using village mapping (case-insensitive)
+String _getDistrictFromVillageMap(String placeName) {
+  final nameLower = placeName.toLowerCase().trim();
+  return kVillageDistrictMap[nameLower] ?? '';
+}
 
 class Customer {
   final String? id;
@@ -114,19 +143,23 @@ class _CustomerHomeState extends State<CustomerHome> {
     }
 
     try {
-      // First try Google Places API Autocomplete
-      final String googleApiKey = 'AIzaSyBU7H_NkKxBGbVnDBuuu2Cye-H1hhREUvE';
-        // Prefer city/region suggestions to improve accuracy for locality searches
-        final String url =
+      // First try Google Places API Autocomplete if key provided
+      if (kGoogleMapsApiKey.isEmpty) {
+        // No API key provided; fall back to Nominatim search only
+        _searchLocationsNominatim(query);
+        return;
+      }
+      
+      // Encode query for API
+      final encoded = Uri.encodeQueryComponent(query);
+      final String url =
           'https://maps.googleapis.com/maps/api/place/autocomplete/json'
-          '?input=$query'
-          '&key=$googleApiKey'
-          '&components=country:in'
+          '?input=$encoded'
+          '&key=$kGoogleMapsApiKey'
           '&language=en'
-          '&types=(cities)'
           '&sessiontoken=cart_link_session';
 
-      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -135,140 +168,116 @@ class _CustomerHomeState extends State<CustomerHome> {
         // Check if we got valid predictions
         if (status == 'OK') {
           final predictions = (data['predictions'] as List? ?? []);
-          final suggestions = <Map<String, String>>[];
 
-          for (var prediction in predictions.take(8)) {
+          // Build quick suggestions from predictions - show ALL results, no filtering
+          final suggestions = predictions
+              .take(12)
+              .map<Map<String, String>>((prediction) {
             final placeId = prediction['place_id'] ?? '';
             final description = prediction['description'] ?? '';
-            final mainText = prediction['main_text'] ?? '';
-            final secondaryText = prediction['secondary_text'] ?? '';
+            final mainText = prediction['structured_formatting']?['main_text'] ?? '';
+            return {
+              'place_id': placeId.toString(),
+              'name': description.toString(),
+              'display': description.toString(),
+              'city': mainText.toString(),
+              'district': '',
+              'state': '',
+              'postcode': '',
+              'latitude': '',
+              'longitude': '',
+              'formatted_address': '',
+            };
+          }).toList();
 
-            if (placeId.isNotEmpty) {
-              try {
-                final detailsUrl =
-                    'https://maps.googleapis.com/maps/api/place/details/json'
-                    '?place_id=$placeId'
-                    '&key=$googleApiKey'
-                    '&fields=address_components,formatted_address,geometry'
-                    '&language=en';
+          // show quick suggestions immediately - no wait for details
+          setState(() => _locationSuggestions = suggestions.cast<Map<String, String>>());
 
-                final detailsResp = await http.get(Uri.parse(detailsUrl)).timeout(const Duration(seconds: 5));
+          // fetch details asynchronously for top predictions (limit to 8)
+          // This happens in background without blocking UI
+          final detailFutures = predictions.take(8).map((prediction) async {
+            try {
+              final placeId = prediction['place_id'] ?? '';
+              if (placeId.isEmpty) return;
+              
+              final detailsUrl =
+                  'https://maps.googleapis.com/maps/api/place/details/json'
+                  '?place_id=${Uri.encodeQueryComponent(placeId)}'
+                  '&key=$kGoogleMapsApiKey'
+                  '&fields=address_components,formatted_address,geometry'
+                  '&language=en';
 
-                if (detailsResp.statusCode == 200) {
-                  final detailsData = jsonDecode(detailsResp.body);
-                  final result = detailsData['result'] as Map<String, dynamic>? ?? {};
-                  final addressComponents = (result['address_components'] as List? ?? []);
+              final detailsResp = await http.get(Uri.parse(detailsUrl)).timeout(const Duration(seconds: 5));
+              if (detailsResp.statusCode != 200) return;
 
-                  String city = '';
-                  String district = '';
-                  String state = '';
-                  String postcode = '';
+              final detailsData = jsonDecode(detailsResp.body);
+              final result = detailsData['result'] as Map<String, dynamic>? ?? {};
+              final addressComponents = (result['address_components'] as List? ?? []);
+              final formattedAddress = result['formatted_address'] ?? '';
+              final geometry = result['geometry'] as Map<String, dynamic>? ?? {};
+              final location = geometry['location'] as Map<String, dynamic>? ?? {};
 
-                  // Enhanced parsing: prefer locality > postal_town > sublocality > neighborhood
-                  // when Google place details are present.
+              String city = '';
+              String district = '';
+              String state = '';
+              String postcode = '';
+              double latitude = 0;
+              double longitude = 0;
 
-                  // Parse address components - Google provides these more accurately
-                  for (var component in addressComponents) {
-                    final types = (component['types'] as List? ?? []);
-                    final longName = component['long_name'] ?? '';
-
-                    // Locality is the city/town level
-                    if (types.contains('locality')) {
-                      city = longName;
-                    }
-                    if (types.contains('postal_town') && city.isEmpty) {
-                      city = longName;
-                    }
-                    if ((types.contains('sublocality') || types.contains('sublocality_level_1')) && city.isEmpty) {
-                      city = longName;
-                    }
-                    if (types.contains('neighborhood') && city.isEmpty) {
-                      city = longName;
-                    }
-                    // administrative_area_level_3 is often district in India
-                    if (types.contains('administrative_area_level_3')) {
-                      district = longName;
-                    }
-                    // administrative_area_level_2 is also sometimes district
-                    if (types.contains('administrative_area_level_2') && district.isEmpty) {
-                      district = longName;
-                    }
-                    // administrative_area_level_1 is state
-                    if (types.contains('administrative_area_level_1')) {
-                      state = longName;
-                    }
-                    // postal_code for pincode
-                    if (types.contains('postal_code')) {
-                      postcode = longName;
-                    }
-                  }
-
-                    // If city is empty, use main_text from prediction or formatted_address
-                    if (city.isEmpty) {
-                      city = mainText;
-                    }
-                  // If still no district, try to extract from secondary_text
-                  if (district.isEmpty && secondaryText.isNotEmpty) {
-                    final parts = secondaryText.split(',');
-                    if (parts.isNotEmpty) {
-                      // sometimes secondary_text contains "Ernad, Kerala" etc.
-                      district = parts[0].trim();
-                    }
-                  }
-
-                  // If district is still empty (or possibly ambiguous), try reverse geocoding
-                  // using Nominatim with the place's lat/lng — its `county` field is often
-                  // the proper district name for Indian locations (e.g. Malappuram).
-                  try {
-                    final geometry = (result['geometry'] ?? {})['location'] as Map<String, dynamic>?;
-                    if ((district.isEmpty) && geometry != null) {
-                      final lat = geometry['lat'];
-                      final lng = geometry['lng'];
-                      if (lat != null && lng != null) {
-                        final nomUrl = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=10&addressdetails=1';
-                        final nomResp = await http.get(Uri.parse(nomUrl)).timeout(const Duration(seconds: 5));
-                        if (nomResp.statusCode == 200) {
-                          final nomData = jsonDecode(nomResp.body) as Map<String, dynamic>? ?? {};
-                          final nomAddress = nomData['address'] as Map<String, dynamic>? ?? {};
-                                final nomDistrict = nomAddress['county'] ?? nomAddress['district'] ?? nomAddress['region'] ?? '';
-                          if (nomDistrict != null && nomDistrict.toString().isNotEmpty) {
-                            district = nomDistrict.toString();
-                          }
-                        }
-                      }
-                    }
-                  } catch (e) {
-                    // ignore reverse geocode errors — we'll use whatever Google returned
-                  }
-
-                  // use district as returned by APIs
-
-                  final locationDisplay = _buildLocationDisplay(city, district, state, 'India', postcode);
-
-                  suggestions.add({
-                    'name': description,
-                    'city': city,
-                    'district': district,
-                    'state': state,
-                    'country': 'India',
-                    'postcode': postcode,
-                    'display': locationDisplay['full'] ?? description,
-                  });
-                }
-              } catch (e) {
-                print('Error fetching place details: $e');
+              if (location.isNotEmpty) {
+                latitude = location['lat'] ?? 0.0;
+                longitude = location['lng'] ?? 0.0;
               }
-            }
-          }
 
-          if (suggestions.isNotEmpty) {
-            setState(() => _locationSuggestions = suggestions);
-            return;
-          }
+              for (var component in addressComponents) {
+                final types = (component['types'] as List? ?? []);
+                final longName = component['long_name'] ?? '';
+                if (types.contains('locality')) city = longName;
+                if (types.contains('postal_town') && city.isEmpty) city = longName;
+                if ((types.contains('sublocality') || types.contains('sublocality_level_1')) && city.isEmpty) city = longName;
+                if (types.contains('administrative_area_level_3')) district = longName;
+                if (types.contains('administrative_area_level_2') && district.isEmpty) district = longName;
+                if (types.contains('administrative_area_level_1')) state = longName;
+                if (types.contains('postal_code')) postcode = longName;
+              }
+
+              // Try to extract district if still empty
+              if (district.isEmpty || district.length > 30) {
+                final mappedDistrict = _getDistrictFromVillageMap(city);
+                if (mappedDistrict.isNotEmpty) {
+                  district = mappedDistrict;
+                }
+              }
+
+              // Update the suggestion entry matching this place_id
+              if (mounted) {
+                setState(() {
+                  for (var s in _locationSuggestions) {
+                    if (s['place_id'] == placeId) {
+                      s['city'] = city;
+                      s['district'] = district;
+                      s['state'] = state;
+                      s['postcode'] = postcode;
+                      s['latitude'] = latitude.toString();
+                      s['longitude'] = longitude.toString();
+                      s['formatted_address'] = formattedAddress;
+                      break;
+                    }
+                  }
+                });
+              }
+            } catch (e) {
+              // ignore individual detail failures
+            }
+          }).toList();
+
+          // fire-and-forget details fetching
+          Future.wait(detailFutures);
+          return;
         }
       }
 
-      // Fallback to Nominatim if Google fails or returns no results
+      // Fallback to Nominatim if Google fails
       _searchLocationsNominatim(query);
     } catch (e) {
       print('Error searching locations: $e');
@@ -277,36 +286,58 @@ class _CustomerHomeState extends State<CustomerHome> {
   }
 
   Future<void> _searchLocationsNominatim(String query) async {
+    if (query.isEmpty) {
+      setState(() => _locationSuggestions = []);
+      return;
+    }
+
     try {
+      // Use Nominatim OpenStreetMap API as fallback - search all India, no restrictions
+      final encoded = Uri.encodeQueryComponent(query);
       final resp = await http.get(
         Uri.parse(
-          'https://nominatim.openstreetmap.org/search?format=json&q=$query&countrycodes=in&limit=8&addressdetails=1',
+          'https://nominatim.openstreetmap.org/search?format=json&q=$encoded&countrycodes=in&limit=25&addressdetails=1',
         ),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as List;
+        final queryLower = query.toLowerCase();
+        
         final suggestions = data
+            .where((item) {
+              // Filter: match query text, no geographic restrictions
+              final address = item['address'] as Map<String, dynamic>? ?? {};
+              final displayName = (item['display_name'] ?? '').toString().toLowerCase();
+              
+              return displayName.contains(queryLower);
+            })
             .map<Map<String, String>>((item) {
               final address = item['address'] as Map<String, dynamic>? ?? {};
+              final displayName = item['display_name'] ?? '';
               final name = item['name'] ?? '';
               final city = address['city'] ?? address['town'] ?? address['village'] ?? '';
-              var district = address['county'] ?? '';
+              final district = address['district'] ?? address['county'] ?? address['administrative_area_level_2'] ?? address['administrative_area_level_3'] ?? '';
               final state = address['state'] ?? '';
               final postcode = address['postcode'] ?? '';
-
-              final locationDisplay = _buildLocationDisplay(city, district, state, 'India', postcode);
+              final lat = item['lat'] ?? '0';
+              final lon = item['lon'] ?? '0';
 
               return {
-                'name': name.toString(),
+                'place_id': item['place_id']?.toString() ?? '',
+                'name': displayName.toString(),
+                'display': displayName.toString(),
                 'city': city.toString(),
                 'district': district.toString(),
                 'state': state.toString(),
-                'country': 'India',
                 'postcode': postcode.toString(),
-                'display': locationDisplay['full'] ?? '',
+                'latitude': lat.toString(),
+                'longitude': lon.toString(),
+                'formatted_address': displayName.toString(),
               };
             })
+            .toList()
+            .take(12)
             .toList();
 
         setState(() => _locationSuggestions = suggestions);
@@ -520,6 +551,7 @@ class _LocationPickerDialog extends StatefulWidget {
 
 class _LocationPickerDialogState extends State<_LocationPickerDialog> {
   late List<Map<String, String>> _suggestions;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -528,154 +560,249 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
   }
 
   @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          Icon(Icons.location_on, color: ThemeColors.primary),
-          const SizedBox(width: 8),
-          const Text('Select Location'),
-        ],
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return Dialog(
+      insetPadding: const EdgeInsets.all(8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Select Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          backgroundColor: ThemeColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+          centerTitle: false,
+        ),
+        body: Column(
           children: [
-            TextField(
-              controller: widget.locationController,
-              decoration: InputDecoration(
-                hintText: 'Search location or pincode',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: ThemeColors.primary, width: 1),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: ThemeColors.primary, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                prefixIcon: Icon(Icons.search, color: ThemeColors.primary),
-                suffixIcon: widget.locationController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear, color: ThemeColors.primary),
-                        onPressed: () {
-                          widget.locationController.clear();
-                          setState(() => _suggestions = []);
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (value) async {
-                setState(() {});
-                if (value.isNotEmpty) {
-                  await widget.searchLocations(value);
-                  // Get updated suggestions from parent
-                  await Future.delayed(const Duration(milliseconds: 500));
-                  if (mounted) {
-                    setState(() {
-                      _suggestions = widget.getCurrentSuggestions();
-                    });
-                  }
-                } else {
-                  setState(() => _suggestions = []);
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ThemeColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                try {
-                  final permission = await Geolocator.requestPermission();
-                  if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Location permission denied')),
-                      );
-                    }
-                    return;
-                  }
+            // Search input section
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                spacing: 12,
+                children: [
+                  // Search field
+                  TextField(
+                    controller: widget.locationController,
+                    decoration: InputDecoration(
+                      hintText: 'Search city, area, or address...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: ThemeColors.primary, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      prefixIcon: Icon(Icons.search, color: ThemeColors.primary, size: 22),
+                      suffixIcon: widget.locationController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear, color: Colors.grey[600]),
+                              onPressed: () {
+                                widget.locationController.clear();
+                                setState(() => _suggestions = []);
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                    onChanged: (value) {
+                      setState(() {});
+                      // Debounce with shorter delay for snappier response
+                      _debounce?.cancel();
+                      if (value.isEmpty) {
+                        setState(() => _suggestions = []);
+                        return;
+                      }
+                      _debounce = Timer(const Duration(milliseconds: 150), () async {
+                        try {
+                          await widget.searchLocations(value);
+                          if (!mounted) return;
+                          setState(() {
+                            _suggestions = widget.getCurrentSuggestions();
+                          });
+                        } catch (_) {}
+                      });
+                    },
+                  ),
+                  
+                  // Current location button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ThemeColors.primary.withOpacity(0.15),
+                        foregroundColor: ThemeColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        try {
+                          final permission = await Geolocator.requestPermission();
+                          if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Location permission denied')),
+                              );
+                            }
+                            return;
+                          }
 
-                  final position = await Geolocator.getCurrentPosition(
-                    desiredAccuracy: LocationAccuracy.high,
-                  );
+                          final position = await Geolocator.getCurrentPosition(
+                            desiredAccuracy: LocationAccuracy.high,
+                          );
 
-                  await widget.onGetCurrentLocation(position.latitude, position.longitude);
-                  if (mounted) {
-                    setState(() {});
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
-                  }
-                }
-              },
-              icon: const Icon(Icons.my_location),
-              label: const Text('Use Current Location'),
+                          await widget.onGetCurrentLocation(position.latitude, position.longitude);
+                          if (mounted) {
+                            setState(() {
+                              widget.locationController.text = '';
+                              _suggestions = [];
+                            });
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.my_location, size: 20),
+                      label: const Text('Use Current Location', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            if (_suggestions.isNotEmpty)
+            
+            // Suggestions list
+            if (_suggestions.isEmpty && widget.locationController.text.isNotEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.location_off, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No locations found',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        'Try searching with different keywords',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_suggestions.isNotEmpty)
               Expanded(
                 child: ListView.builder(
-                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   itemCount: _suggestions.length,
                   itemBuilder: (context, index) {
                     final suggestion = _suggestions[index];
                     final display = suggestion['display'] ?? '';
+                    final name = suggestion['name'] ?? '';
                     final postcode = suggestion['postcode'] ?? '';
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      elevation: 2,
-                      child: ListTile(
-                        dense: false,
-                        leading: Icon(Icons.location_on, color: ThemeColors.primary),
-                        title: Text(
-                          display.isNotEmpty ? display : (suggestion['name'] ?? ''),
-                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (postcode.isNotEmpty)
-                              Container(
-                                margin: const EdgeInsets.only(top: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: ThemeColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Pincode: $postcode',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: ThemeColors.primary,
-                                  ),
-                                ),
-                              ),
-                            if (suggestion['district']?.isNotEmpty ?? false)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  'District: ${suggestion['district']}',
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                ),
-                              ),
-                          ],
-                        ),
+                    final district = suggestion['district'] ?? '';
+                    final city = suggestion['city'] ?? '';
+                    final state = suggestion['state'] ?? '';
+                    
+                    // Build location name (prefer formatted display, fall back to name)
+                    final locationName = display.isNotEmpty ? display : name;
+                    
+                    // Build subtitle with city, district, state
+                    final parts = <String>[];
+                    if (city.isNotEmpty) parts.add(city);
+                    if (district.isNotEmpty && district != city) parts.add(district);
+                    if (state.isNotEmpty && state != district) parts.add(state);
+                    final subtitle = parts.join(' • ');
+
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                         onTap: () {
-                          widget.onLocationSelected(
-                            display.isNotEmpty ? display : (suggestion['name'] ?? ''),
-                            postcode,
-                          );
+                          widget.onLocationSelected(locationName, postcode);
                         },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Location pin icon
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4, right: 12),
+                                child: Icon(Icons.location_on, color: ThemeColors.primary, size: 22),
+                              ),
+                              
+                              // Location details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      locationName,
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (subtitle.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          subtitle,
+                                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    if (postcode.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: ThemeColors.primary.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            postcode,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: ThemeColors.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              
+                              // Chevron icon
+                              Icon(Icons.chevron_right, color: Colors.grey[400], size: 24),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -684,21 +811,6 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: ThemeColors.primary)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: ThemeColors.primary,
-          ),
-          onPressed: () {
-            widget.onSave(widget.locationController.text);
-          },
-          child: const Text('Save', style: TextStyle(color: Colors.white)),
-        ),
-      ],
     );
   }
 }
