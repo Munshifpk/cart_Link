@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import '../theme_data.dart';
+import 'package:cart_link/services/auth_state.dart';
 
 class ProductPurchasePage extends StatefulWidget {
   final Map<String, dynamic> offer;
@@ -26,49 +30,141 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     super.dispose();
   }
 
+  String get _backendBase {
+    if (kIsWeb) return 'http://localhost:5000';
+    if (defaultTargetPlatform == TargetPlatform.android)
+      return 'http://10.0.2.2:5000';
+    return 'http://localhost:5000';
+  }
+
+  Future<bool> _addToCartRequest(Map<String, dynamic> offer, int qty) async {
+    try {
+      final shopId = offer['shopId'] ?? offer['ownerId'] ?? offer['shop'];
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+
+      // Check if customerId is available
+      if (customerId == null || customerId.toString().isEmpty) {
+        // ignore: avoid_print
+        print('❌ Add to cart failed: customerId not found in AuthState');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in to add items to cart'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return false;
+      }
+
+      if (shopId == null || shopId.toString().isEmpty) {
+        // ignore: avoid_print
+        print('❌ Add to cart failed: shopId not found');
+        return false;
+      }
+
+      // If the offer already contains `items` (array), prefer sending that
+      // i.e. support sending multiple products for the same shop in one request.
+      if (offer['items'] is List) {
+        final items = (offer['items'] as List).map((it) {
+          final pid = it['_id'] ?? it['id'] ?? it['productId'];
+          final q = it['quantity'] ?? it['qty'] ?? 1;
+          return {'productId': pid, 'quantity': q};
+        }).toList();
+
+        final body = jsonEncode({
+          'items': items,
+          'customerId': customerId,
+          'shopId': shopId,
+        });
+
+        final uri = Uri.parse('$_backendBase/api/cart');
+        final res = await http
+            .post(
+              uri,
+              headers: {'Content-Type': 'application/json'},
+              body: body,
+            )
+            .timeout(const Duration(seconds: 15));
+        if (res.statusCode == 201 || res.statusCode == 200) return true;
+        // ignore: avoid_print
+        print('Add to cart failed: ${res.statusCode} ${res.body}');
+        return false;
+      }
+
+      // Fallback: single product
+      final productId = offer['_id'] ?? offer['id'] ?? offer['productId'];
+      final body = jsonEncode({
+        'productId': productId,
+        'customerId': customerId,
+        'shopId': shopId,
+        'quantity': qty,
+      });
+
+      final uri = Uri.parse('$_backendBase/api/cart');
+      final res = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 201 || res.statusCode == 200) return true;
+      // debug log
+      // ignore: avoid_print
+      print('Add to cart failed: ${res.statusCode} ${res.body}');
+      return false;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Add to cart error: $e');
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final offer = widget.offer;
-    final images = (offer['images'] is List) ? (offer['images'] as List).cast<String>() : <String>[];
+    final images = (offer['images'] is List)
+        ? (offer['images'] as List).cast<String>()
+        : <String>[];
     final mainImage = images.isNotEmpty ? images[_selectedImageIndex] : null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Purchase Product'),
-      foregroundColor: ThemeColors.textColorWhite,
-      backgroundColor: ThemeColors.primary
+      appBar: AppBar(
+        title: const Text('Purchase Product'),
+        foregroundColor: ThemeColors.textColorWhite,
+        backgroundColor: ThemeColors.primary,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 800;
 
           Widget thumbnails(double height) => SizedBox(
-                height: height,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: images.length,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedImageIndex = index),
-                      child: Container(
-                        width: height,
-                        height: height,
-                        margin: const EdgeInsets.symmetric(horizontal: 6),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: _selectedImageIndex == index
-                                ? Colors.blue
-                                : Colors.grey.shade300,
-                            width: _selectedImageIndex == index ? 3 : 1,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey.shade100,
-                        ),
-                        child: _buildImageWidget(images[index]),
+            height: height,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: images.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedImageIndex = index),
+                  child: Container(
+                    width: height,
+                    height: height,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _selectedImageIndex == index
+                            ? Colors.blue
+                            : Colors.grey.shade300,
+                        width: _selectedImageIndex == index ? 3 : 1,
                       ),
-                    );
-                  },
-                ),
-              );
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey.shade100,
+                    ),
+                    child: _buildImageWidget(images[index]),
+                  ),
+                );
+              },
+            ),
+          );
 
           if (isWide) {
             // Side-by-side: image left, details right. Description full-width below.
@@ -95,7 +191,11 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                               alignment: Alignment.center,
                               child: mainImage != null
                                   ? _buildImageWidget(mainImage)
-                                  : const Icon(Icons.image, size: 120, color: Colors.grey),
+                                  : const Icon(
+                                      Icons.image,
+                                      size: 120,
+                                      color: Colors.grey,
+                                    ),
                             ),
                             const SizedBox(height: 12),
                             if (images.isNotEmpty) thumbnails(90),
@@ -112,47 +212,85 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                             // name, price, mrp, shop
                             Text(
                               offer['product'] ?? 'Product',
-                              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Shop: ${offer['shop'] ?? 'Unknown'}',
-                              style: const TextStyle(fontSize: 14, color: Colors.grey),
+                              offer['shopName'] ??
+                                  offer['shop'] ??
+                                  'Unknown Shop',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 4),
                             // Price and MRP (MRP shown below price when available)
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   '₹${offer['price'] ?? 0}',
-                                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green),
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 if ((offer['mrp'] ?? 0) > (offer['price'] ?? 0))
                                   Text(
                                     'MRP: ₹${(offer['mrp'] ?? 0).toString()}',
-                                    style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey, fontSize: 14),
+                                    style: const TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: Colors.grey,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 if ((offer['discount'] ?? 0) > 0) ...[
                                   const SizedBox(height: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(6)),
-                                    child: Text('${offer['discount']}% off', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.w600)),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade100,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${offer['discount']}% off',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ],
                             ),
                             const SizedBox(height: 20),
                             // Quantity
-                            const Text('Quantity', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Quantity',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
-                                    final newVal = (_quantityNotifier.value - 1) < 1 ? 1 : (_quantityNotifier.value - 1);
+                                    final newVal =
+                                        (_quantityNotifier.value - 1) < 1
+                                        ? 1
+                                        : (_quantityNotifier.value - 1);
                                     _quantityNotifier.value = newVal;
                                   },
                                   child: const Text('-'),
@@ -160,12 +298,21 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                 const SizedBox(width: 16),
                                 ValueListenableBuilder<int>(
                                   valueListenable: _quantityNotifier,
-                                  builder: (context, qty, _) => Text('$qty', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  builder: (context, qty, _) => Text(
+                                    '$qty',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
                                 ElevatedButton(
                                   onPressed: () {
-                                    final newVal = (_quantityNotifier.value + 1) > 100 ? 100 : (_quantityNotifier.value + 1);
+                                    final newVal =
+                                        (_quantityNotifier.value + 1) > 100
+                                        ? 100
+                                        : (_quantityNotifier.value + 1);
                                     _quantityNotifier.value = newVal;
                                   },
                                   child: const Text('+'),
@@ -180,19 +327,67 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                   width: double.infinity,
                                   height: 56,
                                   child: ElevatedButton.icon(
-                                    onPressed: () {
+                                    onPressed: () async {
                                       final qty = _quantityNotifier.value;
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added $qty item(s) to cart'), duration: const Duration(seconds: 2)));
-                                      Future.delayed(const Duration(milliseconds: 500), () {
-                                        if (context.mounted) Navigator.pushNamed(context, '/cart');
-                                      });
+                                      final ok = await _addToCartRequest(
+                                        offer,
+                                        qty,
+                                      );
+                                      if (ok) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Added $qty item(s) to cart',
+                                            ),
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
+                                          ),
+                                        );
+                                        Future.delayed(
+                                          const Duration(milliseconds: 500),
+                                          () {
+                                            if (context.mounted)
+                                              Navigator.pushNamed(
+                                                context,
+                                                '/cart',
+                                              );
+                                          },
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Failed to add to cart',
+                                            ),
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
                                     },
-                                    icon: const Icon(Icons.shopping_cart, size: 24),
-                                    label: const Text('Add to Cart', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                    icon: const Icon(
+                                      Icons.shopping_cart,
+                                      size: 24,
+                                    ),
+                                    label: const Text(
+                                      'Add to Cart',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: ThemeColors.accent,
-                                      foregroundColor: ThemeColors.textColorWhite,
-                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                      foregroundColor:
+                                          ThemeColors.textColorWhite,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal: 16,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -203,14 +398,33 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                   child: ElevatedButton.icon(
                                     onPressed: () {
                                       final qty = _quantityNotifier.value;
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Proceeding to checkout for $qty item(s)...'), duration: const Duration(seconds: 2)));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Proceeding to checkout for $qty item(s)...',
+                                          ),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
                                     },
                                     icon: const Icon(Icons.payment, size: 24),
-                                    label: const Text('Buy Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                    label: const Text(
+                                      'Buy Now',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: ThemeColors.greenButton,
-                                      foregroundColor: ThemeColors.textColorWhite,
-                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                      foregroundColor:
+                                          ThemeColors.textColorWhite,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal: 16,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -223,9 +437,17 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                   ),
                   const SizedBox(height: 24),
                   // Description below spanning full width
-                  const Text('Product Description', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Product Description',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
-                  Text((offer['product'] ?? 'product').toString().toLowerCase() + ' — ' + (offer['description'] ?? 'High-quality product with excellent quality and durability.')),
+                  Text(
+                    (offer['product'] ?? 'product').toString().toLowerCase() +
+                        ' — ' +
+                        (offer['description'] ??
+                            'High-quality product with excellent quality and durability.'),
+                  ),
                 ],
               ),
             );
@@ -245,12 +467,20 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: mainImage != null ? _buildImageWidget(mainImage) : const Icon(Icons.image, size: 100, color: Colors.grey),
+                  child: mainImage != null
+                      ? _buildImageWidget(mainImage)
+                      : const Icon(Icons.image, size: 100, color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
                 if (images.isNotEmpty) thumbnails(80),
                 const SizedBox(height: 24),
-                SizedBox(width: double.infinity, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: _buildProductDetails(offer))),
+                SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: _buildProductDetails(offer),
+                  ),
+                ),
               ],
             ),
           );
@@ -261,17 +491,22 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
   List<Widget> _buildProductDetails(Map<String, dynamic> offer) {
     return [
-      // Product name and shop
+      // Product name
       Text(
         offer['product'] ?? 'Product',
         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
       ),
       const SizedBox(height: 4),
+      // Shop name below product name
       Text(
-        'Shop: ${offer['shop'] ?? 'Unknown'}',
-        style: const TextStyle(fontSize: 14, color: Colors.grey),
+        offer['shopName'] ?? offer['shop'] ?? 'Unknown Shop',
+        style: const TextStyle(
+          fontSize: 13,
+          color: Colors.blue,
+          fontWeight: FontWeight.w500,
+        ),
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 12),
       // Pricing
       Row(
         children: [
@@ -338,7 +573,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         children: [
           ElevatedButton(
             onPressed: () {
-              final newVal = (_quantityNotifier.value - 1) < 1 ? 1 : (_quantityNotifier.value - 1);
+              final newVal = (_quantityNotifier.value - 1) < 1
+                  ? 1
+                  : (_quantityNotifier.value - 1);
               _quantityNotifier.value = newVal;
             },
             child: const Text('-'),
@@ -354,7 +591,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           const SizedBox(width: 16),
           ElevatedButton(
             onPressed: () {
-              final newVal = (_quantityNotifier.value + 1) > 100 ? 100 : (_quantityNotifier.value + 1);
+              final newVal = (_quantityNotifier.value + 1) > 100
+                  ? 100
+                  : (_quantityNotifier.value + 1);
               _quantityNotifier.value = newVal;
             },
             child: const Text('+'),
@@ -380,27 +619,43 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             child: SizedBox(
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () {
+                onPressed: () async {
                   final qty = _quantityNotifier.value;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Added $qty item(s) to cart'),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    if (context.mounted) {
-                      Navigator.pushNamed(context, '/cart');
-                    }
-                  });
+                  final ok = await _addToCartRequest(offer, qty);
+                  if (ok) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Added $qty item(s) to cart'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                    Future.delayed(const Duration(milliseconds: 500), () {
+                      if (context.mounted) {
+                        Navigator.pushNamed(context, '/cart');
+                      }
+                    });
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to add to cart'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
                 icon: const Icon(Icons.shopping_cart, size: 20),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ThemeColors.accent,
                   foregroundColor: ThemeColors.textColorWhite,
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 8,
+                  ),
                 ),
-                label: const Text('Add to Cart', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                label: const Text(
+                  'Add to Cart',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ),
@@ -421,11 +676,17 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                   );
                 },
                 icon: const Icon(Icons.payment, size: 20),
-                label: const Text('Buy Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                label: const Text(
+                  'Buy Now',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ThemeColors.greenButton,
                   foregroundColor: ThemeColors.textColorWhite,
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 8,
+                  ),
                 ),
               ),
             ),

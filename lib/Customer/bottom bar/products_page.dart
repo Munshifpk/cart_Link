@@ -130,9 +130,15 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                                 MaterialPageRoute(
                                   builder: (_) => ProductPurchasePage(
                                     offer: {
+                                      '_id': p['_id'],
+                                      'productId': p['_id'],
                                       'product': name,
+                                      'name': name,
                                       'shop': shopName,
+                                      'shopName': shopName,
                                       'price': price.toInt(),
+                                      'ownerId': p['ownerId'],
+                                      'shopId': p['ownerId'],
                                       'discount': ((1 - (price / mrp)) * 100)
                                           .toInt(),
                                       'validTill': 'Dec 31, 2025',
