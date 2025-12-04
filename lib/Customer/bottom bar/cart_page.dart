@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'dart:io' as io;
 import 'dart:math' as math;
 import '../customer_home.dart';
-import 'shop_carts_page.dart';
 import 'package:cart_link/services/auth_state.dart';
 import '../shop_products_page.dart';
 import '../product_purchase_page.dart';
