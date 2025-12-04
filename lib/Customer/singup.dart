@@ -1,4 +1,5 @@
 import 'package:cart_link/Customer/customer_home.dart';
+import 'package:cart_link/services/auth_state.dart';
 import 'package:cart_link/services/customer_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -70,6 +71,33 @@ class _SignUpPageState extends State<SignUpPage> {
 
       if (result['success'] == true) {
         _showMessage('Welcome, ${_nameController.text}!');
+        // Save customer into shared AuthState so other pages can access id
+        try {
+          // Backend returns customer data under 'customer' key
+          final serverCustomer =
+              result['customer'] as Map<String, dynamic>? ??
+              result['data'] as Map<String, dynamic>?;
+          if (serverCustomer != null && serverCustomer['_id'] != null) {
+            // Use server-returned customer data (includes _id)
+            AuthState.setCustomer(serverCustomer);
+          } else {
+            // Fallback: use local data but this won't have _id (cart will fail)
+            AuthState.setCustomer({
+              '_id': null, // Will cause cart to fail - user must log in instead
+              'customerName': _nameController.text,
+              'mobile': mobileParsed,
+              'email': _emailController.text,
+            });
+          }
+        } catch (e) {
+          print('Error setting customer auth: $e');
+          AuthState.setCustomer({
+            'customerName': _nameController.text,
+            'mobile': mobileParsed,
+            'email': _emailController.text,
+          });
+        }
+
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(

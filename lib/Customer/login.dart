@@ -1,13 +1,14 @@
 import 'package:cart_link/Customer/customer_home.dart';
+import 'package:cart_link/services/auth_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'singup.dart';
+import 'package:cart_link/Customer/singup.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 // import '../services/customer_service.dart';
 
-final String _backendUrl = kIsWeb
+final _backendUrl = kIsWeb
     ? 'http://localhost:5000/api/customersauth'
     : 'http://10.0.2.2:5000/api/customersauth';
 
@@ -69,6 +70,13 @@ class _LoginPageState extends State<LoginPage> {
 
           // final token = data['token'];
           final customer = data['owner'];
+          try {
+            if (customer is Map<String, dynamic>) {
+              AuthState.setCustomer(customer);
+            } else if (customer is Map) {
+              AuthState.setCustomer(Map<String, dynamic>.from(customer));
+            }
+          } catch (_) {}
           // print('data : $data');
           // print(  '👤 Customer data: $customer');
 
@@ -314,11 +322,12 @@ class _LoginPageState extends State<LoginPage> {
                           children: [
                             const Text("Don't have an account?"),
                             TextButton(
-                              onPressed: () => Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (_) => const SignUpPage(),
-                                ),
-                              ),
+                              onPressed: () =>
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (_) => const SignUpPage(),
+                                    ),
+                                  ),
                               child: const Text(
                                 'Sign up',
                                 style: TextStyle(
