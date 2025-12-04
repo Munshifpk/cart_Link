@@ -21,6 +21,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
   String? _errorMessage;
   Map<String, dynamic> _productData = {};
   String? _shopName;
+  // similar products
+  List<Map<String, dynamic>> _similarProducts = [];
+  bool _loadingSimilar = false;
 
   @override
   void initState() {
@@ -110,6 +113,13 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             _shopName = shopName;
             _isLoading = false;
           });
+          // fetch similar products (by category) after product details
+          try {
+            final pId = productId?.toString();
+            final category = productData['category']?.toString();
+            final ownerId = shopId?.toString();
+            if (ownerId != null) _fetchSimilarProducts(ownerId, category, pId);
+          } catch (_) {}
         }
       } else {
         if (mounted) {
@@ -130,6 +140,54 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           _shopName = widget.offer['shopName'] ?? 'Unknown Shop';
         });
       }
+    }
+  }
+
+  Future<void> _fetchSimilarProducts(
+    String ownerId,
+    String? category,
+    String? currentProductId,
+  ) async {
+    setState(() => _loadingSimilar = true);
+    try {
+      final uri = Uri.parse(
+        '$_backendBase/api/products',
+      ).replace(queryParameters: {'ownerId': ownerId});
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final List<dynamic> list = body is Map && body.containsKey('data')
+            ? (body['data'] as List<dynamic>)
+            : (body is List ? body : []);
+        // filter by category (if provided) and exclude current product
+        final filtered = list
+            .where((p) {
+              try {
+                if (currentProductId != null &&
+                    (p['_id']?.toString() == currentProductId ||
+                        p['id']?.toString() == currentProductId))
+                  return false;
+                if (category != null && category.isNotEmpty) {
+                  return (p['category']?.toString() ?? '').toLowerCase() ==
+                      category.toLowerCase();
+                }
+                // if no category provided, pick other products (active)
+                return (p['isActive'] ?? true) == true;
+              } catch (_) {
+                return false;
+              }
+            })
+            .take(10)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        setState(() {
+          _similarProducts = filtered.cast<Map<String, dynamic>>();
+        });
+      }
+    } catch (e) {
+      // ignore errors silently
+    } finally {
+      if (mounted) setState(() => _loadingSimilar = false);
     }
   }
 
@@ -601,6 +659,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                         (offer['description'] ??
                             'High-quality product with excellent quality and durability.'),
                   ),
+                  const SizedBox(height: 24),
+                  // Similar products section
+                  _buildSimilarProductsSection(),
                 ],
               ),
             );
@@ -638,11 +699,125 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+                // Similar products for small layout
+                _buildSimilarProductsSection(),
               ],
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSimilarProductsSection() {
+    if (_loadingSimilar) {
+      return const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_similarProducts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Similar Products',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _similarProducts.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            padding: const EdgeInsets.only(right: 12),
+            itemBuilder: (context, index) {
+              final item = _similarProducts[index];
+              final images = (item['images'] is List)
+                  ? (item['images'] as List).cast<String>()
+                  : <String>[];
+              final thumb = images.isNotEmpty ? images[0] : '';
+
+              return GestureDetector(
+                onTap: () {
+                  // Open the product page for the tapped similar product
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductPurchasePage(offer: item),
+                      ),
+                    );
+                  }
+                },
+                child: SizedBox(
+                  width: 140,
+                  child: Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: thumb.isNotEmpty
+                                  ? _buildImageWidget(thumb)
+                                  : Container(
+                                      color: Colors.grey.shade200,
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.image,
+                                          size: 36,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            (item['name'] ??
+                                    item['product'] ??
+                                    item['title'] ??
+                                    '')
+                                .toString(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '₹${item['price'] ?? item['mrp'] ?? 0}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
