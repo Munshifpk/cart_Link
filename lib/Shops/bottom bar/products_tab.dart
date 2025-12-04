@@ -49,7 +49,9 @@ class Product {
 }
 
 class ProductsTab extends StatefulWidget {
-  const ProductsTab({super.key});
+  final Function(Function())? onRefreshCallback;
+  
+  const ProductsTab({super.key, this.onRefreshCallback});
 
   @override
   State<ProductsTab> createState() => _ProductsTabState();
@@ -62,6 +64,8 @@ class _ProductsTabState extends State<ProductsTab> {
   void initState() {
     super.initState();
     _productsFuture = _fetchProducts();
+    // Register the refresh callback with parent
+    widget.onRefreshCallback?.call(_refreshProducts);
   }
 
   Future<List<Product>> _fetchProducts() async {
@@ -477,21 +481,6 @@ class _ProductsTabState extends State<ProductsTab> {
     final isMediumScreen = screenWidth > 800;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Products',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: ThemeColors.primary,
-        elevation: 2,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: 'Refresh',
-            onPressed: _refreshProducts,
-          ),
-        ],
-      ),
       body: FutureBuilder<List<Product>>(
         future: _productsFuture,
         builder: (context, snapshot) {

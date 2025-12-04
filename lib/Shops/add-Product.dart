@@ -51,10 +51,19 @@ class _AddProductPageState extends State<AddProductPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_pickedImages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least 1 image')),
+      // Ask user whether to continue without images
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('No images selected'),
+          content: const Text('You have not selected any images. Do you want to continue without images?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue')),
+          ],
+        ),
       );
-      return;
+      if (proceed != true) return;
     }
     if (_pickedImages.length > 10) {
       ScaffoldMessenger.of(context).showSnackBar(

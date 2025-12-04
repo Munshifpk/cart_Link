@@ -16,6 +16,7 @@ class ShopHomePage extends StatefulWidget {
 
 class _ShopHomePageState extends State<ShopHomePage> {
   int _currentIndex = 0;
+  late Function() _refreshProducts;
 
   void _onPageChanged(int index) {
     setState(() => _currentIndex = index);
@@ -38,6 +39,12 @@ class _ShopHomePageState extends State<ShopHomePage> {
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
         actions: [
+          if (_currentIndex == 1)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              tooltip: 'Refresh',
+              onPressed: _refreshProducts,
+            ),
           IconButton(
             onPressed: () => Navigator.push(
               context,
@@ -112,7 +119,11 @@ class _ShopHomePageState extends State<ShopHomePage> {
               _onPageChanged(index);
             },
           ),
-          const ProductsTab(),
+          ProductsTab(
+            onRefreshCallback: (refreshFn) {
+              _refreshProducts = refreshFn;
+            },
+          ),
           const OrdersTab(),
           const ProfileTab(),
         ],
