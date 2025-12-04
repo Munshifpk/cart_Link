@@ -73,17 +73,19 @@ class _AddProductPageState extends State<AddProductPage> {
     }
     setState(() => _loading = true);
 
-    // Collect base64-encoded images
+    // Collect base64-encoded images (skip if empty)
     final List<String> imagesData = [];
-    for (final x in _pickedImages) {
-      try {
-        final bytes = await x.readAsBytes();
-        final b64 = base64Encode(bytes);
-        final path = x.path.toLowerCase();
-        final mime = path.endsWith('.png') ? 'image/png' : 'image/jpeg';
-        imagesData.add('data:$mime;base64,$b64');
-      } catch (_) {
-        // ignore individual image errors
+    if (_pickedImages.isNotEmpty) {
+      for (final x in _pickedImages) {
+        try {
+          final bytes = await x.readAsBytes();
+          final b64 = base64Encode(bytes);
+          final path = x.path.toLowerCase();
+          final mime = path.endsWith('.png') ? 'image/png' : 'image/jpeg';
+          imagesData.add('data:$mime;base64,$b64');
+        } catch (e) {
+          print('[IMAGE_ENCODE_ERROR] Failed to encode image: $e');
+        }
       }
     }
 
@@ -108,10 +110,19 @@ class _AddProductPageState extends State<AddProductPage> {
     };
 
     try {
-      final res = await ProductService.createProduct(payload);
+      print('[PRODUCT_SUBMIT] Sending payload: ${payload.keys.join(', ')}');
+      print('[PRODUCT_SUBMIT] Owner: ${payload['ownerId']}, Images: ${imagesData.length}');
+      final res = await ProductService.createProduct(payload).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          print('[PRODUCT_SUBMIT_TIMEOUT] Request timed out after 30s');
+          return {'success': false, 'message': 'Request timed out. Product may have been saved, please refresh.'};
+        },
+      );
       if (!mounted) return;
       setState(() => _loading = false);
       if (res['success'] == true) {
+        print('[PRODUCT_SUBMIT] Success!');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Product added successfully!')),
         );
@@ -120,6 +131,7 @@ class _AddProductPageState extends State<AddProductPage> {
           MaterialPageRoute(builder: (_) => const ProductAddedSuccess()),
         );
       } else {
+        print('[PRODUCT_SUBMIT] Failed: ${res['message']}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['message'] ?? 'Failed to add product')),
         );
@@ -127,6 +139,7 @@ class _AddProductPageState extends State<AddProductPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+      print('[PRODUCT_SUBMIT_ERROR] Exception: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error submitting product: $e')));
@@ -656,7 +669,7 @@ class _AddProductPageState extends State<AddProductPage> {
   Future<void> _pickImages() async {
     try {
       final ImagePicker picker = ImagePicker();
-      final List<XFile> imgs = await picker.pickMultiImage(imageQuality: 85);
+      final List<XFile> imgs = await picker.pickMultiImage(imageQuality: 70);
       if (imgs.isNotEmpty) {
         if (!mounted) return;
         setState(() {

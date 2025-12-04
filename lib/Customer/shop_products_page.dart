@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, Tar
 import 'product_purchase_page.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../services/product_service.dart';
 
 class ShopProductsPage extends StatefulWidget {
   final Map<String, dynamic> shop;
@@ -70,13 +71,10 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
         return;
       }
 
-      final response = await http.get(
-        Uri.parse('$_backendBase/api/products?ownerId=$shopId'),
-      ).timeout(const Duration(seconds: 10));
+      final result = await ProductService.getProducts(ownerId: shopId);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final productList = (data['data'] as List? ?? [])
+      if (result['success'] == true) {
+        final productList = (result['data'] as List? ?? [])
             .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
             .toList();
         setState(() {

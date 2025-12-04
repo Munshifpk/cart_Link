@@ -59,6 +59,7 @@ class ProductsTab extends StatefulWidget {
 
 class _ProductsTabState extends State<ProductsTab> {
   late Future<List<Product>> _productsFuture;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -81,8 +82,24 @@ class _ProductsTabState extends State<ProductsTab> {
 
     final result = await ProductService.getProducts(ownerId: ownerId);
     if (result['success'] == true) {
-      final List<dynamic> productData = result['data'];
-      return productData.map((json) => Product.fromJson(json)).toList();
+      final List<dynamic> productData = result['data'] ?? [];
+
+      // Fetch images for each product on-demand (backend excludes images in list)
+      final products = await Future.wait(productData.map<Future<Product>>((json) async {
+        final Map<String, dynamic> map = Map<String, dynamic>.from(json);
+        try {
+          final id = (map['_id'] ?? map['id'] ?? '').toString();
+          if (id.isNotEmpty) {
+            final imgs = await ProductService.getProductImages(id);
+            if (imgs.isNotEmpty) map['images'] = imgs;
+          }
+        } catch (_) {
+          // ignore image fetch errors, continue without images
+        }
+        return Product.fromJson(map);
+      }));
+
+      return products;
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,7 +114,14 @@ class _ProductsTabState extends State<ProductsTab> {
   }
 
   void _refreshProducts() {
-    setState(() => _productsFuture = _fetchProducts());
+    // Do not call async code directly inside the setState callback.
+    // Compute the future first, then update state synchronously.
+    setState(() => _isRefreshing = true);
+    final future = _fetchProducts();
+    setState(() {
+      _productsFuture = future;
+      _isRefreshing = false;
+    });
   }
 
   void _editProduct(Product product) {
@@ -112,7 +136,8 @@ class _ProductsTabState extends State<ProductsTab> {
         ),
       ),
     ).then((result) {
-      if (result == true) {
+      // Always refresh after returning from edit page, regardless of result
+      if (mounted) {
         _refreshProducts();
       }
     });
@@ -120,8 +145,9 @@ class _ProductsTabState extends State<ProductsTab> {
 
   void _deleteProduct(Product product) {
     // Confirm and delete
+    final parentContext = context;
     showDialog(
-      context: context,
+      context: parentContext,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Deletion'),
         content: Text(
@@ -136,8 +162,8 @@ class _ProductsTabState extends State<ProductsTab> {
             onPressed: () async {
               Navigator.pop(context);
 
-              // Show loading indicator
-              ScaffoldMessenger.of(context).showSnackBar(
+              // Use the parent context (not the dialog's) when showing SnackBars
+              ScaffoldMessenger.of(parentContext).showSnackBar(
                 const SnackBar(
                   content: Text('Deleting product...'),
                   duration: Duration(seconds: 2),
@@ -148,7 +174,7 @@ class _ProductsTabState extends State<ProductsTab> {
               if (!mounted) return;
 
               if (result['success'] == true) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(parentContext).showSnackBar(
                   SnackBar(
                     content: Text('${product.name} deleted successfully'),
                     backgroundColor: Colors.green,
@@ -157,7 +183,7 @@ class _ProductsTabState extends State<ProductsTab> {
                 );
                 _refreshProducts();
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(parentContext).showSnackBar(
                   SnackBar(
                     content: Text(
                       result['message'] ?? 'Failed to delete product',
@@ -484,7 +510,7 @@ class _ProductsTabState extends State<ProductsTab> {
       body: FutureBuilder<List<Product>>(
         future: _productsFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting || _isRefreshing) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {

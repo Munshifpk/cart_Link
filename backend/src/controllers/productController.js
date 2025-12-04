@@ -44,10 +44,33 @@ exports.getAllProducts = async (req, res) => {
             filter.ownerId = ownerId;
         }
 
-        const products = await Product.find(filter).lean();
+        // Exclude images field to reduce payload size (images bloat response with base64)
+        const products = await Product.find(filter).select('-images').lean();
         return res.json({ success: true, data: products });
     } catch (err) {
         console.error('getAllProducts error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.getAllProductsWithImages = async (req, res) => {
+    try {
+        const { ownerId } = req.query || {};
+
+        let filter = {};
+        if (ownerId) {
+            // validate ownerId
+            if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+                return res.status(400).json({ success: false, message: 'Invalid ownerId' });
+            }
+            filter.ownerId = ownerId;
+        }
+
+        // Include images (for customer pages that need them)
+        const products = await Product.find(filter).lean();
+        return res.json({ success: true, data: products });
+    } catch (err) {
+        console.error('getAllProductsWithImages error:', err);
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 };
@@ -99,6 +122,26 @@ exports.updateProduct = async (req, res) => {
         return res.json({ success: true, message: 'Product updated', data: updated });
     } catch (err) {
         console.error('updateProduct error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.getProductImages = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: 'Invalid product ID' });
+        }
+
+        const product = await Product.findById(id).select('images').lean();
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        return res.json({ success: true, data: product.images || [] });
+    } catch (err) {
+        console.error('getProductImages error:', err);
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 };

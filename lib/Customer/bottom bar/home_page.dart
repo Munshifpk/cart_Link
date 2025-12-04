@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../customer_home.dart';
@@ -6,6 +7,7 @@ import 'shops_page.dart';
 import '../shop_products_page.dart';
 import '../product_purchase_page.dart';
 import '../category_products_page.dart';
+import '../../services/product_service.dart';
 
 class CustomerHomePage extends StatefulWidget {
   final Customer? customer;
@@ -21,6 +23,12 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   List<String> _categories = [];
   List<Map<String, dynamic>> _recommendedProducts = [];
   bool _loadingProducts = false;
+
+  String get _backendBase {
+    if (kIsWeb) return 'http://localhost:5000';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
+    return 'http://localhost:5000';
+  }
 
   @override
   void initState() {
@@ -44,17 +52,17 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Future<void> _loadCategories() async {
     try {
       final resp = await http
-          .get(Uri.parse('http://localhost:5000/api/Shops'))
+          .get(Uri.parse('$_backendBase/api/Shops'))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final shops = (data['data'] as List? ?? []);
         final uniqueCategories = <String>{};
         for (var shop in shops) {
-          final category =
-              shop['category'] ?? shop['businessType'] ?? 'General';
+          final category = shop['category'] ?? shop['businessType'] ?? 'General';
           uniqueCategories.add(category.toString());
         }
+        if (!mounted) return;
         setState(() {
           _categories = uniqueCategories.toList();
         });
@@ -67,12 +75,9 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Future<void> _loadRecommendedProducts() async {
     try {
       setState(() => _loadingProducts = true);
-      final resp = await http
-          .get(Uri.parse('http://localhost:5000/api/products'))
-          .timeout(const Duration(seconds: 20));
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body);
-        final products = (data['data'] as List? ?? [])
+      final result = await ProductService.getProducts();
+      if (result['success'] == true && mounted) {
+        final products = (result['data'] as List? ?? [])
             .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
             .toList();
 
@@ -82,7 +87,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
         // Fetch shops once to map ownerId -> shopName
         try {
-          final shopsResp = await http.get(Uri.parse('http://localhost:5000/api/Shops')).timeout(const Duration(seconds: 10));
+          final shopsResp = await http.get(Uri.parse('$_backendBase/api/Shops')).timeout(const Duration(seconds: 10));
           if (shopsResp.statusCode == 200) {
             final shopsData = jsonDecode(shopsResp.body);
             final shopsList = (shopsData['data'] as List? ?? [])
@@ -128,14 +133,14 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
   Future<void> _loadShops() async {
     try {
-      final resp = await http
-          .get(Uri.parse('http://localhost:5000/api/Shops'))
+        final resp = await http
+          .get(Uri.parse('$_backendBase/api/Shops'))
           .timeout(const Duration(seconds: 10));
-      if (resp.statusCode == 200) {
+        if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final list = (data['data'] as List? ?? [])
-            .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
-            .toList();
+          .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
+          .toList();
         // Fetch product counts for each shop in parallel
         final futures = list.map((shop) async {
           final shopId = shop['_id']?.toString() ?? '';
@@ -144,9 +149,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
             try {
               final resp2 = await http
                   .get(
-                    Uri.parse(
-                      'http://localhost:5000/api/products?ownerId=$shopId',
-                    ),
+                    Uri.parse('$_backendBase/api/products?ownerId=$shopId'),
                   )
                   .timeout(const Duration(seconds: 10));
               if (resp2.statusCode == 200) {
@@ -169,15 +172,16 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
               (b['productCount'] as int).compareTo(a['productCount'] as int),
         );
         final top = enriched.take(6).toList();
+        if (!mounted) return;
         setState(() {
           _shops = top;
           _loading = false;
         });
       } else {
-        setState(() => _loading = false);
+        if (mounted) setState(() => _loading = false);
       }
     } catch (e) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
