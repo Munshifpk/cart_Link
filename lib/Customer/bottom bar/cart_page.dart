@@ -19,6 +19,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
   bool _isLoading = true;
   String? _errorMessage;
   Map<String, dynamic> _cartsByShop = {}; // Map<shopId, {shopData, items}>
+  Map<String, String> _shopNames = {}; // Map<shopId, shopName>
 
   @override
   void initState() {
@@ -30,6 +31,33 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
     if (kIsWeb) return 'http://localhost:5000';
     if (io.Platform.isAndroid) return 'http://10.0.2.2:5000';
     return 'http://localhost:5000';
+  }
+
+  Future<void> _fetchShopName(String shopId) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_backendBase/api/Shops/$shopId'))
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final shopData = data['data'] ?? data;
+        final shopName = shopData['shopName'] ?? 'Shop $shopId';
+
+        if (mounted) {
+          setState(() {
+            _shopNames[shopId] = shopName;
+          });
+        }
+      }
+    } catch (e) {
+      // Silently fail - use shop ID as fallback
+      if (mounted) {
+        setState(() {
+          _shopNames[shopId] = 'Shop $shopId';
+        });
+      }
+    }
   }
 
   Future<void> _fetchCarts() async {
@@ -53,11 +81,15 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
 
         // Group carts by shop and organize data
         final Map<String, dynamic> shopMap = {};
+        final Set<String> shopIds = {};
+
         for (var cart in carts) {
           final shopId = cart['shopId'] as String?;
           final items = cart['items'] as List? ?? [];
 
           if (shopId != null && items.isNotEmpty) {
+            shopIds.add(shopId);
+
             if (!shopMap.containsKey(shopId)) {
               shopMap[shopId] = {
                 'shopId': shopId,
@@ -94,6 +126,11 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
               shopMap[shopId]['totalQuantity'] += quantity;
             }
           }
+        }
+
+        // Fetch shop names for all shops in parallel
+        for (var shopId in shopIds) {
+          _fetchShopName(shopId);
         }
 
         setState(() {
@@ -214,7 +251,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Shop $shopId',
+                                _shopNames[shopId] ?? 'Shop $shopId',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -381,6 +418,43 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  ),
+                  // Checkout button for this shop
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          final shopName = _shopNames[shopId] ?? 'Shop $shopId';
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Proceeding to checkout for $shopName (₹${totalAmount.toStringAsFixed(2)})...',
+                              ),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                          // TODO: Implement checkout flow
+                        },
+                        icon: const Icon(Icons.payment, size: 20),
+                        label: const Text(
+                          'Checkout',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ),

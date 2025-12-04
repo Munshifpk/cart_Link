@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../shop_products_page.dart';
@@ -15,6 +17,13 @@ class _ShopsPageState extends State<ShopsPage> {
   List<Map<String, dynamic>> shops = [];
   Map<String, int> productCounts = {}; // Store product count per shop
 
+  String get _backendBase {
+    if (kIsWeb) return 'http://localhost:5000';
+    if (defaultTargetPlatform == TargetPlatform.android)
+      return 'http://10.0.2.2:5000';
+    return 'http://localhost:5000';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -23,62 +32,77 @@ class _ShopsPageState extends State<ShopsPage> {
 
   Future<void> _loadShops() async {
     try {
-      final response = await http.get(
-        Uri.parse('http://localhost:5000/api/Shops'),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(Uri.parse('$_backendBase/api/Shops'))
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final shopList = (data['data'] as List? ?? [])
-            .map<Map<String, dynamic>>((shop) => Map<String, dynamic>.from(shop))
+            .map<Map<String, dynamic>>(
+              (shop) => Map<String, dynamic>.from(shop),
+            )
             .toList();
-        
-        // Fetch product counts for each shop
+
+        // Fetch product counts for each shop in parallel (non-blocking)
+        if (mounted) {
+          setState(() {
+            shops = shopList;
+            _loading = false;
+          });
+        }
+
+        // Fetch product counts in background (don't wait)
         for (var shop in shopList) {
           final shopId = shop['_id'] ?? '';
           if (shopId.isNotEmpty) {
-            await _fetchProductCount(shopId);
+            _fetchProductCount(shopId);
           }
         }
-        
-        setState(() {
-          shops = shopList;
-          _loading = false;
-        });
       } else {
         setState(() => _loading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to load shops: ${response.statusCode}')),
+            SnackBar(
+              content: Text('Failed to load shops: ${response.statusCode}'),
+            ),
           );
         }
       }
     } catch (e) {
       setState(() => _loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading shops: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading shops: $e')));
       }
     }
   }
 
   Future<void> _fetchProductCount(String shopId) async {
     try {
-      final response = await http.get(
-        Uri.parse('http://localhost:5000/api/products?ownerId=$shopId'),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final products = data['data'] as List? ?? [];
-        setState(() {
-          productCounts[shopId] = products.length;
-        });
+        if (mounted) {
+          setState(() {
+            productCounts[shopId] = products.length;
+          });
+        }
       }
     } catch (e) {
-      // Silently fail for product count
-      print('Error fetching product count for shop $shopId: $e');
+      // Silently fail for product count - set to 0 or skip
+      if (mounted) {
+        setState(() {
+          productCounts[shopId] = 0;
+        });
+      }
+      // ignore: avoid_print
+      print('⚠ Error fetching product count for shop $shopId: $e');
     }
   }
 
@@ -139,10 +163,7 @@ class _ShopsPageState extends State<ShopsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Center(
-                            child: Text(
-                              '🏪',
-                              style: TextStyle(fontSize: 32),
-                            ),
+                            child: Text('🏪', style: TextStyle(fontSize: 32)),
                           ),
                         ),
                         const SizedBox(width: 12),

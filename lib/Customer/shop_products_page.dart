@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'product_purchase_page.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -14,6 +15,12 @@ class ShopProductsPage extends StatefulWidget {
 class _ShopProductsPageState extends State<ShopProductsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> products = [];
+
+  String get _backendBase {
+    if (kIsWeb) return 'http://localhost:5000';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
+    return 'http://localhost:5000';
+  }
 
   Widget _buildImageFromProduct(Map<String, dynamic> product, {BoxFit fit = BoxFit.cover}) {
     String? src;
@@ -64,7 +71,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       }
 
       final response = await http.get(
-        Uri.parse('http://localhost:5000/api/products?ownerId=$shopId'),
+        Uri.parse('$_backendBase/api/products?ownerId=$shopId'),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -150,9 +157,16 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                               MaterialPageRoute(
                                 builder: (_) => ProductPurchasePage(
                                   offer: {
+                                    '_id': product['_id'],
+                                    'productId': product['_id'],
                                     'product': name,
+                                    'name': name,
                                     'shop': shopName,
+                                    'shopName': shopName,
                                     'price': price.toInt(),
+                                    'mrp': mrp.toInt(),
+                                    'ownerId': widget.shop['_id'],
+                                    'shopId': widget.shop['_id'],
                                     'discount': discount,
                                     'validTill': 'Dec 31, 2025',
                                     'images': product['images'] ?? [],
