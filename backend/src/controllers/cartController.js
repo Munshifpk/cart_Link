@@ -90,3 +90,81 @@ exports.getByCustomer = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+// Update quantity for a specific item in a customer's shop cart
+exports.updateCartItem = async (req, res) => {
+  try {
+    const { customerId, shopId, productId } = req.params;
+    const { quantity } = req.body;
+
+    if (!customerId || !shopId || !productId) {
+      return res.status(400).json({ success: false, message: 'Missing identifiers' });
+    }
+
+    if (!Number.isInteger(quantity) && typeof quantity !== 'number') {
+      return res.status(400).json({ success: false, message: 'Quantity must be a number' });
+    }
+
+    // Find the cart
+    let cart = await Cart.findOne({ customerId, shopId });
+    if (!cart) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
+
+    // Ensure items is an array
+    cart.items = Array.isArray(cart.items) ? cart.items : [];
+
+    // Find existing item index (compare stringified ids)
+    const idx = cart.items.findIndex(it => (it.productId?.toString ? it.productId.toString() : it.productId) === productId.toString());
+
+    if (idx === -1) {
+      // If item not found and quantity > 0, add it
+      if ((quantity ?? 0) > 0) {
+        cart.items.push({ productId, quantity: Number(quantity) });
+      } else {
+        return res.status(404).json({ success: false, message: 'Item not found in cart' });
+      }
+    } else {
+      if ((quantity ?? 0) > 0) {
+        cart.items[idx].quantity = Number(quantity);
+      } else {
+        // remove item
+        cart.items.splice(idx, 1);
+      }
+    }
+
+    // If no items left, remove the cart document
+    if (!cart.items || cart.items.length === 0) {
+      await Cart.deleteOne({ _id: cart._id });
+      return res.json({ success: true, message: 'Item removed and cart deleted' });
+    }
+
+    cart.updatedAt = new Date();
+    await cart.save();
+
+    return res.json({ success: true, message: 'Cart updated', data: cart });
+  } catch (err) {
+    console.error('updateCartItem error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Delete an entire cart for a given customer + shop
+exports.deleteCart = async (req, res) => {
+  try {
+    const { customerId, shopId } = req.params;
+    if (!customerId || !shopId) {
+      return res.status(400).json({ success: false, message: 'Missing identifiers' });
+    }
+
+    const result = await Cart.findOneAndDelete({ customerId, shopId });
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
+
+    return res.json({ success: true, message: 'Cart deleted' });
+  } catch (err) {
+    console.error('deleteCart error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

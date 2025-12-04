@@ -17,11 +17,16 @@ class ProductPurchasePage extends StatefulWidget {
 class _ProductPurchasePageState extends State<ProductPurchasePage> {
   late final ValueNotifier<int> _quantityNotifier;
   int _selectedImageIndex = 0;
+  bool _isLoading = true;
+  String? _errorMessage;
+  Map<String, dynamic> _productData = {};
+  String? _shopName;
 
   @override
   void initState() {
     super.initState();
     _quantityNotifier = ValueNotifier<int>(1);
+    _fetchProductAndShopDetails();
   }
 
   @override
@@ -35,6 +40,97 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     if (defaultTargetPlatform == TargetPlatform.android)
       return 'http://10.0.2.2:5000';
     return 'http://localhost:5000';
+  }
+
+  Future<void> _fetchProductAndShopDetails() async {
+    try {
+      final productId = widget.offer['_id'] ?? widget.offer['id'];
+      final shopId =
+          widget.offer['shopId'] ??
+          widget.offer['ownerId'] ??
+          widget.offer['shop'];
+
+      if (productId == null || shopId == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Invalid product or shop ID';
+            _productData = widget.offer;
+            _shopName = widget.offer['shopName'] ?? 'Unknown Shop';
+          });
+        }
+        return;
+      }
+
+      // Fetch product details from /api/products?ownerId=$shopId and filter by productId
+      final productResponse = await http
+          .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+          .timeout(const Duration(seconds: 8));
+
+      if (productResponse.statusCode == 200) {
+        final productsData =
+            jsonDecode(productResponse.body)['data'] as List? ?? [];
+        final productData = productsData.firstWhere(
+          (p) =>
+              p['_id']?.toString() == productId.toString() ||
+              p['_id'] == productId,
+          orElse: () => null,
+        );
+
+        if (productData == null) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+              _errorMessage = 'Product not found';
+              _productData = widget.offer;
+            });
+          }
+          return;
+        }
+
+        // Fetch shop details
+        final shopResponse = await http
+            .get(Uri.parse('$_backendBase/api/Shops/$shopId'))
+            .timeout(const Duration(seconds: 8));
+
+        String shopName = 'Unknown Shop';
+        if (shopResponse.statusCode == 200) {
+          final shopData =
+              jsonDecode(shopResponse.body)['data'] ??
+              jsonDecode(shopResponse.body);
+          shopName = shopData['shopName'] ?? 'Unknown Shop';
+        }
+
+        // Merge shop name with product data
+        productData['shopName'] = shopName;
+
+        if (mounted) {
+          setState(() {
+            _productData = productData;
+            _shopName = shopName;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Failed to load product details';
+            _productData = widget.offer;
+            _shopName = widget.offer['shopName'] ?? 'Unknown Shop';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Error loading product: $e';
+          _productData = widget.offer;
+          _shopName = widget.offer['shopName'] ?? 'Unknown Shop';
+        });
+      }
+    }
   }
 
   Future<bool> _addToCartRequest(Map<String, dynamic> offer, int qty) async {
@@ -121,7 +217,64 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
   @override
   Widget build(BuildContext context) {
-    final offer = widget.offer;
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Loading Product...'),
+          foregroundColor: ThemeColors.textColorWhite,
+          backgroundColor: ThemeColors.primary,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Product Details'),
+          foregroundColor: ThemeColors.textColorWhite,
+          backgroundColor: ThemeColors.primary,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(fontSize: 16, color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final offer = _productData.isNotEmpty ? _productData : widget.offer;
+    final String productTitle =
+        (_productData['name'] ??
+                _productData['product'] ??
+                _productData['productName'] ??
+                offer['name'] ??
+                offer['product'] ??
+                offer['productName'] ??
+                offer['title'])
+            ?.toString() ??
+        'Product';
+    final String shopDisplayName =
+        (_productData['shopName'] ??
+                _shopName ??
+                offer['shopName'] ??
+                offer['shop'])
+            ?.toString() ??
+        'Unknown Shop';
     final images = (offer['images'] is List)
         ? (offer['images'] as List).cast<String>()
         : <String>[];
@@ -129,7 +282,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Purchase Product'),
+        title: Text(
+          productTitle.isNotEmpty ? productTitle : 'Purchase Product',
+        ),
         foregroundColor: ThemeColors.textColorWhite,
         backgroundColor: ThemeColors.primary,
       ),
@@ -211,7 +366,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                           children: [
                             // name, price, mrp, shop
                             Text(
-                              offer['product'] ?? 'Product',
+                              productTitle,
                               style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
@@ -219,9 +374,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              offer['shopName'] ??
-                                  offer['shop'] ??
-                                  'Unknown Shop',
+                              shopDisplayName,
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.blue,
@@ -443,7 +596,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    (offer['product'] ?? 'product').toString().toLowerCase() +
+                    (productTitle).toString().toLowerCase() +
                         ' — ' +
                         (offer['description'] ??
                             'High-quality product with excellent quality and durability.'),
@@ -478,7 +631,11 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                   width: double.infinity,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _buildProductDetails(offer),
+                    children: _buildProductDetails(
+                      offer,
+                      productTitle,
+                      shopDisplayName,
+                    ),
                   ),
                 ),
               ],
@@ -489,17 +646,21 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     );
   }
 
-  List<Widget> _buildProductDetails(Map<String, dynamic> offer) {
+  List<Widget> _buildProductDetails(
+    Map<String, dynamic> offer,
+    String productTitle,
+    String shopDisplayName,
+  ) {
     return [
-      // Product name
+      // Product name (use DB-fetched canonical title when available)
       Text(
-        offer['product'] ?? 'Product',
+        productTitle,
         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
       ),
       const SizedBox(height: 4),
-      // Shop name below product name
+      // Shop name below product name (use DB-fetched shop name when available)
       Text(
-        offer['shopName'] ?? offer['shop'] ?? 'Unknown Shop',
+        shopDisplayName,
         style: const TextStyle(
           fontSize: 13,
           color: Colors.blue,
