@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart'
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../shop_products_page.dart';
-import '../shop_notifications_page.dart';
 
 class ShopsPage extends StatefulWidget {
   const ShopsPage({super.key});

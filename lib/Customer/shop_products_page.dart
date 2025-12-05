@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'product_purchase_page.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../services/product_service.dart';
 
@@ -17,13 +15,10 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> products = [];
 
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
-
-  Widget _buildImageFromProduct(Map<String, dynamic> product, {BoxFit fit = BoxFit.cover}) {
+  Widget _buildImageFromProduct(
+    Map<String, dynamic> product, {
+    BoxFit fit = BoxFit.cover,
+  }) {
     String? src;
     final imgs = product['images'];
     if (imgs is List && imgs.isNotEmpty) {
@@ -33,7 +28,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
     }
 
     if (src == null || src.trim().isEmpty) {
-      return const Center(child: Icon(Icons.image, size: 40, color: Colors.grey));
+      return const Center(
+        child: Icon(Icons.image, size: 40, color: Colors.grey),
+      );
     }
 
     if (src.trim().startsWith('data:')) {
@@ -41,9 +38,17 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
         final parts = src.split(',');
         final b64 = parts.length > 1 ? parts.last : '';
         final bytes = base64Decode(b64);
-        return Image.memory(bytes, fit: fit, width: double.infinity, height: double.infinity, alignment: Alignment.center);
+        return Image.memory(
+          bytes,
+          fit: fit,
+          width: double.infinity,
+          height: double.infinity,
+          alignment: Alignment.center,
+        );
       } catch (_) {
-        return const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey));
+        return const Center(
+          child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+        );
       }
     }
 
@@ -53,7 +58,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       width: double.infinity,
       height: double.infinity,
       alignment: Alignment.center,
-      errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+      errorBuilder: (_, __, ___) => const Center(
+        child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+      ),
     );
   }
 
@@ -87,9 +94,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
     } catch (e) {
       setState(() => _loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading products: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading products: $e')));
       }
     }
   }
@@ -137,11 +144,18 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      final name = product['name'] ?? product['productName'] ?? 'Product';
+                      final name =
+                          product['name'] ??
+                          product['productName'] ??
+                          'Product';
                       final price = (product['price'] ?? 0).toDouble();
                       final mrp = (product['mrp'] ?? price).toDouble();
-                      final discount = mrp > price ? ((1 - (price / mrp)) * 100).toInt() : 0;
-                      final rating = (product['rating'] ?? product['avgRating'] ?? 0).toDouble();
+                      final discount = mrp > price
+                          ? ((1 - (price / mrp)) * 100).toInt()
+                          : 0;
+                      final rating =
+                          (product['rating'] ?? product['avgRating'] ?? 0)
+                              .toDouble();
 
                       return Card(
                         clipBehavior: Clip.antiAlias,
@@ -182,7 +196,10 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
                                     color: Colors.blue.shade50,
-                                    child: _buildImageFromProduct(product, fit: BoxFit.cover),
+                                    child: _buildImageFromProduct(
+                                      product,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -213,7 +230,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                                           ),
                                           const SizedBox(width: 2),
                                           Text(
-                                            rating > 0 ? rating.toStringAsFixed(1) : 'New',
+                                            rating > 0
+                                                ? rating.toStringAsFixed(1)
+                                                : 'New',
                                             style: const TextStyle(
                                               fontSize: 10,
                                               color: Colors.grey,

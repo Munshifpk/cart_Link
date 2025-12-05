@@ -547,8 +547,15 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     final offer = _productData.isNotEmpty ? _productData : widget.offer;
     // normalize incoming offer data (adds offerPrice, price, mrp, images etc.)
     try {
-      if (offer is Map<String, dynamic>) _validateProductData(offer);
+      _validateProductData(offer);
     } catch (_) {}
+
+    // Compute normalized prices once for use throughout build
+    final double offerPrice = _parsePrice(
+      offer['offerPrice'] ?? offer['price'] ?? 0,
+    );
+    final double mrp = _parsePrice(offer['mrp'] ?? 0);
+    final double discount = _parsePrice(offer['discount'] ?? 0);
 
     final String productTitle =
         (offer['name'] ??
@@ -566,12 +573,6 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                 offer['shop'])
             ?.toString() ??
         'Unknown Shop';
-
-    // prefer offerPrice for display and calculations
-    final double offerPrice = _parsePrice(
-      offer['offerPrice'] ?? offer['price'] ?? 0,
-    );
-    final double mrp = _parsePrice(offer['mrp']);
 
     final images = (offer['images'] is List)
         ? (offer['images'] as List).cast<String>()
@@ -687,7 +688,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '₹${offer['price'] ?? 0}',
+                                  '₹${offerPrice.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -695,16 +696,16 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                if ((offer['mrp'] ?? 0) > (offer['price'] ?? 0))
+                                if (mrp > 0 && offerPrice < mrp)
                                   Text(
-                                    'MRP: ₹${(offer['mrp'] ?? 0).toString()}',
+                                    'MRP: ₹${mrp.toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       decoration: TextDecoration.lineThrough,
                                       color: Colors.grey,
                                       fontSize: 14,
                                     ),
                                   ),
-                                if ((offer['discount'] ?? 0) > 0) ...[
+                                if (discount > 0) ...[
                                   const SizedBox(height: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -716,7 +717,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      '${offer['discount']}% off',
+                                      '${discount.toStringAsFixed(0)}% off',
                                       style: TextStyle(
                                         color: Colors.orange.shade700,
                                         fontWeight: FontWeight.w600,
@@ -1090,11 +1091,11 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         ),
       ),
       const SizedBox(height: 12),
-      // Pricing
+      // Pricing (note: offerPrice, mrp, discount are pre-computed in build())
       Row(
         children: [
           Text(
-            '₹${offer['price'] ?? 0}',
+            '₹${_parsePrice(offer['offerPrice'] ?? offer['price'] ?? 0).toStringAsFixed(0)}',
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -1102,7 +1103,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             ),
           ),
           const SizedBox(width: 12),
-          if ((offer['discount'] ?? 0) > 0)
+          if (_parsePrice(offer['discount'] ?? 0) > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -1110,7 +1111,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '-${offer['discount']}%',
+                '-${_parsePrice(offer['discount']).toStringAsFixed(0)}%',
                 style: const TextStyle(
                   color: Colors.orange,
                   fontWeight: FontWeight.bold,

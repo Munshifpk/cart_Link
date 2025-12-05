@@ -37,8 +37,6 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
     return 'http://localhost:5000';
   }
 
-  get SharedPreferences => null;
-
   Future<void> _loadNotificationSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool(_offersEnabledKey);
