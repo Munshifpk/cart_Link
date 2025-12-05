@@ -30,39 +30,58 @@ class _AppUpdatesPageState extends State<AppUpdatesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('App Updates')),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'App Updates',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            // Data table showing updates in tabular form
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Date')),
-                  DataColumn(label: Text('Title')),
-                  DataColumn(label: Text('Description')),
-                ],
-                rows: List.generate(_updates.length, (i) {
-                  final u = _updates[i];
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(u['date']!)),
-                      DataCell(Text(u['title']!)),
-                      DataCell(Text(u['desc']!)),
-                    ],
-                  );
-                }),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'App Updates',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+
+              // Mobile friendly list of updates
+              Expanded(
+                child: ListView.separated(
+                  itemCount: _updates.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, i) {
+                    final u = _updates[i];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 12,
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue.shade50,
+                        child: Text(
+                          u['date']!.split('-').first,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        u['title']!,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(u['desc']!),
+                      trailing: Text(
+                        u['date']!,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

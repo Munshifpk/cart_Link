@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../shop_products_page.dart';
+import '../shop_notifications_page.dart';
 
 class ShopsPage extends StatefulWidget {
   const ShopsPage({super.key});
@@ -16,6 +17,7 @@ class _ShopsPageState extends State<ShopsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> shops = [];
   Map<String, int> productCounts = {}; // Store product count per shop
+  Set<String> followedShops = {}; // Track followed shops by ID
 
   String get _backendBase {
     if (kIsWeb) return 'http://localhost:5000';
@@ -27,7 +29,52 @@ class _ShopsPageState extends State<ShopsPage> {
   @override
   void initState() {
     super.initState();
+    _loadFollowedShops();
     _loadShops();
+  }
+
+  Future<void> _loadFollowedShops() async {
+    // Load followed shops from backend or local storage
+  }
+
+  Future<void> _toggleFollowShop(String shopId, String shopName) async {
+    try {
+      setState(() {
+        if (followedShops.contains(shopId)) {
+          followedShops.remove(shopId);
+        } else {
+          followedShops.add(shopId);
+        }
+      });
+
+      final uri = Uri.parse('$_backendBase/api/customers/follow-shop');
+      await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'shopId': shopId,
+          'isFollowing': followedShops.contains(shopId),
+        }),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              followedShops.contains(shopId)
+                  ? 'Following $shopName - You\'ll get offers & stock updates'
+                  : 'Unfollowed $shopName',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
   Future<void> _loadShops() async {
@@ -208,11 +255,45 @@ class _ShopsPageState extends State<ShopsPage> {
                             ],
                           ),
                         ),
-                        // Arrow indicator
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Colors.grey,
+                        // Follow button moved to top-right of the card
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () =>
+                                  _toggleFollowShop(shopId, shopName),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: followedShops.contains(shopId)
+                                    ? Colors.green
+                                    : Colors.grey.shade300,
+                                foregroundColor: followedShops.contains(shopId)
+                                    ? Colors.white
+                                    : Colors.black87,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                              ),
+                              icon: Icon(
+                                followedShops.contains(shopId)
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                size: 16,
+                              ),
+                              label: Text(
+                                followedShops.contains(shopId)
+                                    ? 'Following'
+                                    : 'Follow',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -232,32 +313,26 @@ class _ShopsPageState extends State<ShopsPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // Product preview
+                  // Product preview and follow button
                   Padding(
                     padding: const EdgeInsets.all(12),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${productCounts[shopId] ?? 0} products',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue.shade600,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ShopProductsPage(shop: shop),
+                        Row(
+                          children: [
+                            Text(
+                              '${productCounts[shopId] ?? 0} products',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue.shade600,
+                                fontWeight: FontWeight.w600,
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.shopping_bag, size: 16),
-                          label: const Text('Browse'),
+                            ),
+                            const Spacer(),
+                          ],
                         ),
+                        const SizedBox(height: 8),
                       ],
                     ),
                   ),

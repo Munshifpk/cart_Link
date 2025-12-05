@@ -24,6 +24,13 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
   // similar products
   List<Map<String, dynamic>> _similarProducts = [];
   bool _loadingSimilar = false;
+  // reviews & feedback
+  List<Map<String, dynamic>> _reviews = [];
+  bool _loadingReviews = false;
+  double _averageRating = 0.0;
+  int _totalReviews = 0;
+  bool _hasPurchased = false;
+  bool _checkingPurchase = false;
 
   @override
   void initState() {
@@ -91,6 +98,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           return;
         }
 
+        // Validate and ensure all required product fields are present
+        _validateProductData(productData);
+
         // Fetch shop details
         final shopResponse = await http
             .get(Uri.parse('$_backendBase/api/Shops/$shopId'))
@@ -119,6 +129,11 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             final category = productData['category']?.toString();
             final ownerId = shopId?.toString();
             if (ownerId != null) _fetchSimilarProducts(ownerId, category, pId);
+            // fetch reviews for this product
+            if (pId != null) {
+              _fetchReviews(pId);
+              _checkPurchaseStatus(pId);
+            }
           } catch (_) {}
         }
       } else {
@@ -188,6 +203,220 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       // ignore errors silently
     } finally {
       if (mounted) setState(() => _loadingSimilar = false);
+    }
+  }
+
+  Future<void> _fetchReviews(String productId) async {
+    setState(() => _loadingReviews = true);
+    try {
+      // Try to fetch reviews from two common endpoints
+      Uri uri = Uri.parse(
+        '$_backendBase/api/reviews',
+      ).replace(queryParameters: {'productId': productId});
+      var res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) {
+        uri = Uri.parse('$_backendBase/api/products/$productId/reviews');
+        res = await http.get(uri).timeout(const Duration(seconds: 8));
+      }
+
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final List<dynamic> list = body is Map && body.containsKey('data')
+            ? (body['data'] as List<dynamic>)
+            : (body is List ? body : []);
+        final parsed = list
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        if (mounted) {
+          setState(() {
+            _reviews = parsed;
+            _totalReviews = _reviews.length;
+            if (_totalReviews > 0) {
+              _averageRating =
+                  _reviews
+                      .map((r) => (r['rating'] ?? 0))
+                      .fold<double>(
+                        0.0,
+                        (p, e) =>
+                            p +
+                            (e is num
+                                ? e.toDouble()
+                                : double.tryParse(e.toString()) ?? 0.0),
+                      ) /
+                  _totalReviews;
+            } else {
+              _averageRating = 0.0;
+            }
+          });
+        }
+      }
+    } catch (_) {
+      // ignore errors
+    } finally {
+      if (mounted) setState(() => _loadingReviews = false);
+    }
+  }
+
+  Future<void> _checkPurchaseStatus(String productId) async {
+    setState(() => _checkingPurchase = true);
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+      if (customerId == null) {
+        setState(() => _hasPurchased = false);
+        return;
+      }
+
+      final uri = Uri.parse('$_backendBase/api/orders').replace(
+        queryParameters: {
+          'customerId': customerId.toString(),
+          'productId': productId,
+        },
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final List<dynamic> list = body is Map && body.containsKey('data')
+            ? (body['data'] as List<dynamic>)
+            : (body is List ? body : []);
+        setState(() => _hasPurchased = (list.isNotEmpty));
+      } else {
+        setState(() => _hasPurchased = false);
+      }
+    } catch (_) {
+      setState(() => _hasPurchased = false);
+    } finally {
+      if (mounted) setState(() => _checkingPurchase = false);
+    }
+  }
+
+  /// Parse numeric value from database field safely
+  double _parsePrice(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  /// Validate and ensure product data has required pricing fields
+  void _validateProductData(Map<String, dynamic> productData) {
+    // Ensure price is valid
+    if (!productData.containsKey('price') || productData['price'] == null) {
+      productData['price'] = productData['mrp'] ?? 0;
+    } else {
+      productData['price'] = _parsePrice(productData['price']);
+    }
+
+    // Ensure MRP is valid
+    if (!productData.containsKey('mrp') || productData['mrp'] == null) {
+      productData['mrp'] = productData['price'] ?? 0;
+    } else {
+      productData['mrp'] = _parsePrice(productData['mrp']);
+    }
+
+    // Ensure offerPrice is present and valid
+    if (!productData.containsKey('offerPrice') ||
+        productData['offerPrice'] == null) {
+      productData['offerPrice'] = productData['price'] ?? 0;
+    } else {
+      productData['offerPrice'] = _parsePrice(productData['offerPrice']);
+    }
+
+    // Calculate discount if not provided
+    final mrp = _parsePrice(productData['mrp']);
+    final price = _parsePrice(productData['price']);
+    if (!productData.containsKey('discount') ||
+        productData['discount'] == null) {
+      if (mrp > 0 && price < mrp) {
+        productData['discount'] = ((mrp - price) / mrp * 100).toStringAsFixed(
+          0,
+        );
+      } else {
+        productData['discount'] = 0;
+      }
+    }
+
+    // Ensure description is present
+    if (!productData.containsKey('description') ||
+        productData['description'] == null) {
+      final productName =
+          productData['name'] ??
+          productData['product'] ??
+          productData['productName'] ??
+          'Product';
+      productData['description'] =
+          'High-quality $productName with excellent quality and durability.';
+    }
+
+    // Ensure category exists
+    if (!productData.containsKey('category') ||
+        productData['category'] == null) {
+      productData['category'] = 'General';
+    }
+
+    // Ensure images is a list
+    if (!productData.containsKey('images') || productData['images'] is! List) {
+      productData['images'] = [];
+    }
+  }
+
+  Future<void> _submitReview(
+    int rating,
+    String message,
+    String? imageUrl,
+  ) async {
+    try {
+      final productId =
+          _productData['_id'] ??
+          _productData['id'] ??
+          widget.offer['_id'] ??
+          widget.offer['id'];
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+      if (productId == null || customerId == null) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login required to submit review')),
+          );
+        return;
+      }
+
+      final uri = Uri.parse('$_backendBase/api/reviews');
+      final Map<String, dynamic> payload = {
+        'productId': productId,
+        'customerId': customerId,
+        'rating': rating,
+        'message': message,
+      };
+      if (imageUrl != null && imageUrl.isNotEmpty)
+        payload['imageUrl'] = imageUrl;
+      final body = jsonEncode(payload);
+      final res = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Thank you for your feedback')),
+          );
+          final pid = productId.toString();
+          await _fetchReviews(pid);
+        }
+      } else {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to submit review')),
+          );
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -316,14 +545,18 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     }
 
     final offer = _productData.isNotEmpty ? _productData : widget.offer;
+    // normalize incoming offer data (adds offerPrice, price, mrp, images etc.)
+    try {
+      if (offer is Map<String, dynamic>) _validateProductData(offer);
+    } catch (_) {}
+
     final String productTitle =
-        (_productData['name'] ??
-                _productData['product'] ??
-                _productData['productName'] ??
-                offer['name'] ??
+        (offer['name'] ??
                 offer['product'] ??
                 offer['productName'] ??
-                offer['title'])
+                _productData['name'] ??
+                _productData['product'] ??
+                _productData['title'])
             ?.toString() ??
         'Product';
     final String shopDisplayName =
@@ -333,10 +566,19 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                 offer['shop'])
             ?.toString() ??
         'Unknown Shop';
+
+    // prefer offerPrice for display and calculations
+    final double offerPrice = _parsePrice(
+      offer['offerPrice'] ?? offer['price'] ?? 0,
+    );
+    final double mrp = _parsePrice(offer['mrp']);
+
     final images = (offer['images'] is List)
         ? (offer['images'] as List).cast<String>()
         : <String>[];
-    final mainImage = images.isNotEmpty ? images[_selectedImageIndex] : null;
+    final mainImage = images.isNotEmpty
+        ? images[_selectedImageIndex.clamp(0, images.length - 1)]
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -654,14 +896,16 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    (productTitle).toString().toLowerCase() +
-                        ' — ' +
-                        (offer['description'] ??
-                            'High-quality product with excellent quality and durability.'),
+                    offer['description'] ??
+                        'High-quality product with excellent quality and durability.',
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 24),
                   // Similar products section
                   _buildSimilarProductsSection(),
+                  const SizedBox(height: 24),
+                  // Reviews & Feedback section
+                  _buildReviewsSection(),
                 ],
               ),
             );
@@ -702,6 +946,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                 const SizedBox(height: 24),
                 // Similar products for small layout
                 _buildSimilarProductsSection(),
+                const SizedBox(height: 24),
+                // Reviews for small layout
+                _buildReviewsSection(),
               ],
             ),
           );
@@ -1066,6 +1313,186 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       errorBuilder: (_, _, _) => const Center(
         child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
       ),
+    );
+  }
+
+  Widget _buildReviewsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Customer Reviews & Feedback',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(Icons.star, color: Colors.amber),
+            const SizedBox(width: 6),
+            Text(
+              _averageRating > 0 ? _averageRating.toStringAsFixed(1) : '0.0',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            Text('($_totalReviews reviews)'),
+            const Spacer(),
+            if (_checkingPurchase)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (_hasPurchased)
+              TextButton.icon(
+                onPressed: () async {
+                  // open review dialog (allow image URL attachment)
+                  final result = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => _ReviewDialog(onSubmit: _submitReview),
+                  );
+                  if (result == true) {
+                    // refresh handled by submit
+                  }
+                },
+                icon: const Icon(Icons.rate_review, size: 18),
+                label: const Text('Write a review'),
+              )
+            else
+              const Text(
+                'Only customers who purchased can review',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_loadingReviews) const Center(child: CircularProgressIndicator()),
+        if (!_loadingReviews && _reviews.isEmpty)
+          const Text('No reviews yet. Be the first to review!'),
+        if (_reviews.isNotEmpty)
+          Column(
+            children: _reviews.take(5).map((r) {
+              final rating = (r['rating'] ?? 0);
+              final msg = (r['message'] ?? r['text'] ?? '');
+              final author =
+                  (r['customerName'] ??
+                          r['author'] ??
+                          r['customerId'] ??
+                          'Anonymous')
+                      .toString();
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  child: Text(author.isNotEmpty ? author[0] : '?'),
+                ),
+                title: Row(
+                  children: [
+                    Text(
+                      author,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '· ${rating.toString()}',
+                      style: const TextStyle(color: Colors.amber),
+                    ),
+                  ],
+                ),
+                subtitle: Text(msg.toString()),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+}
+
+class _ReviewDialog extends StatefulWidget {
+  final Future<void> Function(int rating, String message, String? imageUrl)
+  onSubmit;
+  const _ReviewDialog({required this.onSubmit});
+
+  @override
+  State<_ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _ReviewDialogState extends State<_ReviewDialog> {
+  int _rating = 5;
+  final TextEditingController _msg = TextEditingController();
+  final TextEditingController _imageUrl = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _msg.dispose();
+    _imageUrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Write a Review'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: List.generate(5, (i) {
+              final idx = i + 1;
+              return IconButton(
+                icon: Icon(
+                  idx <= _rating ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                ),
+                onPressed: () => setState(() => _rating = idx),
+              );
+            }),
+          ),
+          TextField(
+            controller: _msg,
+            decoration: const InputDecoration(
+              hintText: 'Write your feedback...',
+            ),
+            minLines: 2,
+            maxLines: 5,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _imageUrl,
+            decoration: const InputDecoration(
+              hintText: 'Optional: attach image URL',
+            ),
+            keyboardType: TextInputType.url,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting
+              ? null
+              : () async {
+                  setState(() => _submitting = true);
+                  await widget.onSubmit(
+                    _rating,
+                    _msg.text.trim(),
+                    _imageUrl.text.trim().isEmpty
+                        ? null
+                        : _imageUrl.text.trim(),
+                  );
+                  if (mounted) Navigator.pop(context, true);
+                },
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Submit'),
+        ),
+      ],
     );
   }
 }

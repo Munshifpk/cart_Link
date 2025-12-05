@@ -1,5 +1,6 @@
 import 'package:cart_link/main.dart' as app_main;
 import 'package:cart_link/Customer/report_shops_page.dart';
+import 'package:cart_link/Customer/customer_settings_page.dart';
 import 'package:flutter/material.dart';
 import '../customer_home.dart';
 import '../orders_history_page.dart';
@@ -78,7 +79,13 @@ class CustomerProfilePage extends StatelessWidget {
           child: ListTile(
             title: const Text('Settings'),
             leading: const Icon(Icons.settings),
-            onTap: () {},
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CustomerSettingsPage(customer: customer),
+                ),
+              );
+            },
           ),
         ),
         Card(
