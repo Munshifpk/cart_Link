@@ -1,11 +1,11 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cart_link/services/auth_state.dart';
 import 'shop_products_page.dart';
 import '../theme_data.dart';
+import 'package:cart_link/constant.dart';
 
 class FollowedShopsPage extends StatefulWidget {
   final String? customerId;
@@ -18,14 +18,6 @@ class FollowedShopsPage extends StatefulWidget {
 class _FollowedShopsPageState extends State<FollowedShopsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> _shops = [];
-
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000';
-    }
-    return 'http://localhost:5000';
-  }
 
   @override
   void initState() {
@@ -48,7 +40,7 @@ class _FollowedShopsPageState extends State<FollowedShopsPage> {
 
     try {
       setState(() => _loading = true);
-      final uri = Uri.parse('$_backendBase/api/customers/$customerId/following');
+      final uri = backendUri('$kApiCustomers/$customerId/following');
       final resp = await http.get(uri).timeout(const Duration(seconds: 12));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -84,7 +76,7 @@ class _FollowedShopsPageState extends State<FollowedShopsPage> {
     if (shopId.isNotEmpty) {
       try {
         final resp = await http
-            .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+          .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
             .timeout(const Duration(seconds: 10));
         if (resp.statusCode == 200) {
           final data = jsonDecode(resp.body);
@@ -144,7 +136,7 @@ class _FollowedShopsPageState extends State<FollowedShopsPage> {
     if (shopId.isEmpty) return;
 
     try {
-      final uri = Uri.parse('$_backendBase/api/customers/follow-shop');
+      final uri = backendUri('$kApiCustomers/follow-shop');
       final resp = await http
           .post(
             uri,

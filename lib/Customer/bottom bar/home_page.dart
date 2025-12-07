@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../customer_home.dart';
@@ -10,6 +8,7 @@ import '../product_purchase_page.dart';
 import '../category_products_page.dart';
 import '../../services/product_service.dart';
 import 'package:cart_link/services/auth_state.dart';
+import 'package:cart_link/constant.dart';
 
 class CustomerHomePage extends StatefulWidget {
   final Customer? customer;
@@ -27,13 +26,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   bool _loadingProducts = false;
   List<Map<String, dynamic>> _followingShops = [];
   bool _loadingFollowingShops = false;
-
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android)
-      return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
 
   @override
   void initState() {
@@ -58,7 +50,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Future<void> _loadCategories() async {
     try {
       final resp = await http
-          .get(Uri.parse('$_backendBase/api/Shops'))
+            .get(backendUri(kApiShops))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -109,7 +101,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
         // Fetch shops once to map ownerId -> shopName
         try {
           final shopsResp = await http
-              .get(Uri.parse('$_backendBase/api/Shops'))
+                .get(backendUri(kApiShops))
               .timeout(const Duration(seconds: 10));
           if (shopsResp.statusCode == 200) {
             final shopsData = jsonDecode(shopsResp.body);
@@ -170,7 +162,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
       setState(() => _loadingFollowingShops = true);
 
-      final uri = Uri.parse('$_backendBase/api/customers/$customerId/following');
+        final uri = backendUri('$kApiCustomers/$customerId/following');
       final resp = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (resp.statusCode == 200) {
@@ -186,7 +178,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           if (shopId.isNotEmpty) {
             try {
               final resp2 = await http
-                  .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+                    .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
                   .timeout(const Duration(seconds: 10));
               if (resp2.statusCode == 200) {
                 final pData = jsonDecode(resp2.body);
@@ -225,7 +217,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Future<void> _loadShops() async {
     try {
       final resp = await http
-          .get(Uri.parse('$_backendBase/api/Shops'))
+            .get(backendUri(kApiShops))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -239,7 +231,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           if (shopId.isNotEmpty) {
             try {
               final resp2 = await http
-                  .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+                    .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
                   .timeout(const Duration(seconds: 10));
               if (resp2.statusCode == 200) {
                 final pData = jsonDecode(resp2.body);

@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform, kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +7,7 @@ import 'package:cart_link/Customer/app_updates_page.dart';
 import 'package:cart_link/Customer/product_purchase_page.dart';
 import 'package:cart_link/services/auth_state.dart';
 import '../theme_data.dart';
+import 'package:cart_link/constant.dart';
 
 class OffersFollowedShopsPage extends StatefulWidget {
   const OffersFollowedShopsPage({super.key});
@@ -31,13 +31,6 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
     _fetchOffers();
   }
 
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android)
-      return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
-
   Future<void> _loadNotificationSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool(_offersEnabledKey);
@@ -47,7 +40,7 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
   Future<void> _fetchOffers() async {
     try {
       setState(() => _isLoading = true);
-      final uri = Uri.parse('$_backendBase/api/products');
+      final uri = backendUri(kApiProducts);
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -102,7 +95,7 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
         'quantity': 1,
       });
 
-      final uri = Uri.parse('$_backendBase/api/cart');
+      final uri = backendUri(kApiCart);
       final res = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 10));

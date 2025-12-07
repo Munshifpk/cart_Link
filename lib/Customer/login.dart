@@ -5,12 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:cart_link/Customer/singup.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cart_link/constant.dart';
 // import '../services/customer_service.dart';
 
-final _backendUrl = kIsWeb
-    ? 'http://localhost:5000/api/customersauth'
-    : 'http://10.0.2.2:5000/api/customersauth';
+String get _customerAuthUrl => backendUrl(kApiCustomerAuth);
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -43,11 +41,11 @@ class _LoginPageState extends State<LoginPage> {
       final password = _passwordController.text.trim();
 
       print('🔍 Verifying credentials for mobile: $mobile');
-      print('📡 Connecting to: $_backendUrl/verify-credentials');
+      print('📡 Connecting to: $_customerAuthUrl/verify-credentials');
 
       final response = await http
           .post(
-            Uri.parse('$_backendUrl/verify-credentials'),
+        Uri.parse('$_customerAuthUrl/verify-credentials'),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -141,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
       print('❌ Error: $e');
       _showErrorDialog(
         'Connection Error',
-        'Failed to connect to backend:\n$e\n\nMake sure backend is running on http://localhost:5000',
+        'Failed to connect to backend:\n$e\n\nMake sure backend is running on $backendBaseUrl',
       );
     } finally {
       if (mounted) {

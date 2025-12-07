@@ -5,9 +5,9 @@ import 'package:cart_link/Shops/analytics/analytics_page.dart';
 import 'package:cart_link/Shops/daily_sales.dart';
 import 'package:cart_link/Shops/report_page.dart';
 import 'package:cart_link/main.dart';
+import 'package:cart_link/constant.dart';
 import 'package:cart_link/services/auth_state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 
@@ -33,14 +33,6 @@ class _ProfileTabState extends State<ProfileTab> {
   int _followersCount = 0;
   bool _loadingShop = true;
 
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000';
-    }
-    return 'http://localhost:5000';
-  }
-
   @override
   void initState() {
     super.initState();
@@ -62,7 +54,7 @@ class _ProfileTabState extends State<ProfileTab> {
 
       // Fetch shop details directly by ID
       final resp = await http
-          .get(Uri.parse('$_backendBase/api/Shops/$shopId'))
+          .get(backendUri('$kApiShops/$shopId'))
           .timeout(const Duration(seconds: 10));
       
       print('📡 Response status: ${resp.statusCode}');
@@ -125,7 +117,7 @@ class _ProfileTabState extends State<ProfileTab> {
 
     try {
       final resp = await http
-          .get(Uri.parse('$_backendBase/api/Shops/$_shopId/followers'))
+          .get(backendUri('$kApiShops/$_shopId/followers'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode == 200 && mounted) {

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import '../theme_data.dart';
 import 'package:cart_link/services/auth_state.dart';
 import '../../services/product_service.dart';
+import 'package:cart_link/constant.dart';
 
 class ProductPurchasePage extends StatefulWidget {
   final Map<String, dynamic> offer;
@@ -46,13 +45,6 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     super.dispose();
   }
 
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android)
-      return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
-
   Future<void> _fetchProductAndShopDetails() async {
     try {
       final productId = widget.offer['_id'] ?? widget.offer['id'];
@@ -74,8 +66,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       }
 
       // Fetch product details from /api/products?ownerId=$shopId and filter by productId
-      final productResponse = await http
-          .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+        final productResponse = await http
+          .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
           .timeout(const Duration(seconds: 8));
 
       if (productResponse.statusCode == 200) {
@@ -116,7 +108,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
         // Fetch shop details
         final shopResponse = await http
-            .get(Uri.parse('$_backendBase/api/Shops/$shopId'))
+          .get(backendUri('$kApiShops/$shopId'))
             .timeout(const Duration(seconds: 8));
 
         String shopName = 'Unknown Shop';
@@ -193,9 +185,10 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
   ) async {
     setState(() => _loadingSimilar = true);
     try {
-      final uri = Uri.parse(
-        '$_backendBase/api/products',
-      ).replace(queryParameters: {'ownerId': ownerId});
+      final uri = backendUri(
+        kApiProducts,
+        queryParameters: {'ownerId': ownerId},
+      );
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -260,12 +253,13 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     setState(() => _loadingReviews = true);
     try {
       // Try to fetch reviews from two common endpoints
-      Uri uri = Uri.parse(
-        '$_backendBase/api/reviews',
-      ).replace(queryParameters: {'productId': productId});
+      Uri uri = backendUri(
+        '/api/reviews',
+        queryParameters: {'productId': productId},
+      );
       var res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode != 200) {
-        uri = Uri.parse('$_backendBase/api/products/$productId/reviews');
+        uri = backendUri('$kApiProducts/$productId/reviews');
         res = await http.get(uri).timeout(const Duration(seconds: 8));
       }
 
@@ -319,12 +313,13 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         return;
       }
 
-      final uri = Uri.parse('$_backendBase/api/orders').replace(
-        queryParameters: {
-          'customerId': customerId.toString(),
-          'productId': productId,
-        },
-      );
+        final uri = backendUri(
+          '/api/orders',
+          queryParameters: {
+            'customerId': customerId.toString(),
+            'productId': productId,
+          },
+        );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -435,7 +430,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         return;
       }
 
-      final uri = Uri.parse('$_backendBase/api/reviews');
+      final uri = backendUri('/api/reviews');
       final Map<String, dynamic> payload = {
         'productId': productId,
         'customerId': customerId,
@@ -512,7 +507,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           'shopId': shopId,
         });
 
-        final uri = Uri.parse('$_backendBase/api/cart');
+        final uri = backendUri(kApiCart);
         final res = await http
             .post(
               uri,
@@ -535,7 +530,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         'quantity': qty,
       });
 
-      final uri = Uri.parse('$_backendBase/api/cart');
+      final uri = backendUri(kApiCart);
       final res = await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 15));

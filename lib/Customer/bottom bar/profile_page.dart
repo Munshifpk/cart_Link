@@ -5,13 +5,13 @@ import 'package:cart_link/services/customer_service.dart';
 import 'package:cart_link/services/auth_state.dart';
 import 'package:cart_link/Customer/followed_shops_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import '../customer_home.dart';
 import '../orders_history_page.dart';
+import 'package:cart_link/constant.dart';
 
 class CustomerProfilePage extends StatefulWidget {
   final Customer? customer;
@@ -25,11 +25,6 @@ class _CustomerProfilePageState extends State<CustomerProfilePage> {
   File? _profileImage;
   List<Map<String, dynamic>> _followingShops = [];
   bool _loadingFollowing = false;
-
-  String get _backendBase {
-    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
 
   @override
   void initState() {
@@ -53,7 +48,7 @@ class _CustomerProfilePageState extends State<CustomerProfilePage> {
 
       setState(() => _loadingFollowing = true);
 
-      final uri = Uri.parse('$_backendBase/api/customers/$customerId/following');
+      final uri = backendUri('$kApiCustomers/$customerId/following');
       final resp = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (resp.statusCode == 200) {
@@ -68,8 +63,8 @@ class _CustomerProfilePageState extends State<CustomerProfilePage> {
           int count = 0;
           if (shopId.isNotEmpty) {
             try {
-              final resp2 = await http
-                  .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+                final resp2 = await http
+                  .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
                   .timeout(const Duration(seconds: 10));
               if (resp2.statusCode == 200) {
                 final pData = jsonDecode(resp2.body);
