@@ -125,4 +125,88 @@ class CustomerService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  /// Update customer profile data
+  static Future<Map<String, dynamic>> updateCustomerProfile({
+    required String customerId,
+    String? customerName,
+    String? email,
+    String? address,
+    int? mobile,
+  }) async {
+    try {
+      final uri = Uri.parse('$_backendUrl/$customerId');
+      final body = <String, dynamic>{};
+      if (customerName != null) body['customerName'] = customerName;
+      if (email != null) body['email'] = email;
+      if (address != null) body['address'] = address;
+      if (mobile != null) body['mobile'] = mobile;
+
+      final resp = await http
+          .put(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        final responseBody = jsonDecode(resp.body);
+        return {
+          'success': true,
+          'message': responseBody['message'] ?? 'Profile updated successfully',
+        };
+      } else {
+        final responseBody = jsonDecode(resp.body);
+        return {
+          'success': false,
+          'message':
+              responseBody['message'] ?? 'Server returned ${resp.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  /// Change customer password
+  static Future<Map<String, dynamic>> changePassword({
+    required String customerId,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final uri = Uri.parse('$_backendBase/api/customersAuth/change-password');
+      final body = {
+        'customerId': customerId,
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      };
+
+      final resp = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        final responseBody = jsonDecode(resp.body);
+        return {
+          'success': true,
+          'message': responseBody['message'] ?? 'Password changed successfully',
+        };
+      } else {
+        final responseBody = jsonDecode(resp.body);
+        return {
+          'success': false,
+          'message':
+              responseBody['message'] ?? 'Server returned ${resp.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

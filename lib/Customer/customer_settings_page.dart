@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cart_link/theme_data.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:cart_link/services/customer_service.dart';
 import 'customer_home.dart';
 
 class CustomerSettingsPage extends StatefulWidget {
@@ -19,6 +22,7 @@ class _CustomerSettingsPageState extends State<CustomerSettingsPage> {
   bool _orderUpdatesEnabled = true;
   bool _offersEnabled = true;
   bool _isLoading = false;
+  File? _profileImage;
 
   @override
   void initState() {
@@ -46,19 +50,340 @@ class _CustomerSettingsPageState extends State<CustomerSettingsPage> {
     super.dispose();
   }
 
+  void _showChangePasswordDialog() {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool isLoading = false;
+    bool showCurrentPassword = false;
+    bool showNewPassword = false;
+    bool showConfirmPassword = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Change Password'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: !showCurrentPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    hintText: 'Enter your current password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        showCurrentPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(
+                          () => showCurrentPassword = !showCurrentPassword,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: !showNewPassword,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    hintText: 'Enter your new password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        showNewPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() => showNewPassword = !showNewPassword);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: !showConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    hintText: 'Confirm your new password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        showConfirmPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(
+                          () => showConfirmPassword = !showConfirmPassword,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      // Validation
+                      if (currentPasswordController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter current password'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPasswordController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter new password'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPasswordController.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Password must be at least 6 characters',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPasswordController.text !=
+                          confirmPasswordController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Passwords do not match'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() => isLoading = true);
+
+                      try {
+                        if (widget.customer?.id == null ||
+                            widget.customer!.id!.isEmpty) {
+                          throw Exception('Customer ID not found');
+                        }
+
+                        final result = await CustomerService.changePassword(
+                          customerId: widget.customer!.id!,
+                          currentPassword: currentPasswordController.text,
+                          newPassword: newPasswordController.text,
+                        );
+
+                        if (mounted) {
+                          Navigator.pop(context);
+                          if (result['success'] ?? false) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  result['message'] ??
+                                      'Password changed successfully',
+                                ),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  result['message'] ??
+                                      'Error changing password',
+                                ),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error changing password: $e'),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Change'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickProfileImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image != null) {
+        setState(() {
+          _profileImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _takeProfilePhoto() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.camera);
+
+      if (image != null) {
+        setState(() {
+          _profileImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error taking photo: $e'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Update Profile Picture'),
+        content: const Text('Choose image source'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _takeProfilePhoto();
+            },
+            child: const Text('Camera'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickProfileImage();
+            },
+            child: const Text('Gallery'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveSettings() async {
     setState(() => _isLoading = true);
     try {
-      // Simulate saving settings (in production, call backend API)
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Validate customer ID
+      if (widget.customer?.id == null || widget.customer!.id!.isEmpty) {
+        throw Exception('Customer ID not found');
+      }
+
+      // Parse mobile if it's not null
+      int? parsedMobile;
+      if (_mobileController.text.isNotEmpty) {
+        parsedMobile = int.tryParse(_mobileController.text);
+      }
+
+      // Call backend API to update customer profile
+      final result = await CustomerService.updateCustomerProfile(
+        customerId: widget.customer!.id!,
+        customerName: _nameController.text.isNotEmpty
+            ? _nameController.text
+            : null,
+        email: _emailController.text.isNotEmpty ? _emailController.text : null,
+        address: _addressController.text.isNotEmpty
+            ? _addressController.text
+            : null,
+        mobile: parsedMobile,
+      );
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Settings saved successfully'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (result['success'] ?? false) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Settings saved successfully'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Error saving settings'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -79,6 +404,8 @@ class _CustomerSettingsPageState extends State<CustomerSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final name = widget.customer?.customerName ?? 'Unknown';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -92,6 +419,63 @@ class _CustomerSettingsPageState extends State<CustomerSettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Profile Picture Section
+                  const Text(
+                    'Profile Picture',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage: _profileImage != null
+                              ? FileImage(_profileImage!)
+                              : null,
+                          child: _profileImage == null
+                              ? Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        GestureDetector(
+                          onTap: _showImageSourceDialog,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: ThemeColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      'Tap camera to change picture',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Divider(color: Colors.grey[400], thickness: 1),
+                  const SizedBox(height: 12),
+
                   // Account Information Section
                   const Text(
                     'Account Information',
@@ -213,16 +597,7 @@ class _CustomerSettingsPageState extends State<CustomerSettingsPage> {
                       title: const Text('Change Password'),
                       leading: const Icon(Icons.lock),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Change password feature coming soon',
-                            ),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
+                      onTap: _showChangePasswordDialog,
                     ),
                   ),
                   Card(
