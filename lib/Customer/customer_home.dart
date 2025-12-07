@@ -68,7 +68,6 @@ class CustomerHome extends StatefulWidget {
 class _CustomerHomeState extends State<CustomerHome> {
   int _currentIndex = 0;
   String _selectedLocation = 'Select Location';
-  String _selectedPincode = '';
   List<Map<String, String>> _locationSuggestions = [];
 
   List<Widget> get _pages => <Widget>[
@@ -118,7 +117,6 @@ class _CustomerHomeState extends State<CustomerHome> {
         
         setState(() {
           _selectedLocation = locationDisplay['full'] ?? '';
-          _selectedPincode = postcode.toString();
         });
       } else {
         print('[LOCATION] Reverse geocode failed with status: ${resp.statusCode}');
@@ -374,7 +372,6 @@ class _CustomerHomeState extends State<CustomerHome> {
         onLocationSelected: (location, pincode) {
           setState(() {
             _selectedLocation = location;
-            _selectedPincode = pincode;
             locationController.text = location; // Update text box with selected location
           });
           Navigator.pop(dialogContext);

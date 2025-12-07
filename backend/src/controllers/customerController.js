@@ -219,11 +219,131 @@ exports.checkEmailExists = async (req, res) => {
 exports.listAll = async (req, res) => {
     try {
         const customers = await Customer.find().lean();
-        console.log('Customers listed:', customers); 
+        console.log('Customers listed:', customers);
         return res.json({ success: true, data: customers });
-        
+
     } catch (err) {
         console.error('listAll error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// Follow/Unfollow shop
+exports.followShop = async (req, res) => {
+    try {
+        const { shopId, isFollowing, customerId } = req.body;
+
+        console.log('[FOLLOW SHOP] Request received:', { shopId, isFollowing, customerId });
+
+        if (!shopId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Shop ID is required'
+            });
+        }
+
+        const cId = customerId;
+
+        if (!cId) {
+            console.error('[FOLLOW SHOP] Customer ID missing');
+            return res.status(400).json({
+                success: false,
+                message: 'Customer ID is required'
+            });
+        }
+
+        const Shop = require('../models/Shop');
+
+        if (isFollowing) {
+            // Add shop to customer's following list
+            const updatedCustomer = await Customer.findByIdAndUpdate(
+                cId,
+                { $addToSet: { following: shopId } },
+                { new: true }
+            );
+
+            console.log('[FOLLOW SHOP] Updated customer:', updatedCustomer);
+
+            // Add customer to shop's followers list
+            const updatedShop = await Shop.findByIdAndUpdate(
+                shopId,
+                { $addToSet: { followers: cId } },
+                { new: true }
+            );
+
+            console.log('[FOLLOW SHOP] Updated shop:', updatedShop);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Shop followed successfully',
+                data: { customer: updatedCustomer, shop: updatedShop }
+            });
+        } else {
+            // Remove shop from customer's following list
+            const updatedCustomer = await Customer.findByIdAndUpdate(
+                cId,
+                { $pull: { following: shopId } },
+                { new: true }
+            );
+
+            console.log('[FOLLOW SHOP] Updated customer (unfollow):', updatedCustomer);
+
+            // Remove customer from shop's followers list
+            const updatedShop = await Shop.findByIdAndUpdate(
+                shopId,
+                { $pull: { followers: cId } },
+                { new: true }
+            );
+
+            console.log('[FOLLOW SHOP] Updated shop (unfollow):', updatedShop);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Shop unfollowed successfully',
+                data: { customer: updatedCustomer, shop: updatedShop }
+            });
+        }
+    } catch (err) {
+        console.error('Follow shop error:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+// Get followed shops for a customer
+exports.getFollowing = async (req, res) => {
+    try {
+        const customerId = req.params.id || req.query.customerId || null;
+
+        if (!customerId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Customer ID is required'
+            });
+        }
+
+        const Shop = require('../models/Shop');
+
+        const customer = await Customer.findById(customerId).lean();
+        if (!customer) {
+            return res.status(404).json({ success: false, message: 'Customer not found' });
+        }
+
+        const followingIds = customer.following || [];
+
+        const shops = await Shop.find({ _id: { $in: followingIds } }).lean();
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                following: followingIds,
+                shops
+            }
+        });
+    } catch (err) {
+        console.error('Get following error:', err);
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 };

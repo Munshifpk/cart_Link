@@ -2,8 +2,13 @@ import 'package:cart_link/main.dart' as app_main;
 import 'package:cart_link/Customer/report_shops_page.dart';
 import 'package:cart_link/Customer/customer_settings_page.dart';
 import 'package:cart_link/services/customer_service.dart';
+import 'package:cart_link/services/auth_state.dart';
+import 'package:cart_link/Customer/followed_shops_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:io';
 import '../customer_home.dart';
 import '../orders_history_page.dart';
@@ -18,6 +23,103 @@ class CustomerProfilePage extends StatefulWidget {
 
 class _CustomerProfilePageState extends State<CustomerProfilePage> {
   File? _profileImage;
+  List<Map<String, dynamic>> _followingShops = [];
+  bool _loadingFollowing = false;
+
+  String get _backendBase {
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
+    return 'http://localhost:5000';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFollowingShops();
+  }
+
+  Future<void> _loadFollowingShops() async {
+    try {
+      final customerId = (widget.customer?.id?.isNotEmpty == true)
+          ? widget.customer!.id!
+          : (AuthState.currentCustomer?['_id']?.toString() ?? '');
+
+      if (customerId.isEmpty) {
+        setState(() {
+          _followingShops = [];
+          _loadingFollowing = false;
+        });
+        return;
+      }
+
+      setState(() => _loadingFollowing = true);
+
+      final uri = Uri.parse('$_backendBase/api/customers/$customerId/following');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final shops = (data['data']?['shops'] as List? ?? [])
+            .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
+            .toList();
+
+        // fetch product counts for each followed shop
+        final futures = shops.map((shop) async {
+          final shopId = (shop['_id'] ?? shop['id'] ?? '').toString();
+          int count = 0;
+          if (shopId.isNotEmpty) {
+            try {
+              final resp2 = await http
+                  .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+                  .timeout(const Duration(seconds: 10));
+              if (resp2.statusCode == 200) {
+                final pData = jsonDecode(resp2.body);
+                final products = (pData['data'] as List? ?? []);
+                count = products.length;
+              }
+            } catch (_) {
+              count = 0;
+            }
+          }
+          shop['productCount'] = count;
+          return shop;
+        }).toList();
+
+        final enriched = await Future.wait(futures);
+
+        if (mounted) {
+          setState(() {
+            _followingShops = enriched;
+            _loadingFollowing = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _followingShops = [];
+            _loadingFollowing = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingFollowing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load followed shops: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openFollowedShopsPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FollowedShopsPage(customerId: widget.customer?.id),
+      ),
+    );
+    if (mounted) {
+      _loadFollowingShops();
+    }
+  }
 
   void _showEditAddressDialog(String currentAddress) {
     final addressController = TextEditingController(text: currentAddress);
@@ -226,43 +328,45 @@ class _CustomerProfilePageState extends State<CustomerProfilePage> {
       key: const PageStorageKey('profile'),
       padding: const EdgeInsets.all(16),
       children: [
-        Stack(
-          alignment: Alignment.bottomRight,
-          children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.grey[200],
-              backgroundImage: _profileImage != null
-                  ? FileImage(_profileImage!)
-                  : null,
-              child: _profileImage == null
-                  ? Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-            GestureDetector(
-              onTap: _showImageSourceDialog,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.white,
-                  size: 20,
+        Center(
+          child: Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.grey[200],
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!)
+                    : null,
+                child: _profileImage == null
+                    ? Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
+              GestureDetector(
+                onTap: _showImageSourceDialog,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         Center(
@@ -288,6 +392,20 @@ class _CustomerProfilePageState extends State<CustomerProfilePage> {
           leading: const Icon(Icons.phone_outlined),
           title: const Text('Mobile'),
           subtitle: Text(mobile),
+        ),
+        Card(
+          elevation: 1,
+          child: ListTile(
+            leading: const Icon(Icons.store_outlined),
+            title: const Text('Shops You Follow'),
+            subtitle: Text(
+              _loadingFollowing
+                  ? 'Loading...'
+                  : '${_followingShops.length} shop(s)',
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: _openFollowedShopsPage,
+          ),
         ),
         Card(
           elevation: 1,

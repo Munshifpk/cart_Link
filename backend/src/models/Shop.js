@@ -9,6 +9,7 @@ const ShopSchema = new mongoose.Schema({
     businessType: String,
     address: String,
     isActive: { type: Boolean, default: true },
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Customers' }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 }, { collection: 'shops' }); // <-- Map to existing 'shops' collection

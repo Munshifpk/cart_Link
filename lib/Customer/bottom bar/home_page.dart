@@ -9,6 +9,7 @@ import '../shop_products_page.dart';
 import '../product_purchase_page.dart';
 import '../category_products_page.dart';
 import '../../services/product_service.dart';
+import 'package:cart_link/services/auth_state.dart';
 
 class CustomerHomePage extends StatefulWidget {
   final Customer? customer;
@@ -158,13 +159,63 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
   Future<void> _loadFollowingShops() async {
     try {
+      final customerId = AuthState.currentCustomer?['_id'] as String?;
+      if (customerId == null || customerId.isEmpty) {
+        setState(() {
+          _followingShops = [];
+          _loadingFollowingShops = false;
+        });
+        return;
+      }
+
       setState(() => _loadingFollowingShops = true);
-      // TODO: Fetch followed shop IDs from backend or SharedPreferences
-      // For now, following shops are empty; user can add via follow button on shop cards
-      setState(() {
-        _followingShops = [];
-        _loadingFollowingShops = false;
-      });
+
+      final uri = Uri.parse('$_backendBase/api/customers/$customerId/following');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final shops = (data['data']?['shops'] as List? ?? [])
+            .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
+            .toList();
+
+        // fetch product counts per followed shop
+        final futures = shops.map((shop) async {
+          final shopId = (shop['_id'] ?? shop['id'] ?? '').toString();
+          int count = 0;
+          if (shopId.isNotEmpty) {
+            try {
+              final resp2 = await http
+                  .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+                  .timeout(const Duration(seconds: 10));
+              if (resp2.statusCode == 200) {
+                final pData = jsonDecode(resp2.body);
+                final products = (pData['data'] as List? ?? []);
+                count = products.length;
+              }
+            } catch (_) {
+              count = 0;
+            }
+          }
+          shop['productCount'] = count;
+          return shop;
+        }).toList();
+
+        final enriched = await Future.wait(futures);
+        if (mounted) {
+          setState(() {
+            _followingShops = enriched;
+            _loadingFollowingShops = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _followingShops = [];
+            _loadingFollowingShops = false;
+          });
+        }
+      }
     } catch (e) {
       print('Error loading following shops: $e');
       setState(() => _loadingFollowingShops = false);

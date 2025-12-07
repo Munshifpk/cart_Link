@@ -7,6 +7,7 @@ const CustomerSchema = new mongoose.Schema({
     mobile: { type: Number, required: true, unique: true },
     password: { type: String, required: true },
     address: { type: String, required: false },
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }],
     createdAt: { type: Date, default: Date.now }
 
 }

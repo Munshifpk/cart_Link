@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'product_purchase_page.dart';
 import 'dart:convert';
 import '../../services/product_service.dart';
+import '../theme_data.dart';
 
 class ShopProductsPage extends StatefulWidget {
   final Map<String, dynamic> shop;
@@ -126,7 +127,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(shopName), elevation: 1),
+      appBar: AppBar(title: Text(shopName), elevation: 1,
+      backgroundColor: ThemeColors.primary,
+      foregroundColor: ThemeColors.textColorWhite,),
       body: LayoutBuilder(
         builder: (context, constraints) {
           // Determine number of columns dynamically based on available width.

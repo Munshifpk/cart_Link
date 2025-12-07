@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../shop_products_page.dart';
 import '../../theme_data.dart';
+import 'package:cart_link/services/auth_state.dart';
 
 class ShopsPage extends StatefulWidget {
   const ShopsPage({super.key});
@@ -29,51 +30,116 @@ class _ShopsPageState extends State<ShopsPage> {
   @override
   void initState() {
     super.initState();
-    _loadFollowedShops();
     _loadShops();
+    _loadFollowedShops();
   }
 
   Future<void> _loadFollowedShops() async {
-    // Load followed shops from backend or local storage
+    try {
+      final customerId = AuthState.currentCustomer?['_id'] as String?;
+      if (customerId == null || customerId.isEmpty) {
+        return;
+      }
+
+      final uri = Uri.parse('$_backendBase/api/customers/$customerId/following');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final ids = ((data['data']?['following'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toSet();
+        if (mounted) {
+          setState(() {
+            followedShops = ids;
+          });
+        }
+      }
+    } catch (_) {
+      // ignore errors; fallback to empty set
+    }
   }
 
   Future<void> _toggleFollowShop(String shopId, String shopName) async {
     try {
+      // Get customer ID from auth state
+      final customerId = AuthState.currentCustomer?['_id'] as String?;
+      
+      if (customerId == null || customerId.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please login to follow shops'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      final isCurrentlyFollowing = followedShops.contains(shopId);
+      
+      // Optimistic UI update
       setState(() {
-        if (followedShops.contains(shopId)) {
+        if (isCurrentlyFollowing) {
           followedShops.remove(shopId);
         } else {
           followedShops.add(shopId);
         }
       });
 
-      final uri = Uri.parse('$_backendBase/api/customers/follow-shop');
-      await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'shopId': shopId,
-          'isFollowing': followedShops.contains(shopId),
-        }),
-      );
+      final isNowFollowing = followedShops.contains(shopId);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              followedShops.contains(shopId)
-                  ? 'Following $shopName - You\'ll get offers & stock updates'
-                  : 'Unfollowed $shopName',
-            ),
-          ),
-        );
+      // Call backend to update customer's following list and shop's followers list
+      final uri = Uri.parse('$_backendBase/api/customers/follow-shop');
+      
+      try {
+        final response = await http.post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'customerId': customerId,
+            'shopId': shopId,
+            'shopName': shopName,
+            'isFollowing': isNowFollowing,
+          }),
+        ).timeout(const Duration(seconds: 10));
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          // Success - UI already updated optimistically
+          if (mounted) {
+            final message = isNowFollowing
+                ? 'Following $shopName'
+                : 'Unfollowed $shopName';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } else {
+          // Revert the UI change if the API call failed
+          setState(() {
+            if (isCurrentlyFollowing) {
+              followedShops.add(shopId);
+            } else {
+              followedShops.remove(shopId);
+            }
+          });
+        }
+      } catch (e) {
+        // Network error - revert the UI change
+        setState(() {
+          if (isCurrentlyFollowing) {
+            followedShops.add(shopId);
+          } else {
+            followedShops.remove(shopId);
+          }
+        });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      // ignore error
     }
   }
 
