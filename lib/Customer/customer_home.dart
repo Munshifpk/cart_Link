@@ -6,6 +6,7 @@ import 'bottom bar/profile_page.dart';
 import '../theme_data.dart';
 import 'package:cart_link/shared/notification_actions.dart';
 import 'bottom bar/shops_page.dart';
+import 'search_page.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -13,7 +14,10 @@ import 'dart:async';
 
 // Google Maps API key must be provided at build/run time using --dart-define
 // Example: flutter run -d chrome --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY
-const String kGoogleMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY', defaultValue: '');
+const String kGoogleMapsApiKey = String.fromEnvironment(
+  'GOOGLE_MAPS_API_KEY',
+  defaultValue: '',
+);
 
 /// Map of known villages/towns to their correct districts
 /// Useful for rural areas where geocoding data is incomplete (works across India)
@@ -87,24 +91,40 @@ class _CustomerHomeState extends State<CustomerHome> {
     try {
       print('[LOCATION] Reverse geocoding: $lat, $lng');
       // Using nominatim (OpenStreetMap) for reverse geocoding
-      final resp = await http.get(
-        Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1'),
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(
+            Uri.parse(
+              'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1',
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final address = data['address'] as Map<String, dynamic>? ?? {};
-        
-        final city = address['city'] ?? address['town'] ?? address['village'] ?? 'Unknown';
+
+        final city =
+            address['city'] ??
+            address['town'] ??
+            address['village'] ??
+            'Unknown';
         final district = address['county'] ?? '';
         final state = address['state'] ?? '';
         final country = address['country'] ?? '';
         final postcode = address['postcode'] ?? '';
-        
-        print('[LOCATION] Reverse geocode successful: $city, $district, $state');
-        
-        final locationDisplay = _buildLocationDisplay(city, district, state, country, postcode);
-  
+
+        print(
+          '[LOCATION] Reverse geocode successful: $city, $district, $state',
+        );
+
+        final locationDisplay = _buildLocationDisplay(
+          city,
+          district,
+          state,
+          country,
+          postcode,
+        );
+
         print('\n========== LOCATION FROM GPS ==========');
         print('Coordinates: ($lat, $lng)');
         print('Formatted Address: ${locationDisplay['full']}');
@@ -114,31 +134,40 @@ class _CustomerHomeState extends State<CustomerHome> {
         print('Country: $country');
         print('Pincode: $postcode');
         print('=====================================\n');
-        
+
         setState(() {
           _selectedLocation = locationDisplay['full'] ?? '';
         });
       } else {
-        print('[LOCATION] Reverse geocode failed with status: ${resp.statusCode}');
+        print(
+          '[LOCATION] Reverse geocode failed with status: ${resp.statusCode}',
+        );
       }
     } catch (e) {
       print('[LOCATION] Error getting location: $e');
     }
   }
 
-  Map<String, String> _buildLocationDisplay(dynamic city, dynamic district, dynamic state, dynamic country, dynamic postcode) {
+  Map<String, String> _buildLocationDisplay(
+    dynamic city,
+    dynamic district,
+    dynamic state,
+    dynamic country,
+    dynamic postcode,
+  ) {
     final cityStr = city?.toString() ?? '';
     final districtStr = district?.toString() ?? '';
     final stateStr = state?.toString() ?? '';
     final countryStr = country?.toString() ?? '';
     final pincodeStr = postcode?.toString() ?? '';
-    
+
     final parts = <String>[];
     if (cityStr.isNotEmpty) parts.add(cityStr);
-    if (districtStr.isNotEmpty && districtStr != cityStr) parts.add(districtStr);
+    if (districtStr.isNotEmpty && districtStr != cityStr)
+      parts.add(districtStr);
     if (stateStr.isNotEmpty) parts.add(stateStr);
     if (countryStr.isNotEmpty) parts.add(countryStr);
-    
+
     return {
       'city': cityStr,
       'district': districtStr,
@@ -162,7 +191,7 @@ class _CustomerHomeState extends State<CustomerHome> {
         _searchLocationsNominatim(query);
         return;
       }
-      
+
       // Encode query for API
       final encoded = Uri.encodeQueryComponent(query);
       final String url =
@@ -172,7 +201,9 @@ class _CustomerHomeState extends State<CustomerHome> {
           '&language=en'
           '&sessiontoken=cart_link_session';
 
-      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+      final resp = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -183,12 +214,13 @@ class _CustomerHomeState extends State<CustomerHome> {
           final predictions = (data['predictions'] as List? ?? []);
 
           // Build quick suggestions from predictions - show ALL results, no filtering
-          final suggestions = predictions
-              .take(12)
-              .map<Map<String, String>>((prediction) {
+          final suggestions = predictions.take(12).map<Map<String, String>>((
+            prediction,
+          ) {
             final placeId = prediction['place_id'] ?? '';
             final description = prediction['description'] ?? '';
-            final mainText = prediction['structured_formatting']?['main_text'] ?? '';
+            final mainText =
+                prediction['structured_formatting']?['main_text'] ?? '';
             return {
               'place_id': placeId.toString(),
               'name': description.toString(),
@@ -204,7 +236,10 @@ class _CustomerHomeState extends State<CustomerHome> {
           }).toList();
 
           // show quick suggestions immediately - no wait for details
-          setState(() => _locationSuggestions = suggestions.cast<Map<String, String>>());
+          setState(
+            () =>
+                _locationSuggestions = suggestions.cast<Map<String, String>>(),
+          );
 
           // fetch details asynchronously for top predictions (limit to 8)
           // This happens in background without blocking UI
@@ -212,7 +247,7 @@ class _CustomerHomeState extends State<CustomerHome> {
             try {
               final placeId = prediction['place_id'] ?? '';
               if (placeId.isEmpty) return;
-              
+
               final detailsUrl =
                   'https://maps.googleapis.com/maps/api/place/details/json'
                   '?place_id=${Uri.encodeQueryComponent(placeId)}'
@@ -220,15 +255,21 @@ class _CustomerHomeState extends State<CustomerHome> {
                   '&fields=address_components,formatted_address,geometry'
                   '&language=en';
 
-              final detailsResp = await http.get(Uri.parse(detailsUrl)).timeout(const Duration(seconds: 5));
+              final detailsResp = await http
+                  .get(Uri.parse(detailsUrl))
+                  .timeout(const Duration(seconds: 5));
               if (detailsResp.statusCode != 200) return;
 
               final detailsData = jsonDecode(detailsResp.body);
-              final result = detailsData['result'] as Map<String, dynamic>? ?? {};
-              final addressComponents = (result['address_components'] as List? ?? []);
+              final result =
+                  detailsData['result'] as Map<String, dynamic>? ?? {};
+              final addressComponents =
+                  (result['address_components'] as List? ?? []);
               final formattedAddress = result['formatted_address'] ?? '';
-              final geometry = result['geometry'] as Map<String, dynamic>? ?? {};
-              final location = geometry['location'] as Map<String, dynamic>? ?? {};
+              final geometry =
+                  result['geometry'] as Map<String, dynamic>? ?? {};
+              final location =
+                  geometry['location'] as Map<String, dynamic>? ?? {};
 
               String city = '';
               String district = '';
@@ -246,11 +287,19 @@ class _CustomerHomeState extends State<CustomerHome> {
                 final types = (component['types'] as List? ?? []);
                 final longName = component['long_name'] ?? '';
                 if (types.contains('locality')) city = longName;
-                if (types.contains('postal_town') && city.isEmpty) city = longName;
-                if ((types.contains('sublocality') || types.contains('sublocality_level_1')) && city.isEmpty) city = longName;
-                if (types.contains('administrative_area_level_3')) district = longName;
-                if (types.contains('administrative_area_level_2') && district.isEmpty) district = longName;
-                if (types.contains('administrative_area_level_1')) state = longName;
+                if (types.contains('postal_town') && city.isEmpty)
+                  city = longName;
+                if ((types.contains('sublocality') ||
+                        types.contains('sublocality_level_1')) &&
+                    city.isEmpty)
+                  city = longName;
+                if (types.contains('administrative_area_level_3'))
+                  district = longName;
+                if (types.contains('administrative_area_level_2') &&
+                    district.isEmpty)
+                  district = longName;
+                if (types.contains('administrative_area_level_1'))
+                  state = longName;
                 if (types.contains('postal_code')) postcode = longName;
               }
 
@@ -307,30 +356,43 @@ class _CustomerHomeState extends State<CustomerHome> {
     try {
       // Use Nominatim OpenStreetMap API as fallback - search all India, no restrictions
       final encoded = Uri.encodeQueryComponent(query);
-      final resp = await http.get(
-        Uri.parse(
-          'https://nominatim.openstreetmap.org/search?format=json&q=$encoded&countrycodes=in&limit=25&addressdetails=1',
-        ),
-      ).timeout(const Duration(seconds: 8));
+      final resp = await http
+          .get(
+            Uri.parse(
+              'https://nominatim.openstreetmap.org/search?format=json&q=$encoded&countrycodes=in&limit=25&addressdetails=1',
+            ),
+          )
+          .timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as List;
         final queryLower = query.toLowerCase();
-        
+
         final suggestions = data
             .where((item) {
               // Filter: match query text, no geographic restrictions
               // final address = item['address'] as Map<String, dynamic>? ?? {};
-              final displayName = (item['display_name'] ?? '').toString().toLowerCase();
-              
+              final displayName = (item['display_name'] ?? '')
+                  .toString()
+                  .toLowerCase();
+
               return displayName.contains(queryLower);
             })
             .map<Map<String, String>>((item) {
               final address = item['address'] as Map<String, dynamic>? ?? {};
               final displayName = item['display_name'] ?? '';
               // final name = item['name'] ?? '';
-              final city = address['city'] ?? address['town'] ?? address['village'] ?? '';
-              final district = address['district'] ?? address['county'] ?? address['administrative_area_level_2'] ?? address['administrative_area_level_3'] ?? '';
+              final city =
+                  address['city'] ??
+                  address['town'] ??
+                  address['village'] ??
+                  '';
+              final district =
+                  address['district'] ??
+                  address['county'] ??
+                  address['administrative_area_level_2'] ??
+                  address['administrative_area_level_3'] ??
+                  '';
               final state = address['state'] ?? '';
               final postcode = address['postcode'] ?? '';
               final lat = item['lat'] ?? '0';
@@ -361,8 +423,10 @@ class _CustomerHomeState extends State<CustomerHome> {
   }
 
   Future<void> _showLocationPicker() async {
-    final TextEditingController locationController = TextEditingController(text: _selectedLocation == 'Select Location' ? '' : _selectedLocation);
-    
+    final TextEditingController locationController = TextEditingController(
+      text: _selectedLocation == 'Select Location' ? '' : _selectedLocation,
+    );
+
     await showDialog(
       context: context,
       barrierDismissible: true,
@@ -372,21 +436,26 @@ class _CustomerHomeState extends State<CustomerHome> {
         onLocationSelected: (location, pincode) {
           setState(() {
             _selectedLocation = location;
-            locationController.text = location; // Update text box with selected location
+            locationController.text =
+                location; // Update text box with selected location
           });
           Navigator.pop(dialogContext);
         },
         onSave: (location) {
           setState(() {
-            _selectedLocation = location.isNotEmpty ? location : 'Select Location';
-            locationController.text = _selectedLocation; // Update text box with saved location
+            _selectedLocation = location.isNotEmpty
+                ? location
+                : 'Select Location';
+            locationController.text =
+                _selectedLocation; // Update text box with saved location
           });
           Navigator.pop(dialogContext);
         },
         onGetCurrentLocation: (lat, lng) async {
           await _getLocationFromCoordinates(lat, lng);
           if (mounted) {
-            locationController.text = _selectedLocation; // Always update text box after getting location
+            locationController.text =
+                _selectedLocation; // Always update text box after getting location
           }
         },
         searchLocations: (query) async {
@@ -419,7 +488,8 @@ class _CustomerHomeState extends State<CustomerHome> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 120),
                     child: Text(
-                      (_selectedLocation == 'Select Location' || _selectedLocation.isEmpty)
+                      (_selectedLocation == 'Select Location' ||
+                              _selectedLocation.isEmpty)
                           ? 'Select Location'
                           : _selectedLocation.split(',').first.trim(),
                       style: const TextStyle(
@@ -439,43 +509,52 @@ class _CustomerHomeState extends State<CustomerHome> {
 
             // Search bar - takes remaining space
             Expanded(
-              child: Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: Colors.grey[600], size: 18),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: TextField(
-                        style: const TextStyle(fontSize: 14),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          hintText: 'Search products...',
-                          hintStyle: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SearchPage()),
+                  );
+                },
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, color: Colors.grey[600], size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: TextField(
+                          style: const TextStyle(fontSize: 14),
+                          enabled: false,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            border: InputBorder.none,
+                            hintText: 'Search products...',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[500],
+                            ),
+                          ),
                         ),
-                        onSubmitted: (q) {
-                          // TODO: perform search
-                        },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
 
             const SizedBox(width: 8),
-            
+
             // Notification icon
             const NotificationActions(),
-            
+
             const SizedBox(width: 4),
-            
+
             // Cart icon
             IconButton(
               icon: const Icon(Icons.shopping_cart, color: Colors.white),
@@ -527,7 +606,9 @@ class _CustomerHomeState extends State<CustomerHome> {
           _onTap(adjustedIndex);
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: _currentIndex == 3 ? Colors.grey.shade600 : Colors.deepOrange,
+        selectedItemColor: _currentIndex == 3
+            ? Colors.grey.shade600
+            : Colors.deepOrange,
         unselectedItemColor: Colors.grey.shade600,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -589,7 +670,10 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Select Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),),
+          title: const Text(
+            'Select Location',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           backgroundColor: ThemeColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
@@ -618,14 +702,27 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                        borderSide: BorderSide(
+                          color: Colors.grey[300]!,
+                          width: 1.5,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: ThemeColors.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: ThemeColors.primary,
+                          width: 2,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      prefixIcon: Icon(Icons.search, color: ThemeColors.primary, size: 22),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: ThemeColors.primary,
+                        size: 22,
+                      ),
                       suffixIcon: widget.locationController.text.isNotEmpty
                           ? IconButton(
                               icon: Icon(Icons.clear, color: Colors.grey[600]),
@@ -646,18 +743,21 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                         setState(() => _suggestions = []);
                         return;
                       }
-                      _debounce = Timer(const Duration(milliseconds: 150), () async {
-                        try {
-                          await widget.searchLocations(value);
-                          if (!mounted) return;
-                          setState(() {
-                            _suggestions = widget.getCurrentSuggestions();
-                          });
-                        } catch (_) {}
-                      });
+                      _debounce = Timer(
+                        const Duration(milliseconds: 150),
+                        () async {
+                          try {
+                            await widget.searchLocations(value);
+                            if (!mounted) return;
+                            setState(() {
+                              _suggestions = widget.getCurrentSuggestions();
+                            });
+                          } catch (_) {}
+                        },
+                      );
                     },
                   ),
-                  
+
                   // Current location button
                   SizedBox(
                     width: double.infinity,
@@ -667,19 +767,25 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                         foregroundColor: ThemeColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: () async {
                         try {
                           print('[GPS] Requesting location permission...');
-                          final permission = await Geolocator.requestPermission();
+                          final permission =
+                              await Geolocator.requestPermission();
                           print('[GPS] Permission result: $permission');
-                          
-                          if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+
+                          if (permission == LocationPermission.denied ||
+                              permission == LocationPermission.deniedForever) {
                             print('[GPS] Location permission denied');
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Location permission denied')),
+                                const SnackBar(
+                                  content: Text('Location permission denied'),
+                                ),
                               );
                             }
                             return;
@@ -689,9 +795,14 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                           final position = await Geolocator.getCurrentPosition(
                             desiredAccuracy: LocationAccuracy.high,
                           );
-                          print('[GPS] Position obtained: ${position.latitude}, ${position.longitude}');
+                          print(
+                            '[GPS] Position obtained: ${position.latitude}, ${position.longitude}',
+                          );
 
-                          await widget.onGetCurrentLocation(position.latitude, position.longitude);
+                          await widget.onGetCurrentLocation(
+                            position.latitude,
+                            position.longitude,
+                          );
                           if (mounted) {
                             // Parent callback updates the shared controller's text.
                             // Do not clear it here — only clear suggestions and rebuild
@@ -710,25 +821,40 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                         }
                       },
                       icon: const Icon(Icons.my_location, size: 20),
-                      label: const Text('Use Current Location', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      label: const Text(
+                        'Use Current Location',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             // Suggestions list
-            if (_suggestions.isEmpty && widget.locationController.text.isNotEmpty)
+            if (_suggestions.isEmpty &&
+                widget.locationController.text.isNotEmpty)
               Expanded(
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.location_off, size: 48, color: Colors.grey[400]),
+                      Icon(
+                        Icons.location_off,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No locations found',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 16, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       Text(
                         'Try searching with different keywords',
@@ -741,7 +867,10 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
             else if (_suggestions.isNotEmpty)
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   itemCount: _suggestions.length,
                   itemBuilder: (context, index) {
                     final suggestion = _suggestions[index];
@@ -751,14 +880,15 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                     final district = suggestion['district'] ?? '';
                     final city = suggestion['city'] ?? '';
                     final state = suggestion['state'] ?? '';
-                    
+
                     // Build location name (prefer formatted display, fall back to name)
                     final locationName = display.isNotEmpty ? display : name;
-                    
+
                     // Build subtitle with city, district, state
                     final parts = <String>[];
                     if (city.isNotEmpty) parts.add(city);
-                    if (district.isNotEmpty && district != city) parts.add(district);
+                    if (district.isNotEmpty && district != city)
+                      parts.add(district);
                     if (state.isNotEmpty && state != district) parts.add(state);
                     final subtitle = parts.join(' • ');
 
@@ -770,16 +900,26 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Location pin icon
                               Padding(
-                                padding: const EdgeInsets.only(top: 4, right: 12),
-                                child: Icon(Icons.location_on, color: ThemeColors.primary, size: 22),
+                                padding: const EdgeInsets.only(
+                                  top: 4,
+                                  right: 12,
+                                ),
+                                child: Icon(
+                                  Icons.location_on,
+                                  color: ThemeColors.primary,
+                                  size: 22,
+                                ),
                               ),
-                              
+
                               // Location details
                               Expanded(
                                 child: Column(
@@ -787,7 +927,11 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                                   children: [
                                     Text(
                                       locationName,
-                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                        color: Colors.black87,
+                                      ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -796,7 +940,10 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                                         padding: const EdgeInsets.only(top: 4),
                                         child: Text(
                                           subtitle,
-                                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey[600],
+                                          ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -805,10 +952,16 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 6),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: ThemeColors.primary.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: ThemeColors.primary
+                                                .withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: Text(
                                             postcode,
@@ -823,9 +976,13 @@ class _LocationPickerDialogState extends State<_LocationPickerDialog> {
                                   ],
                                 ),
                               ),
-                              
+
                               // Chevron icon
-                              Icon(Icons.chevron_right, color: Colors.grey[400], size: 24),
+                              Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey[400],
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
