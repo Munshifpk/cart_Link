@@ -26,8 +26,21 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
     final res = await ProductService.getProducts();
     print('🔍 _loadProducts response: $res');
     if (res['success'] == true) {
-      final List<dynamic> data = res['data'] ?? [];
+      var data = res['data'] ?? [];
       print('📦 Received ${data.length} products');
+
+      // Fetch images for each product
+      data = await Future.wait((data as List).map<Future<Map<String, dynamic>>>((json) async {
+        final Map<String, dynamic> map = Map<String, dynamic>.from(json as Map);
+        try {
+          final id = (map['_id'] ?? map['id'] ?? '').toString();
+          if (id.isNotEmpty) {
+            final imgs = await ProductService.getProductImages(id);
+            if (imgs.isNotEmpty) map['images'] = imgs;
+          }
+        } catch (_) {}
+        return map;
+      }));
       // sanitize incoming data: convert possible JS interop objects to plain Dart types
       final sanitized = data.map<Map<String, dynamic>>((raw) {
         final m = Map<String, dynamic>.from(raw as Map);

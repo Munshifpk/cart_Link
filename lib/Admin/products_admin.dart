@@ -74,7 +74,20 @@ class _ProductAdminPageState extends State<ProductAdminPage> {
     try {
       final res = await ProductService.getProducts();
       if (res['success'] == true) {
-        final List<dynamic> data = res['data'] ?? [];
+        var data = res['data'] ?? [];
+
+        // Fetch images for each product
+        data = await Future.wait((data as List).map<Future<Map<String, dynamic>>>((json) async {
+          final Map<String, dynamic> map = Map<String, dynamic>.from(json as Map);
+          try {
+            final id = (map['_id'] ?? map['id'] ?? '').toString();
+            if (id.isNotEmpty) {
+              final imgs = await ProductService.getProductImages(id);
+              if (imgs.isNotEmpty) map['images'] = imgs;
+            }
+          } catch (_) {}
+          return map;
+        }));
 
         // fetch shops once and build id->name map to resolve shop names
         final shopsRes = await ShopService.getAllShops();
@@ -91,8 +104,8 @@ class _ProductAdminPageState extends State<ProductAdminPage> {
         }
 
         setState(() {
-          _products = data.map((e) {
-            final Map<String, dynamic> js = e as Map<String, dynamic>;
+          _products = (data as List).map((e) {
+            final Map<String, dynamic> js = Map<String, dynamic>.from(e as Map);
 
             // attempt to extract shopName directly from product JSON
             String resolvedShop = '';

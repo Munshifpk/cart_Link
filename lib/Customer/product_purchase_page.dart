@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import '../theme_data.dart';
 import 'package:cart_link/services/auth_state.dart';
+import '../../services/product_service.dart';
 
 class ProductPurchasePage extends StatefulWidget {
   final Map<String, dynamic> offer;
@@ -98,6 +99,16 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           return;
         }
 
+        // Fetch images for this product
+        try {
+          final imgs = await ProductService.getProductImages(productId.toString());
+          if (imgs.isNotEmpty) {
+            productData['images'] = imgs;
+          }
+        } catch (_) {
+          // continue without images if fetch fails
+        }
+
         // Validate and ensure all required product fields are present
         _validateProductData(productData);
 
@@ -174,8 +185,20 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         final List<dynamic> list = body is Map && body.containsKey('data')
             ? (body['data'] as List<dynamic>)
             : (body is List ? body : []);
+        // Fetch images for each product
+        final withImages = await Future.wait(list.map<Future<Map<String, dynamic>>>((p) async {
+          final Map<String, dynamic> map = Map<String, dynamic>.from(p as Map);
+          try {
+            final id = (map['_id'] ?? map['id'] ?? '').toString();
+            if (id.isNotEmpty) {
+              final imgs = await ProductService.getProductImages(id);
+              if (imgs.isNotEmpty) map['images'] = imgs;
+            }
+          } catch (_) {}
+          return map;
+        }));
         // filter by category (if provided) and exclude current product
-        final filtered = list
+        final filtered = withImages
             .where((p) {
               try {
                 if (currentProductId != null &&

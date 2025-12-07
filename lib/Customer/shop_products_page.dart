@@ -81,9 +81,22 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       final result = await ProductService.getProducts(ownerId: shopId);
 
       if (result['success'] == true) {
-        final productList = (result['data'] as List? ?? [])
+        var productList = (result['data'] as List? ?? [])
             .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
             .toList();
+
+        // Fetch images for each product
+        productList = await Future.wait(productList.map<Future<Map<String, dynamic>>>((p) async {
+          try {
+            final id = (p['_id'] ?? p['id'] ?? '').toString();
+            if (id.isNotEmpty) {
+              final imgs = await ProductService.getProductImages(id);
+              if (imgs.isNotEmpty) p['images'] = imgs;
+            }
+          } catch (_) {}
+          return p;
+        }));
+
         setState(() {
           products = productList;
           _loading = false;

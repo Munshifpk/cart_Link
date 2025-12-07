@@ -56,12 +56,28 @@ class _EventOffersPageState extends State<EventOffersPage> {
     }
     final result = await ProductService.getProducts(ownerId: ownerId);
     if (result['success'] && result['data'] is List) {
-      final fetchedProducts = (result['data'] as List)
+      var rawProducts = result['data'] as List;
+
+      // Fetch images for each product
+      final productsWithImages = await Future.wait(rawProducts.map<Future<Map<String, dynamic>>>((p) async {
+        final Map<String, dynamic> map = Map<String, dynamic>.from(p as Map);
+        try {
+          final id = (map['_id'] ?? map['id'] ?? '').toString();
+          if (id.isNotEmpty) {
+            final imgs = await ProductService.getProductImages(id);
+            if (imgs.isNotEmpty) map['images'] = imgs;
+          }
+        } catch (_) {}
+        return map;
+      }));
+
+      final fetchedProducts = productsWithImages
           .map(
             (p) => {
               'name': p['name'] ?? 'Unknown',
               'price': p['price'] ?? 0,
               'mrp': p['mrp'] ?? p['price'] ?? 0,
+              'images': p['images'],
             },
           )
           .toList();
