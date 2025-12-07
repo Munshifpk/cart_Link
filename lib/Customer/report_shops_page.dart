@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme_data.dart';
 
 class CustomerReportShopsPage extends StatefulWidget {
   const CustomerReportShopsPage({super.key});
@@ -112,7 +113,9 @@ class _CustomerReportShopsPageState extends State<CustomerReportShopsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Report Shop'), elevation: 0),
+      appBar: AppBar(title: const Text('Report Shop'), elevation: 0,
+      backgroundColor: ThemeColors.primary,
+      foregroundColor: ThemeColors.textColorWhite,),
       body: Column(
         children: [
           // Search box

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme_data.dart';
 
 class OrdersHistoryPage extends StatelessWidget {
   const OrdersHistoryPage({super.key});
@@ -50,7 +51,9 @@ class OrdersHistoryPage extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Order History')),
+      appBar: AppBar(title: const Text('Order History'),
+      backgroundColor: ThemeColors.primary,
+      foregroundColor: ThemeColors.textColorWhite,),
       body: ListView.separated(
         padding: const EdgeInsets.all(12.0),
         itemCount: orders.length,

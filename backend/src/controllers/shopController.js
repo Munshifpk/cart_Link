@@ -22,3 +22,23 @@ exports.getShopById = async (req, res) => {
     }
 };
 
+exports.getShopFollowers = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const shop = await Shop.findById(id).populate('followers', 'customerName email').lean();
+        if (!shop) return res.status(404).json({ success: false, message: 'Shop not found' });
+
+        const followers = shop.followers || [];
+        return res.json({
+            success: true,
+            data: {
+                count: followers.length,
+                followers: followers
+            }
+        });
+    } catch (err) {
+        console.error('getShopFollowers error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+

@@ -1,11 +1,15 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:cart_link/Shops/analytics/analytics_page.dart';
 import 'package:cart_link/Shops/daily_sales.dart';
 import 'package:cart_link/Shops/report_page.dart';
 import 'package:cart_link/main.dart';
+import 'package:cart_link/services/auth_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -15,15 +19,180 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  String name = 'Shop Owner';
-  String email = 'owner@example.com';
-  String phone = '+1 555 0100';
-  String shopName = 'My Shop';
-  String address = '123 Market Street';
+  String name = '';
+  String email = '';
+  String phone = '';
+  String shopName = '';
+  String address = '';
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
 
   final _formKey = GlobalKey<FormState>();
+  
+  String? _shopId;
+  int _followersCount = 0;
+  bool _loadingShop = true;
+
+  String get _backendBase {
+    if (kIsWeb) return 'http://localhost:5000';
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:5000';
+    }
+    return 'http://localhost:5000';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShopData();
+  }
+
+  Future<void> _loadShopData() async {
+    try {
+      final shopId = AuthState.currentOwner?['_id']?.toString();
+      print('🔍 Loading shop data for ID: $shopId');
+      
+      if (shopId == null || shopId.isEmpty) {
+        print('❌ No shop ID found in AuthState');
+        if (mounted) {
+          setState(() => _loadingShop = false);
+        }
+        return;
+      }
+
+      // Fetch shop details directly by ID
+      final resp = await http
+          .get(Uri.parse('$_backendBase/api/Shops/$shopId'))
+          .timeout(const Duration(seconds: 10));
+      
+      print('📡 Response status: ${resp.statusCode}');
+      
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final shop = data['data'];
+        
+        print('📦 Shop data: $shop');
+
+        if (shop != null && mounted) {
+          _shopId = shop['_id']?.toString();
+          final followers = shop['followers'] as List? ?? [];
+          
+          final loadedShopName = shop['shopName']?.toString() ?? '';
+          final loadedAddress = shop['location']?.toString() ?? shop['address']?.toString() ?? '';
+          final loadedEmail = shop['email']?.toString() ?? '';
+          final loadedPhone = shop['mobile']?.toString() ?? '';
+          final loadedName = shop['ownerName']?.toString() ?? '';
+          
+          print('📱 Loaded phone: $loadedPhone');
+          print('📧 Loaded email: $loadedEmail');
+          
+          setState(() {
+            shopName = loadedShopName;
+            address = loadedAddress;
+            email = loadedEmail;
+            phone = loadedPhone;
+            name = loadedName;
+            _followersCount = followers.length;
+            _loadingShop = false;
+          });
+        } else {
+          print('❌ Shop data is null');
+          if (mounted) {
+            setState(() => _loadingShop = false);
+          }
+        }
+      } else {
+        print('❌ Failed to load shop: ${resp.statusCode}');
+        if (mounted) {
+          setState(() => _loadingShop = false);
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading shop data: $e');
+      if (mounted) {
+        setState(() => _loadingShop = false);
+      }
+    }
+  }
+
+  Future<void> _showFollowersList() async {
+    if (_shopId == null || _shopId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Shop ID not found')),
+      );
+      return;
+    }
+
+    try {
+      final resp = await http
+          .get(Uri.parse('$_backendBase/api/Shops/$_shopId/followers'))
+          .timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body);
+        final followers = (data['data']?['followers'] as List? ?? [])
+            .map<Map<String, dynamic>>((f) => Map<String, dynamic>.from(f))
+            .toList();
+
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (_) {
+            if (followers.isEmpty) {
+              return const SizedBox(
+                height: 200,
+                child: Center(child: Text('No followers yet')),
+              );
+            }
+            return SizedBox(
+              height: 400,
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Followers',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: followers.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final follower = followers[index];
+                        final followerName = follower['customerName']?.toString() ?? 'Customer';
+                        final followerEmail = follower['email']?.toString() ?? '';
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text(followerName.isNotEmpty ? followerName[0].toUpperCase() : 'C'),
+                          ),
+                          title: Text(followerName),
+                          subtitle: followerEmail.isNotEmpty ? Text(followerEmail) : null,
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load followers')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading followers: $e')),
+        );
+      }
+    }
+  }
 
   void _openEditDialog() {
     final nameController = TextEditingController(text: name);
@@ -219,6 +388,14 @@ class _ProfileTabState extends State<ProfileTab> {
                 _infoTile(Icons.phone_outlined, 'Phone', phone),
                 const Divider(height: 1),
                 _infoTile(Icons.location_on_outlined, 'Address', address),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.group, color: Colors.blueGrey),
+                  title: const Text('Followers'),
+                  subtitle: Text(_loadingShop ? 'Loading...' : '$_followersCount follower(s)'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: _loadingShop ? null : _showFollowersList,
+                ),
               ],
             ),
           ),
