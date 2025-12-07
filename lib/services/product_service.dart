@@ -1,26 +1,15 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:cart_link/constant.dart';
 import 'package:http/http.dart' as http;
-
-String get _backendBase {
-  // Android emulator uses 10.0.2.2 to reach host machine localhost
-  if (kIsWeb) return 'http://localhost:5000';
-  if (defaultTargetPlatform == TargetPlatform.android)
-    return 'http://10.0.2.2:5000';
-  // iOS simulator and desktop use localhost
-  return 'http://localhost:5000';
-}
-
-String get _backendUrl => '$_backendBase/api/products';
 
 class ProductService {
   // Fetch products; if ownerId provided backend will filter by owner
   static Future<Map<String, dynamic>> getProducts({String? ownerId}) async {
     try {
-      final uri = Uri.parse(
-        _backendUrl,
-      ).replace(queryParameters: ownerId != null ? {'ownerId': ownerId} : null);
+      final uri = backendUri(
+        kApiProducts,
+        queryParameters: ownerId != null ? {'ownerId': ownerId} : null,
+      );
       // debug: print the final request URL so it's visible in logs
       // ignore: avoid_print
       print('ProductService.getProducts -> $uri');
@@ -49,9 +38,10 @@ class ProductService {
   // Fetch products WITH images (for customer pages that need them)
   static Future<Map<String, dynamic>> getProductsWithImages({String? ownerId}) async {
     try {
-      final uri = Uri.parse(
-        '$_backendUrl/with-images',
-      ).replace(queryParameters: ownerId != null ? {'ownerId': ownerId} : null);
+      final uri = backendUri(
+        '$kApiProducts/with-images',
+        queryParameters: ownerId != null ? {'ownerId': ownerId} : null,
+      );
       // ignore: avoid_print
       print('ProductService.getProductsWithImages -> $uri');
       final resp = await http.get(uri).timeout(const Duration(seconds: 60));
@@ -78,7 +68,7 @@ class ProductService {
   // Fetch images for a specific product
   static Future<List<String>> getProductImages(String productId) async {
     try {
-      final uri = Uri.parse('$_backendUrl/$productId/images');
+      final uri = backendUri('$kApiProducts/$productId/images');
       final resp = await http.get(uri).timeout(const Duration(seconds: 15));
       if (resp.statusCode == 200) {
         final body = json.decode(resp.body);
@@ -99,7 +89,7 @@ class ProductService {
     try {
       final res = await http
           .post(
-            Uri.parse(_backendUrl),
+            backendUri(kApiProducts),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(data),
           )
@@ -126,7 +116,7 @@ class ProductService {
   static Future<Map<String, dynamic>> deleteProduct(String id) async {
     try {
       final res = await http
-          .delete(Uri.parse('$_backendUrl/$id'))
+          .delete(backendUri('$kApiProducts/$id'))
           .timeout(const Duration(seconds: 15));
       print('DeleteProduct: status=${res.statusCode}');
       if (res.statusCode == 200 || res.statusCode == 204) {
@@ -149,7 +139,7 @@ class ProductService {
     try {
       final res = await http
           .put(
-            Uri.parse('$_backendUrl/$id'),
+            backendUri('$kApiProducts/$id'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(data),
           )

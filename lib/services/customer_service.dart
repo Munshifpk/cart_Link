@@ -1,24 +1,12 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:cart_link/constant.dart';
 import 'package:http/http.dart' as http;
-
-String get _backendBase {
-  if (kIsWeb) return 'http://localhost:5000';
-  if (defaultTargetPlatform == TargetPlatform.android)
-    return 'http://10.0.2.2:5000';
-  return 'http://localhost:5000';
-}
-
-String get _backendUrl => '$_backendBase/api/customers';
 
 class CustomerAuthService {
   /// Check if a mobile exists. Expected to return a map like:
   /// { 'success': true, 'exists': false, 'message': '...' }
   static Future<Map<String, dynamic>> checkMobileExists(String mobile) async {
-    final uri = Uri.parse(
-      '$_backendBase/api/customersauth/check-mobile/$mobile',
-    );
+    final uri = backendUri('$kApiCustomerAuth/check-mobile/$mobile');
     try {
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
@@ -50,7 +38,7 @@ class CustomerAuthService {
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('$_backendBase/api/customersAuth/register');
+    final uri = backendUri('$kApiCustomerAuth/register');
     final body = {
       'customerName': customerName,
       'mobile': mobile,
@@ -107,7 +95,7 @@ class CustomerAuthService {
 class CustomerService {
   static Future<Map<String, dynamic>> getAllCustomers() async {
     try {
-      final uri = Uri.parse(_backendUrl);
+      final uri = backendUri(kApiCustomers);
       // debug
       // ignore: avoid_print
       print('CustomerService.getAllCustomers -> $uri');
@@ -135,7 +123,7 @@ class CustomerService {
     int? mobile,
   }) async {
     try {
-      final uri = Uri.parse('$_backendUrl/$customerId');
+      final uri = backendUri('$kApiCustomers/$customerId');
       final body = <String, dynamic>{};
       if (customerName != null) body['customerName'] = customerName;
       if (email != null) body['email'] = email;
@@ -176,7 +164,7 @@ class CustomerService {
     required String newPassword,
   }) async {
     try {
-      final uri = Uri.parse('$_backendBase/api/customersAuth/change-password');
+      final uri = backendUri('$kApiCustomerAuth/change-password');
       final body = {
         'customerId': customerId,
         'currentPassword': currentPassword,

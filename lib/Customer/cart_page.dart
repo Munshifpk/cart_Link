@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'dart:io' as io;
 import 'dart:math' as math;
 import 'package:cart_link/Customer/customer_home.dart';
@@ -9,6 +8,7 @@ import 'package:cart_link/services/auth_state.dart';
 import 'package:cart_link/Customer/shop_products_page.dart';
 import 'package:cart_link/Customer/product_purchase_page.dart';
 import 'package:cart_link/Customer/checkout_page.dart';
+import 'package:cart_link/constant.dart';
 
 class CustomerCartPage extends StatefulWidget {
   final Customer? customer;
@@ -31,16 +31,10 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
     _fetchCarts();
   }
 
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (io.Platform.isAndroid) return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
-
   Future<void> _fetchShopName(String shopId) async {
     try {
       final response = await http
-          .get(Uri.parse('$_backendBase/api/Shops/$shopId'))
+          .get(backendUri('$kApiShops/$shopId'))
           .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
@@ -76,7 +70,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
       }
 
       final response = await http
-          .get(Uri.parse('$_backendBase/api/cart/customer/$customerId'))
+          .get(backendUri('$kApiCart/customer/$customerId'))
           .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
@@ -175,9 +169,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
     setState(() => _updatingItems[key] = true);
 
     try {
-      final uri = Uri.parse(
-        '$_backendBase/api/cart/$customerId/$shopId/item/$productId',
-      );
+      final uri = backendUri('$kApiCart/$customerId/$shopId/item/$productId');
       final response = await http
           .patch(
             uri,
@@ -278,7 +270,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
 
                       // Fire restore request in background; revert if it fails
                       try {
-                        final postUri = Uri.parse('$_backendBase/api/cart');
+                        final postUri = backendUri(kApiCart);
                         final body = jsonEncode({
                           'customerId': customerId,
                           'shopId': shopId,
@@ -401,7 +393,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
     }
 
     try {
-      final uri = Uri.parse('$_backendBase/api/cart/$customerId/$shopId');
+      final uri = backendUri('$kApiCart/$customerId/$shopId');
       final resp = await http.delete(uri).timeout(const Duration(seconds: 12));
       if (resp.statusCode == 200 || resp.statusCode == 204) {
         // remove locally
@@ -555,7 +547,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                                     final response = await http
                                         .get(
                                           Uri.parse(
-                                            '$_backendBase/api/Shops/$shopId',
+                                            backendUrl('$kApiShops/$shopId'),
                                           ),
                                         )
                                         .timeout(const Duration(seconds: 8));
@@ -748,7 +740,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                                     final response = await http
                                         .get(
                                           Uri.parse(
-                                            '$_backendBase/api/products?ownerId=$shopId',
+                                            backendUrl(kApiProducts, queryParameters: {'ownerId': shopId}),
                                           ),
                                         )
                                         .timeout(const Duration(seconds: 8));

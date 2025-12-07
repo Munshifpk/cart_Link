@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../shop_products_page.dart';
 import '../../theme_data.dart';
 import 'package:cart_link/services/auth_state.dart';
+import 'package:cart_link/constant.dart';
 
 class ShopsPage extends StatefulWidget {
   const ShopsPage({super.key});
@@ -19,13 +18,6 @@ class _ShopsPageState extends State<ShopsPage> {
   List<Map<String, dynamic>> shops = [];
   Map<String, int> productCounts = {}; // Store product count per shop
   Set<String> followedShops = {}; // Track followed shops by ID
-
-  String get _backendBase {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android)
-      return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
 
   @override
   void initState() {
@@ -41,7 +33,7 @@ class _ShopsPageState extends State<ShopsPage> {
         return;
       }
 
-      final uri = Uri.parse('$_backendBase/api/customers/$customerId/following');
+      final uri = backendUri('$kApiCustomers/$customerId/following');
       final resp = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (resp.statusCode == 200) {
@@ -91,7 +83,7 @@ class _ShopsPageState extends State<ShopsPage> {
       final isNowFollowing = followedShops.contains(shopId);
 
       // Call backend to update customer's following list and shop's followers list
-      final uri = Uri.parse('$_backendBase/api/customers/follow-shop');
+      final uri = backendUri('$kApiCustomers/follow-shop');
       
       try {
         final response = await http.post(
@@ -145,8 +137,8 @@ class _ShopsPageState extends State<ShopsPage> {
 
   Future<void> _loadShops() async {
     try {
-      final response = await http
-          .get(Uri.parse('$_backendBase/api/Shops'))
+        final response = await http
+          .get(backendUri(kApiShops))
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -194,8 +186,8 @@ class _ShopsPageState extends State<ShopsPage> {
 
   Future<void> _fetchProductCount(String shopId) async {
     try {
-      final response = await http
-          .get(Uri.parse('$_backendBase/api/products?ownerId=$shopId'))
+        final response = await http
+          .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
           .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {

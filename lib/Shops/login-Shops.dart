@@ -7,13 +7,10 @@ import 'bottom bar/home-shops.dart';
 import '../services/auth_state.dart';
 // import 'package:cart_link/Admin/shops_admin.dart';
 import 'signUp-Shops.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cart_link/constant.dart';
 
-// Use a top-level const (works for web/desktop and emulator).
-// For a real device replace host with your PC LAN IP (e.g. 'http://192.168.x.x:5000/api/auth').
-const String _backendUrl = kIsWeb
-    ? 'http://localhost:5000/api/auth'
-    : 'http://10.0.2.2:5000/api/auth';
+// Base auth endpoint for shops.
+String get _backendUrl => backendUrl(kApiAuth);
 
 class ShopLoginPage extends StatefulWidget {
   const ShopLoginPage({super.key});
@@ -123,7 +120,7 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
       print('❌ Error: $e');
       _showErrorDialog(
         'Connection Error',
-        'Failed to connect to backend:\n$e\n\nMake sure backend is running on http://localhost:5000',
+        'Failed to connect to backend:\n$e\n\nMake sure backend is running on $backendBaseUrl',
       );
     } finally {
       if (mounted) {
