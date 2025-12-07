@@ -8,6 +8,7 @@ class Product {
   final String id;
   final String name;
   final int stock;
+  final bool inStock;
   final double price;
   final double? mrp;
   final String? description;
@@ -21,6 +22,7 @@ class Product {
     required this.id,
     required this.name,
     required this.stock,
+    this.inStock = true,
     required this.price,
     this.mrp,
     this.description,
@@ -35,7 +37,13 @@ class Product {
     return Product(
       id: json['_id'] ?? '',
       name: json['name'] ?? 'Unnamed Product',
-      stock: (json['stock'] ?? 0).toInt(),
+      // If numeric stock isn't present, fall back to boolean inStock if provided
+      stock: ((json['stock'] != null)
+          ? (json['stock'] as num).toInt()
+          : ((json['inStock'] == true) ? 1 : 0)),
+      inStock:
+          json['inStock'] ??
+          ((json['stock'] != null) ? ((json['stock'] as num) > 0) : true),
       price: (json['price'] ?? 0.0).toDouble(),
       mrp: json['mrp'] != null ? (json['mrp'] as num).toDouble() : null,
       description: json['description'],
@@ -50,7 +58,7 @@ class Product {
 
 class ProductsTab extends StatefulWidget {
   final Function(Function())? onRefreshCallback;
-  
+
   const ProductsTab({super.key, this.onRefreshCallback});
 
   @override
@@ -85,19 +93,21 @@ class _ProductsTabState extends State<ProductsTab> {
       final List<dynamic> productData = result['data'] ?? [];
 
       // Fetch images for each product on-demand (backend excludes images in list)
-      final products = await Future.wait(productData.map<Future<Product>>((json) async {
-        final Map<String, dynamic> map = Map<String, dynamic>.from(json);
-        try {
-          final id = (map['_id'] ?? map['id'] ?? '').toString();
-          if (id.isNotEmpty) {
-            final imgs = await ProductService.getProductImages(id);
-            if (imgs.isNotEmpty) map['images'] = imgs;
+      final products = await Future.wait(
+        productData.map<Future<Product>>((json) async {
+          final Map<String, dynamic> map = Map<String, dynamic>.from(json);
+          try {
+            final id = (map['_id'] ?? map['id'] ?? '').toString();
+            if (id.isNotEmpty) {
+              final imgs = await ProductService.getProductImages(id);
+              if (imgs.isNotEmpty) map['images'] = imgs;
+            }
+          } catch (_) {
+            // ignore image fetch errors, continue without images
           }
-        } catch (_) {
-          // ignore image fetch errors, continue without images
-        }
-        return Product.fromJson(map);
-      }));
+          return Product.fromJson(map);
+        }),
+      );
 
       return products;
     } else {
@@ -199,6 +209,34 @@ class _ProductsTabState extends State<ProductsTab> {
         ],
       ),
     );
+  }
+
+  Future<void> _setProductAvailability(Product product, bool available) async {
+    final parentContext = context;
+    ScaffoldMessenger.of(
+      parentContext,
+    ).showSnackBar(const SnackBar(content: Text('Updating availability...')));
+    final res = await ProductService.updateProduct(product.id, {
+      'inStock': available,
+    });
+    if (!mounted) return;
+    if (res['success'] == true) {
+      ScaffoldMessenger.of(parentContext).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Availability updated: ${available ? 'Available' : 'Unavailable'}',
+          ),
+        ),
+      );
+      _refreshProducts();
+    } else {
+      ScaffoldMessenger.of(parentContext).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Failed to update availability'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showProductInfo(Product product) {
@@ -329,7 +367,7 @@ class _ProductsTabState extends State<ProductsTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Stock',
+                          'Available',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -337,13 +375,35 @@ class _ProductsTabState extends State<ProductsTab> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${product.stock} units',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              product.inStock ? 'Yes' : 'No',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: product.inStock
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            IconButton(
+                              tooltip: 'Toggle availability',
+                              icon: Icon(
+                                product.inStock
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                                color: product.inStock
+                                    ? Colors.green
+                                    : Colors.grey,
+                              ),
+                              onPressed: () => _setProductAvailability(
+                                product,
+                                !product.inStock,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -510,7 +570,8 @@ class _ProductsTabState extends State<ProductsTab> {
       body: FutureBuilder<List<Product>>(
         future: _productsFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting || _isRefreshing) {
+          if (snapshot.connectionState == ConnectionState.waiting ||
+              _isRefreshing) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
@@ -592,7 +653,7 @@ class _ProductsTabState extends State<ProductsTab> {
                         const DataColumn(label: Text('Name')),
                         if (isMediumScreen)
                           const DataColumn(label: Text('Category')),
-                        const DataColumn(label: Text('Stock'), numeric: true),
+                        const DataColumn(label: Text('Available')),
                         const DataColumn(label: Text('Price'), numeric: true),
                         if (isMediumScreen)
                           const DataColumn(label: Text('Status')),
@@ -646,21 +707,14 @@ class _ProductsTabState extends State<ProductsTab> {
                                   ),
                                 ),
                               ),
-                            // Stock
+                            // Available checkbox
                             DataCell(
-                              Container(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  product.stock.toString(),
-                                  style: TextStyle(
-                                    color: product.stock > 10
-                                        ? Colors.green
-                                        : product.stock > 0
-                                        ? Colors.orange
-                                        : Colors.red,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                              Checkbox(
+                                value: product.inStock,
+                                onChanged: (v) {
+                                  if (v == null) return;
+                                  _setProductAvailability(product, v);
+                                },
                               ),
                             ),
                             // Price

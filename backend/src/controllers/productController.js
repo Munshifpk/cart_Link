@@ -3,18 +3,23 @@ const Product = require('../models/Product');
 
 exports.createProduct = async (req, res) => {
     try {
-        const { name, description, price, mrp, stock, sku, category, isActive, isFeatured, images, ownerId } = req.body;
+        const { name, description, price, mrp, stock, inStock, sku, category, isActive, isFeatured, images, ownerId } = req.body;
 
-        if (!name || !description || price == null || stock == null) {
+        if (!name || !description || price == null) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
         }
+
+        // Determine boolean availability: prefer explicit inStock, else derive from numeric stock if provided, otherwise default true
+        const availability = (inStock !== undefined) ? !!inStock : (stock !== undefined ? Number(stock) > 0 : true);
 
         const product = new Product({
             name,
             description,
             price: Number(price),
             mrp: mrp != null ? Number(mrp) : undefined,
-            stock: Number(stock),
+            // optional numeric stock retained for backward compatibility
+            stock: (stock !== undefined) ? Number(stock) : undefined,
+            inStock: availability,
             sku,
             category,
             ownerId: ownerId || null,
@@ -102,7 +107,7 @@ exports.updateProduct = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid product ID' });
         }
 
-        const { name, description, price, mrp, stock, sku, category, isActive, isFeatured, images } = req.body;
+        const { name, description, price, mrp, stock, inStock, sku, category, isActive, isFeatured, images } = req.body;
 
         const update = {};
         if (name !== undefined) update.name = name;
@@ -110,6 +115,7 @@ exports.updateProduct = async (req, res) => {
         if (price !== undefined) update.price = Number(price);
         if (mrp !== undefined) update.mrp = Number(mrp);
         if (stock !== undefined) update.stock = Number(stock);
+        if (inStock !== undefined) update.inStock = !!inStock;
         if (sku !== undefined) update.sku = sku;
         if (category !== undefined) update.category = category;
         if (isActive !== undefined) update.isActive = !!isActive;
