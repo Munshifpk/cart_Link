@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../services/product_service.dart';
+import '../services/shop_service.dart';
 import 'product_purchase_page.dart';
 import 'shop_products_page.dart';
 import '../theme_data.dart';
@@ -17,6 +19,55 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   List<Map<String, dynamic>> _categoryShops = [];
   List<Map<String, dynamic>> _categoryProducts = [];
   bool _loading = true;
+
+  Widget _buildImageFromProduct(
+    Map<String, dynamic> product, {
+    BoxFit fit = BoxFit.cover,
+  }) {
+    String? src;
+    final imgs = product['images'];
+    if (imgs is List && imgs.isNotEmpty) {
+      src = imgs.first?.toString() ?? '';
+    } else if (product['image'] != null) {
+      src = product['image'].toString();
+    }
+
+    if (src == null || src.trim().isEmpty) {
+      return const Center(
+        child: Icon(Icons.image, size: 40, color: Colors.grey),
+      );
+    }
+
+    if (src.trim().startsWith('data:')) {
+      try {
+        final parts = src.split(',');
+        final b64 = parts.length > 1 ? parts.last : '';
+        final bytes = base64Decode(b64);
+        return Image.memory(
+          bytes,
+          fit: fit,
+          width: double.infinity,
+          height: double.infinity,
+          alignment: Alignment.center,
+        );
+      } catch (_) {
+        return const Center(
+          child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+        );
+      }
+    }
+
+    return Image.network(
+      src,
+      fit: fit,
+      width: double.infinity,
+      height: double.infinity,
+      alignment: Alignment.center,
+      errorBuilder: (_, __, ___) => const Center(
+        child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -37,36 +88,32 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   Future<void> _loadCategoryData() async {
     try {
-      // Fetch all shops
-      final shopsResp = await http
-          .get(Uri.parse('http://localhost:5000/api/Shops'))
-          .timeout(const Duration(seconds: 10));
+      // Fetch all shops via ShopService
+      final shopsResult = await ShopService.getAllShops();
+      if (shopsResult['success'] != true) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        return;
+      }
 
-      if (shopsResp.statusCode == 200) {
-        final shopsData = jsonDecode(shopsResp.body);
-        final allShops = (shopsData['data'] as List? ?? []);
+      final allShops = (shopsResult['data'] as List? ?? []);
 
-        // Filter shops by category
-        final filteredShops = allShops.where((shop) {
-          final shopCategory =
-              shop['category'] ?? shop['businessType'] ?? 'General';
-          return shopCategory.toString() == widget.category;
-        }).toList();
+      // Filter shops by category
+      final filteredShops = allShops.where((shop) {
+        final shopCategory = shop['category'] ?? shop['businessType'] ?? 'General';
+        return shopCategory.toString() == widget.category;
+      }).toList();
 
         // Get shop IDs for product fetching
         final shopIds = filteredShops
-            .map((s) => s['_id']?.toString() ?? '')
-            .where((id) => id.isNotEmpty)
-            .toList();
+          .map((s) => s['_id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
 
-        // Fetch all products
-        final productsResp = await http
-            .get(Uri.parse('http://localhost:5000/api/products'))
-            .timeout(const Duration(seconds: 10));
-
-        if (productsResp.statusCode == 200) {
-          final productsData = jsonDecode(productsResp.body);
-          final allProducts = (productsData['data'] as List? ?? [])
+        // Fetch all products via ProductService (returns lightweight list without images)
+        final result = await ProductService.getProducts();
+        if (result['data'] != null) {
+          final allProducts = (result['data'] as List? ?? [])
               .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
               .toList();
 
@@ -76,20 +123,34 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
             return shopIds.contains(ownerId.toString());
           }).toList();
 
+          // For each filtered product, try to fetch images and attach them
+          final productsWithImages = await Future.wait(
+              filteredProducts.map<Future<Map<String, dynamic>>>((product) async {
+            try {
+              final id = (product['_id'] ?? product['id'] ?? '').toString();
+              if (id.isNotEmpty) {
+                final imgs = await ProductService.getProductImages(id);
+                if (imgs.isNotEmpty) product['images'] = imgs;
+              }
+            } catch (e) {
+              // ignore image fetch issues for now
+            }
+            return product;
+          }));
+
+          if (!mounted) return;
           setState(() {
             _categoryShops = filteredShops
                 .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
                 .toList();
-            _categoryProducts = filteredProducts;
+            _categoryProducts = productsWithImages;
             _loading = false;
           });
-        } else {
-          setState(() => _loading = false);
-        }
-      } else {
-        setState(() => _loading = false);
-      }
-    } catch (e) {
+          } else {
+            if (!mounted) return;
+            setState(() => _loading = false);
+          }
+      } catch (e) {
       print('Error loading category data: $e');
       setState(() => _loading = false);
     }
@@ -239,13 +300,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                                         topRight: Radius.circular(8),
                                       ),
                                     ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.shopping_bag,
-                                        size: 40,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
+                                    child: _buildImageFromProduct(product,
+                                        fit: BoxFit.cover),
                                   ),
                                 ),
                                 Padding(

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cart_link/Customer/app_updates_page.dart';
 import 'package:cart_link/Customer/product_purchase_page.dart';
 import 'package:cart_link/services/auth_state.dart';
+import '../theme_data.dart';
 
 class OffersFollowedShopsPage extends StatefulWidget {
   const OffersFollowedShopsPage({super.key});
@@ -116,6 +117,8 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications - Offers'),
+        foregroundColor: ThemeColors.textColorWhite,
+        backgroundColor: ThemeColors.primary,
         actions: [
           IconButton(
             tooltip: 'Notification settings',

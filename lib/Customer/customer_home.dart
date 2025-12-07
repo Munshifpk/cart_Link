@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'bottom bar/home_page.dart';
 import 'bottom bar/products_page.dart';
-import 'bottom bar/cart_page.dart';
+import 'cart_page.dart';
 import 'bottom bar/profile_page.dart';
 import '../theme_data.dart';
 import 'package:cart_link/shared/notification_actions.dart';
@@ -404,104 +404,98 @@ class _CustomerHomeState extends State<CustomerHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: ThemeColors.primary,
+        foregroundColor: ThemeColors.textColorWhite,
+        toolbarHeight: 64,
+        centerTitle: false,
+        elevation: 2,
         title: Row(
           children: [
-            const Icon(Icons.location_on, size: 20, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+            // Location pin icon and text
+            GestureDetector(
+              onTap: _showLocationPicker,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Location',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                  GestureDetector(
-                    onTap: _showLocationPicker,
-                    child: AbsorbPointer(
-                      child: TextField(
-                        controller: TextEditingController(text: _selectedLocation),
-                        readOnly: true,
-                        style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          hintText: 'Select Location',
-                          hintStyle: const TextStyle(color: Colors.white54),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        maxLines: 1,
+                  const Icon(Icons.location_on, size: 18, color: Colors.white),
+                  const SizedBox(width: 4),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
+                    child: Text(
+                      (_selectedLocation == 'Select Location' || _selectedLocation.isEmpty)
+                          ? 'Select Location'
+                          : _selectedLocation.split(',').first.trim(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (_selectedPincode.isNotEmpty)
-                    Text(
-                      _selectedPincode,
-                      style: const TextStyle(fontSize: 12, color: Colors.white70),
-                      maxLines: 1,
-                    ),
                 ],
               ),
             ),
+
+            const SizedBox(width: 8),
+
+            // Search bar - takes remaining space
+            Expanded(
+              child: Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: Colors.grey[600], size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: TextField(
+                        style: const TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          hintText: 'Search products...',
+                          hintStyle: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                        ),
+                        onSubmitted: (q) {
+                          // TODO: perform search
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+            
+            // Notification icon
+            const NotificationActions(),
+            
+            const SizedBox(width: 4),
+            
+            // Cart icon
+            IconButton(
+              icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              onPressed: () {
+                setState(() => _currentIndex = 3);
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
           ],
         ),
-        backgroundColor: ThemeColors.primary,
-        foregroundColor: ThemeColors.textColorWhite,
-        toolbarHeight: 72,
-        centerTitle: false,
-        elevation: 2,
       ),
 
       // Move previous "app bar" elements here, below the AppBar
       body: Column(
         children: [
-          // top controls (search, notifications)
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  // Search bar (expanded centered)
-                  Expanded(
-                    child: Center(
-                      child: Container(
-                        height: 44,
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.search, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                  border: InputBorder.none,
-                                  hintText: 'Search for products, brands...',
-                                ),
-                                onSubmitted: (q) {
-                                  // TODO: perform search
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Notification / updates actions (top right)
-                  const NotificationActions(),
-                ],
-              ),
-            ),
-          ),
+          // top controls now moved into AppBar.bottom
 
           // Main pages area
           Expanded(
@@ -529,10 +523,14 @@ class _CustomerHomeState extends State<CustomerHome> {
       ),
 
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTap,
+        currentIndex: _currentIndex > 3 ? _currentIndex - 1 : _currentIndex,
+        onTap: (index) {
+          // Adjust index to account for cart page at position 3
+          final adjustedIndex = index >= 3 ? index + 1 : index;
+          _onTap(adjustedIndex);
+        },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.deepOrange,
+        selectedItemColor: _currentIndex == 3 ? Colors.grey.shade600 : Colors.deepOrange,
         unselectedItemColor: Colors.grey.shade600,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -540,10 +538,6 @@ class _CustomerHomeState extends State<CustomerHome> {
           BottomNavigationBarItem(
             icon: Icon(Icons.category_sharp),
             label: 'Products',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Cart',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

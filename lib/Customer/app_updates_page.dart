@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme_data.dart';
 
 class AppUpdatesPage extends StatefulWidget {
   const AppUpdatesPage({super.key});
@@ -29,7 +30,10 @@ class _AppUpdatesPageState extends State<AppUpdatesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('App Updates')),
+      appBar: AppBar(title: const Text('App Updates'),
+      foregroundColor: ThemeColors.textColorWhite,
+      backgroundColor: ThemeColors.primary,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12.0),

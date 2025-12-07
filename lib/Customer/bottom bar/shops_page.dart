@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../shop_products_page.dart';
+import '../../theme_data.dart';
 
 class ShopsPage extends StatefulWidget {
   const ShopsPage({super.key});
@@ -263,11 +264,11 @@ class _ShopsPageState extends State<ShopsPage> {
                                   _toggleFollowShop(shopId, shopName),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: followedShops.contains(shopId)
-                                    ? Colors.green
-                                    : Colors.grey.shade300,
+                                    ? ThemeColors.greenButton
+                                    : ThemeColors.primary,
                                 foregroundColor: followedShops.contains(shopId)
-                                    ? Colors.white
-                                    : Colors.black87,
+                                    ? ThemeColors.textColorWhite
+                                    : ThemeColors.textColorWhite,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 6,
@@ -284,7 +285,9 @@ class _ShopsPageState extends State<ShopsPage> {
                                     ? 'Following'
                                     : 'Follow',
                                 style: const TextStyle(fontSize: 12),
+                              
                               ),
+                              
                             ),
                             const SizedBox(height: 8),
                             const Icon(
@@ -292,6 +295,7 @@ class _ShopsPageState extends State<ShopsPage> {
                               size: 16,
                               color: Colors.grey,
                             ),
+                            
                           ],
                         ),
                       ],

@@ -83,9 +83,23 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       setState(() => _loadingProducts = true);
       final result = await ProductService.getProducts();
       if (result['success'] == true && mounted) {
-        final products = (result['data'] as List? ?? [])
+        var products = (result['data'] as List? ?? [])
             .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
             .toList();
+
+        // Fetch images for each product in parallel (backend excludes images in list)
+        products = await Future.wait(products.map<Future<Map<String, dynamic>>>((p) async {
+          try {
+            final id = (p['_id'] ?? p['id'] ?? '').toString();
+            if (id.isNotEmpty) {
+              final imgs = await ProductService.getProductImages(id);
+              if (imgs.isNotEmpty) p['images'] = imgs;
+            }
+          } catch (_) {
+            // ignore image fetch errors
+          }
+          return p;
+        }));
 
         // Shuffle and take 8 random products
         products.shuffle();

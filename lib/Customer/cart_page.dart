@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:io' as io;
 import 'dart:math' as math;
-import '../customer_home.dart';
+import 'package:cart_link/Customer/customer_home.dart';
 import 'package:cart_link/services/auth_state.dart';
-import '../shop_products_page.dart';
-import '../product_purchase_page.dart';
-import '../checkout_page.dart';
+import 'package:cart_link/Customer/shop_products_page.dart';
+import 'package:cart_link/Customer/product_purchase_page.dart';
+import 'package:cart_link/Customer/checkout_page.dart';
 
 class CustomerCartPage extends StatefulWidget {
   final Customer? customer;
@@ -449,32 +449,39 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final double s = width < 360 ? 0.85 : (width < 800 ? 1.0 : 1.05);
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    
+    final content = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : (_errorMessage != null && _cartsByShop.isEmpty)
+            ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 64,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _fetchCarts,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          )
+        : _buildCartContent(width, s);
 
-    if (_errorMessage != null && _cartsByShop.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.shopping_cart_outlined,
-              size: 64,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: _fetchCarts, child: const Text('Retry')),
-          ],
-        ),
-      );
-    }
+    return content;
+  }
+
+  Widget _buildCartContent(double width, double s) {
 
     final listView = RefreshIndicator(
       onRefresh: _fetchCarts,
