@@ -93,7 +93,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
         // Fetch images for this product
         try {
-          final imgs = await ProductService.getProductImages(productId.toString());
+          final imgs = await ProductService.getProductImages(
+            productId.toString(),
+          );
           if (imgs.isNotEmpty) {
             productData['images'] = imgs;
           }
@@ -161,6 +163,21 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     }
   }
 
+  // Helper to determine availability from product document
+  bool _isAvailable(Map<String, dynamic>? p) {
+    if (p == null) return false;
+    try {
+      if (p.containsKey('inStock')) return p['inStock'] == true;
+      if (p.containsKey('stock')) {
+        final s = p['stock'];
+        if (s is num) return s > 0;
+        if (s is String) return int.tryParse(s) != null && int.tryParse(s)! > 0;
+      }
+    } catch (_) {}
+    // default to true when field not provided (preserve existing behavior)
+    return true;
+  }
+
   Future<void> _fetchSimilarProducts(
     String ownerId,
     String? category,
@@ -179,25 +196,35 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             ? (body['data'] as List<dynamic>)
             : (body is List ? body : []);
         // Fetch images for each product
-        final withImages = await Future.wait(list.map<Future<Map<String, dynamic>>>((p) async {
-          final Map<String, dynamic> map = Map<String, dynamic>.from(p as Map);
-          try {
-            final id = (map['_id'] ?? map['id'] ?? '').toString();
-            if (id.isNotEmpty) {
-              final imgs = await ProductService.getProductImages(id);
-              if (imgs.isNotEmpty) map['images'] = imgs;
-            }
-          } catch (_) {}
-          return map;
-        }));
-        // filter by category (if provided) and exclude current product
+        final withImages = await Future.wait(
+          list.map<Future<Map<String, dynamic>>>((p) async {
+            final Map<String, dynamic> map = Map<String, dynamic>.from(
+              p as Map,
+            );
+            try {
+              final id = (map['_id'] ?? map['id'] ?? '').toString();
+              if (id.isNotEmpty) {
+                final imgs = await ProductService.getProductImages(id);
+                if (imgs.isNotEmpty) map['images'] = imgs;
+              }
+            } catch (_) {}
+            return map;
+          }),
+        );
+        // filter by category (if provided), exclude current product and require availability
         final filtered = withImages
             .where((p) {
               try {
+                // Exclude current product
                 if (currentProductId != null &&
                     (p['_id']?.toString() == currentProductId ||
                         p['id']?.toString() == currentProductId))
                   return false;
+
+                // Must be available to customers
+                if (!_isAvailable(Map<String, dynamic>.from(p as Map)))
+                  return false;
+
                 if (category != null && category.isNotEmpty) {
                   return (p['category']?.toString() ?? '').toLowerCase() ==
                       category.toLowerCase();
@@ -599,6 +626,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         ? images[_selectedImageIndex.clamp(0, images.length - 1)]
         : null;
 
+    // Determine availability for this offer/product
+    final bool available = _isAvailable(offer);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -701,56 +731,53 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            // Price and MRP (MRP shown below price when available)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            // Availability badge
+                            Row(
                               children: [
-                                Text(
-                                  '₹${offerPrice.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: available
+                                        ? Colors.green.withOpacity(0.12)
+                                        : Colors.red.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: available
+                                          ? Colors.green.shade300
+                                          : Colors.red.shade200,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    available ? 'Available' : 'Unavailable',
+                                    style: TextStyle(
+                                      color: available
+                                          ? Colors.green.shade800
+                                          : Colors.red.shade700,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 6),
-                                if (mrp > 0 && offerPrice < mrp)
+                                const SizedBox(width: 12),
+                                if (!available)
                                   Text(
-                                    'MRP: ₹${mrp.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      decoration: TextDecoration.lineThrough,
-                                      color: Colors.grey,
-                                      fontSize: 14,
+                                    'This product is currently unavailable for purchase',
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 12,
                                     ),
                                   ),
-                                if (discount > 0) ...[
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.shade100,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '${discount.toStringAsFixed(0)}% off',
-                                      style: TextStyle(
-                                        color: Colors.orange.shade700,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
-                            const SizedBox(height: 20),
-                            // Quantity
-                            const Text(
-                              'Quantity',
-                              style: TextStyle(
-                                fontSize: 16,
+                            const SizedBox(height: 4),
+                            // Price and MRP (MRP shown below price when available)
+                            Text(
+                              '₹${offerPrice.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 28,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -758,13 +785,15 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                             Row(
                               children: [
                                 ElevatedButton(
-                                  onPressed: () {
-                                    final newVal =
-                                        (_quantityNotifier.value - 1) < 1
-                                        ? 1
-                                        : (_quantityNotifier.value - 1);
-                                    _quantityNotifier.value = newVal;
-                                  },
+                                  onPressed: available
+                                      ? () {
+                                          final newVal =
+                                              (_quantityNotifier.value - 1) < 1
+                                              ? 1
+                                              : (_quantityNotifier.value - 1);
+                                          _quantityNotifier.value = newVal;
+                                        }
+                                      : null,
                                   child: const Text('-'),
                                 ),
                                 const SizedBox(width: 16),
@@ -780,13 +809,16 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                 ),
                                 const SizedBox(width: 16),
                                 ElevatedButton(
-                                  onPressed: () {
-                                    final newVal =
-                                        (_quantityNotifier.value + 1) > 100
-                                        ? 100
-                                        : (_quantityNotifier.value + 1);
-                                    _quantityNotifier.value = newVal;
-                                  },
+                                  onPressed: available
+                                      ? () {
+                                          final newVal =
+                                              (_quantityNotifier.value + 1) >
+                                                  100
+                                              ? 100
+                                              : (_quantityNotifier.value + 1);
+                                          _quantityNotifier.value = newVal;
+                                        }
+                                      : null,
                                   child: const Text('+'),
                                 ),
                               ],
@@ -799,48 +831,54 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                   width: double.infinity,
                                   height: 56,
                                   child: ElevatedButton.icon(
-                                    onPressed: () async {
-                                      final qty = _quantityNotifier.value;
-                                      final ok = await _addToCartRequest(
-                                        offer,
-                                        qty,
-                                      );
-                                      if (ok) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Added $qty item(s) to cart',
-                                            ),
-                                            duration: const Duration(
-                                              seconds: 2,
-                                            ),
-                                          ),
-                                        );
-                                        Future.delayed(
-                                          const Duration(milliseconds: 500),
-                                          () {
-                                            if (context.mounted)
-                                              Navigator.pushNamed(
+                                    onPressed: available
+                                        ? () async {
+                                            final qty = _quantityNotifier.value;
+                                            final ok = await _addToCartRequest(
+                                              offer,
+                                              qty,
+                                            );
+                                            if (ok) {
+                                              ScaffoldMessenger.of(
                                                 context,
-                                                '/cart',
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Added $qty item(s) to cart',
+                                                  ),
+                                                  duration: const Duration(
+                                                    seconds: 2,
+                                                  ),
+                                                ),
                                               );
-                                          },
-                                        );
-                                      } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Failed to add to cart',
-                                            ),
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                              Future.delayed(
+                                                const Duration(
+                                                  milliseconds: 500,
+                                                ),
+                                                () {
+                                                  if (context.mounted)
+                                                    Navigator.pushNamed(
+                                                      context,
+                                                      '/cart',
+                                                    );
+                                                },
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Failed to add to cart',
+                                                  ),
+                                                  duration: Duration(
+                                                    seconds: 2,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        : null,
                                     icon: const Icon(
                                       Icons.shopping_cart,
                                       size: 24,
@@ -853,7 +891,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: ThemeColors.accent,
+                                      backgroundColor: available
+                                          ? ThemeColors.accent
+                                          : Colors.grey.shade400,
                                       foregroundColor:
                                           ThemeColors.textColorWhite,
                                       padding: const EdgeInsets.symmetric(
@@ -868,19 +908,23 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                   width: double.infinity,
                                   height: 56,
                                   child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      final qty = _quantityNotifier.value;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Proceeding to checkout for $qty item(s)...',
-                                          ),
-                                          duration: const Duration(seconds: 2),
-                                        ),
-                                      );
-                                    },
+                                    onPressed: available
+                                        ? () {
+                                            final qty = _quantityNotifier.value;
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Proceeding to checkout for $qty item(s)...',
+                                                ),
+                                                duration: const Duration(
+                                                  seconds: 2,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        : null,
                                     icon: const Icon(Icons.payment, size: 24),
                                     label: const Text(
                                       'Buy Now',
@@ -890,7 +934,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: ThemeColors.greenButton,
+                                      backgroundColor: available
+                                          ? ThemeColors.greenButton
+                                          : Colors.grey.shade400,
                                       foregroundColor:
                                           ThemeColors.textColorWhite,
                                       padding: const EdgeInsets.symmetric(
@@ -1092,6 +1138,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     String productTitle,
     String shopDisplayName,
   ) {
+    // Compute availability
+    final bool available = _isAvailable(offer);
+
     return [
       // Product name (use DB-fetched canonical title when available)
       Text(
@@ -1221,33 +1270,37 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             child: SizedBox(
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () async {
-                  final qty = _quantityNotifier.value;
-                  final ok = await _addToCartRequest(offer, qty);
-                  if (ok) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Added $qty item(s) to cart'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                    Future.delayed(const Duration(milliseconds: 500), () {
-                      if (context.mounted) {
-                        Navigator.pushNamed(context, '/cart');
+                onPressed: available
+                    ? () async {
+                        final qty = _quantityNotifier.value;
+                        final ok = await _addToCartRequest(offer, qty);
+                        if (ok) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Added $qty item(s) to cart'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                          Future.delayed(const Duration(milliseconds: 500), () {
+                            if (context.mounted) {
+                              Navigator.pushNamed(context, '/cart');
+                            }
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to add to cart'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       }
-                    });
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Failed to add to cart'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
+                    : null,
                 icon: const Icon(Icons.shopping_cart, size: 20),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: ThemeColors.accent,
+                  backgroundColor: available
+                      ? ThemeColors.accent
+                      : Colors.grey.shade400,
                   foregroundColor: ThemeColors.textColorWhite,
                   padding: const EdgeInsets.symmetric(
                     vertical: 10,
@@ -1266,24 +1319,28 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             child: SizedBox(
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  final qty = _quantityNotifier.value;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Proceeding to checkout for $qty item(s)...',
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
+                onPressed: available
+                    ? () {
+                        final qty = _quantityNotifier.value;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Proceeding to checkout for $qty item(s)...',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    : null,
                 icon: const Icon(Icons.payment, size: 20),
                 label: const Text(
                   'Buy Now',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: ThemeColors.greenButton,
+                  backgroundColor: available
+                      ? ThemeColors.greenButton
+                      : Colors.grey.shade400,
                   foregroundColor: ThemeColors.textColorWhite,
                   padding: const EdgeInsets.symmetric(
                     vertical: 10,

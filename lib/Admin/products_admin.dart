@@ -15,6 +15,7 @@ class ProductItem {
   final String name;
   final double price;
   final int stock;
+  final bool inStock;
   final String shopName;
   final String description;
   final String? imageUrl;
@@ -25,6 +26,7 @@ class ProductItem {
     required this.name,
     required this.price,
     required this.stock,
+    this.inStock = true,
     required this.shopName,
     required this.description,
     required this.imageUrl,
@@ -50,7 +52,11 @@ class ProductItem {
       id: json['_id'] ?? json['id'] ?? '',
       name: json['name'] ?? json['productName'] ?? 'Unnamed product',
       price: (json['price'] ?? 0).toDouble(),
-      stock: (json['stock'] ?? json['quantity'] ?? 0).toInt(),
+        // derive numeric stock from either numeric field or boolean inStock
+        stock: ((json['stock'] ?? json['quantity']) != null)
+          ? (json['stock'] ?? json['quantity']).toInt()
+          : ((json['inStock'] == true) ? 1 : 0),
+        inStock: json['inStock'] ?? ((json['stock'] ?? json['quantity']) != null ? ((json['stock'] ?? json['quantity']) > 0) : true),
       shopName: shopName,
       description: json['description'] ?? '',
       imageUrl: image,
@@ -187,7 +193,7 @@ class _ProductAdminPageState extends State<ProductAdminPage> {
               const SizedBox(height: 6),
               Text('Price: ₹${p.price.toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              Text('Stock: ${p.stock}'),
+              Text('In Stock: ${p.inStock ? 'Yes' : 'No'}'),
               const SizedBox(height: 6),
               if (p.createdAt != null) Text('Created: ${p.createdAt}'),
               const SizedBox(height: 8),
@@ -229,7 +235,7 @@ class _ProductAdminPageState extends State<ProductAdminPage> {
                         DataColumn(label: Text('Product')),
                         DataColumn(label: Text('Shop')),
                         DataColumn(label: Text('Price'), numeric: true),
-                        DataColumn(label: Text('Stock'), numeric: true),
+                        DataColumn(label: Text('In Stock')),
                         DataColumn(label: Text('Info')),
                       ],
                       rows: List.generate(_products.length, (i) {
@@ -239,7 +245,7 @@ class _ProductAdminPageState extends State<ProductAdminPage> {
                           DataCell(SizedBox(width: 220, child: Text(p.name))),
                           DataCell(Text(p.shopName.isNotEmpty ? p.shopName : '—')),
                           DataCell(Container(alignment: Alignment.centerRight, child: Text('₹${p.price.toStringAsFixed(2)}'))),
-                          DataCell(Container(alignment: Alignment.centerRight, child: Text(p.stock.toString()))),
+                          DataCell(Container(alignment: Alignment.centerRight, child: Text(p.inStock ? 'Yes' : 'No'))),
                           DataCell(IconButton(icon: const Icon(Icons.info_outline, color: Colors.blue), onPressed: () => _showInfo(p))),
                         ]);
                       }),

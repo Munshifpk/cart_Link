@@ -27,7 +27,7 @@ class EditProductPage extends StatefulWidget {
 class _EditProductPageState extends State<EditProductPage> {
   late TextEditingController _nameController;
   late TextEditingController _priceController;
-  late TextEditingController _stockController;
+  bool _inStock = true;
   late TextEditingController _descController;
   late TextEditingController _skuController;
   late TextEditingController _mrpController;
@@ -55,9 +55,7 @@ class _EditProductPageState extends State<EditProductPage> {
     _priceController = TextEditingController(
       text: widget.productPrice.toStringAsFixed(0),
     );
-    _stockController = TextEditingController(
-      text: widget.productStock.toString(),
-    );
+    _inStock = widget.productStock > 0;
     _descController = TextEditingController(text: widget.productDescription);
     _skuController = TextEditingController();
     _mrpController = TextEditingController(
@@ -70,7 +68,6 @@ class _EditProductPageState extends State<EditProductPage> {
   void dispose() {
     _nameController.dispose();
     _priceController.dispose();
-    _stockController.dispose();
     _descController.dispose();
     _skuController.dispose();
     _mrpController.dispose();
@@ -90,7 +87,7 @@ class _EditProductPageState extends State<EditProductPage> {
           double.tryParse(_mrpController.text) ??
           double.tryParse(_priceController.text) ??
           0.0,
-      'stock': int.tryParse(_stockController.text) ?? 0,
+      'inStock': _inStock,
       'sku': _skuController.text,
       'category': _category,
       'isActive': _isActive,
@@ -357,9 +354,9 @@ class _EditProductPageState extends State<EditProductPage> {
                   ),
                   const SizedBox(height: 18),
 
-                  // Stock
+                  // Stock availability (boolean)
                   Text(
-                    'Available Stock',
+                    'Stock Availability',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -367,27 +364,11 @@ class _EditProductPageState extends State<EditProductPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _stockController,
-                    decoration: InputDecoration(
-                      hintText: 'Enter stock quantity',
-                      prefixIcon: const Icon(Icons.inventory_2),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Stock is required';
-                      }
-                      if (int.tryParse(value) == null) {
-                        return 'Enter a valid number';
-                      }
-                      return null;
-                    },
+                  CheckboxListTile(
+                    title: const Text('In stock (available)'),
+                    value: _inStock,
+                    onChanged: (v) => setState(() => _inStock = v ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
                   ),
                   const SizedBox(height: 18),
 

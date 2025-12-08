@@ -19,7 +19,7 @@ class _AddProductPageState extends State<AddProductPage> {
   final _descController = TextEditingController();
   final _priceController = TextEditingController();
   final _mrpController = TextEditingController();
-  final _stockController = TextEditingController();
+  bool _inStock = true;
   final _skuController = TextEditingController();
   String? _category;
   // final List<String> _images = [];
@@ -43,7 +43,6 @@ class _AddProductPageState extends State<AddProductPage> {
     _descController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
-    _stockController.dispose();
     _skuController.dispose();
     super.dispose();
   }
@@ -56,10 +55,18 @@ class _AddProductPageState extends State<AddProductPage> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('No images selected'),
-          content: const Text('You have not selected any images. Do you want to continue without images?'),
+          content: const Text(
+            'You have not selected any images. Do you want to continue without images?',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continue'),
+            ),
           ],
         ),
       );
@@ -97,7 +104,7 @@ class _AddProductPageState extends State<AddProductPage> {
           double.tryParse(_mrpController.text) ??
           double.tryParse(_priceController.text) ??
           0.0,
-      'stock': int.tryParse(_stockController.text) ?? 0,
+      'inStock': _inStock,
       'sku': _skuController.text,
       'category': _category,
       'isActive': _isActive,
@@ -111,12 +118,18 @@ class _AddProductPageState extends State<AddProductPage> {
 
     try {
       print('[PRODUCT_SUBMIT] Sending payload: ${payload.keys.join(', ')}');
-      print('[PRODUCT_SUBMIT] Owner: ${payload['ownerId']}, Images: ${imagesData.length}');
+      print(
+        '[PRODUCT_SUBMIT] Owner: ${payload['ownerId']}, Images: ${imagesData.length}',
+      );
       final res = await ProductService.createProduct(payload).timeout(
         const Duration(seconds: 30),
         onTimeout: () {
           print('[PRODUCT_SUBMIT_TIMEOUT] Request timed out after 30s');
-          return {'success': false, 'message': 'Request timed out. Product may have been saved, please refresh.'};
+          return {
+            'success': false,
+            'message':
+                'Request timed out. Product may have been saved, please refresh.',
+          };
         },
       );
       if (!mounted) return;
@@ -517,19 +530,22 @@ class _AddProductPageState extends State<AddProductPage> {
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
-                                  child: TextFormField(
-                                    controller: _stockController,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      CheckboxListTile(
+                                        title: const Text(
+                                          'In stock (available)',
+                                        ),
+                                        value: _inStock,
+                                        onChanged: (v) => setState(
+                                          () => _inStock = v ?? false,
+                                        ),
+                                        controlAffinity:
+                                            ListTileControlAffinity.leading,
+                                      ),
                                     ],
-                                    decoration: const InputDecoration(
-                                      labelText: 'Stock Quantity',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    validator: (v) => v!.isEmpty
-                                        ? 'Enter stock quantity'
-                                        : null,
                                   ),
                                 ),
                               ],
