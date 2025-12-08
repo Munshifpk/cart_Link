@@ -3,13 +3,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
 import 'package:cart_link/theme_data.dart';
+import 'package:cart_link/constant.dart';
 import 'product_purchase_page.dart';
 import 'category_products_page.dart';
 import 'shop_products_page.dart';
-
-String get _backendBase {
-  return 'http://localhost:5000';
-}
 
 class SearchPage extends StatefulWidget {
   final String? initialQuery;
@@ -65,17 +62,17 @@ class _SearchPageState extends State<SearchPage> {
 
       // Fetch products
       final productsResponse = await http
-          .get(Uri.parse('$_backendBase/api/products/search?q=$encodedQuery'))
+          .get(backendUri('/api/products/search', queryParameters: {'q': encodedQuery}))
           .timeout(const Duration(seconds: 10));
 
       // Fetch shops
       final shopsResponse = await http
-          .get(Uri.parse('$_backendBase/api/Shops/search?q=$encodedQuery'))
+          .get(backendUri('/api/Shops/search', queryParameters: {'q': encodedQuery}))
           .timeout(const Duration(seconds: 10));
 
       // Fetch categories
       final categoriesResponse = await http
-          .get(Uri.parse('$_backendBase/api/categories/search?q=$encodedQuery'))
+          .get(backendUri('/api/categories/search', queryParameters: {'q': encodedQuery}))
           .timeout(const Duration(seconds: 10));
 
       if (mounted) {

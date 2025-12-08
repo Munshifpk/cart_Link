@@ -67,7 +67,35 @@ class ProductsTab extends StatefulWidget {
 
 class _ProductsTabState extends State<ProductsTab> {
   late Future<List<Product>> _productsFuture;
+  List<Product> _products = [];
   bool _isRefreshing = false;
+
+  Product _copyWithAvailability(Product p, bool inStock) {
+    return Product(
+      id: p.id,
+      name: p.name,
+      stock: p.stock,
+      inStock: inStock,
+      price: p.price,
+      mrp: p.mrp,
+      description: p.description,
+      category: p.category,
+      sku: p.sku,
+      isActive: p.isActive,
+      isFeatured: p.isFeatured,
+      images: p.images,
+    );
+  }
+
+  void _applyLocalAvailability(String productId, bool inStock) {
+    setState(() {
+      _products = _products
+          .map((p) => p.id == productId
+              ? _copyWithAvailability(p, inStock)
+              : p)
+          .toList();
+    });
+  }
 
   @override
   void initState() {
@@ -109,6 +137,12 @@ class _ProductsTabState extends State<ProductsTab> {
         }),
       );
 
+      if (mounted) {
+        setState(() {
+          _products = products;
+        });
+      }
+
       return products;
     } else {
       if (mounted) {
@@ -123,15 +157,18 @@ class _ProductsTabState extends State<ProductsTab> {
     }
   }
 
-  void _refreshProducts() {
-    // Do not call async code directly inside the setState callback.
-    // Compute the future first, then update state synchronously.
-    setState(() => _isRefreshing = true);
-    final future = _fetchProducts();
+  Future<void> _refreshProducts() async {
     setState(() {
-      _productsFuture = future;
-      _isRefreshing = false;
+      _isRefreshing = true;
+      _productsFuture = _fetchProducts();
     });
+
+    await _productsFuture;
+    if (mounted) {
+      setState(() {
+        _isRefreshing = false;
+      });
+    }
   }
 
   void _editProduct(Product product) {
@@ -145,16 +182,12 @@ class _ProductsTabState extends State<ProductsTab> {
           productStock: product.stock,
         ),
       ),
-    ).then((result) {
-      // Always refresh after returning from edit page, regardless of result
-      if (mounted) {
-        _refreshProducts();
-      }
+    ).then((_) {
+      if (mounted) _refreshProducts();
     });
   }
 
   void _deleteProduct(Product product) {
-    // Confirm and delete
     final parentContext = context;
     showDialog(
       context: parentContext,
@@ -172,7 +205,6 @@ class _ProductsTabState extends State<ProductsTab> {
             onPressed: () async {
               Navigator.pop(context);
 
-              // Use the parent context (not the dialog's) when showing SnackBars
               ScaffoldMessenger.of(parentContext).showSnackBar(
                 const SnackBar(
                   content: Text('Deleting product...'),
@@ -212,30 +244,63 @@ class _ProductsTabState extends State<ProductsTab> {
   }
 
   Future<void> _setProductAvailability(Product product, bool available) async {
-    final parentContext = context;
-    ScaffoldMessenger.of(
-      parentContext,
-    ).showSnackBar(const SnackBar(content: Text('Updating availability...')));
+    // Optimistically update the UI for snappier feedback
+    _applyLocalAvailability(product.id, available);
+
     final res = await ProductService.updateProduct(product.id, {
       'inStock': available,
     });
+
     if (!mounted) return;
+
     if (res['success'] == true) {
-      ScaffoldMessenger.of(parentContext).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Availability updated: ${available ? 'Available' : 'Unavailable'}',
+            '${product.name} is now ${available ? 'available' : 'unavailable'}',
           ),
+          duration: const Duration(seconds: 1),
         ),
       );
-      _refreshProducts();
     } else {
-      ScaffoldMessenger.of(parentContext).showSnackBar(
+      // Revert if backend update failed
+      _applyLocalAvailability(product.id, !available);
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(res['message'] ?? 'Failed to update availability'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  Future<void> _confirmAvailabilityChange(
+    Product product,
+    bool available,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirm availability change'),
+        content: Text(
+          "Mark ${product.name} as ${available ? 'Available' : 'Unavailable'}?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _setProductAvailability(product, available);
     }
   }
 
@@ -398,7 +463,7 @@ class _ProductsTabState extends State<ProductsTab> {
                                     ? Colors.green
                                     : Colors.grey,
                               ),
-                              onPressed: () => _setProductAvailability(
+                              onPressed: () => _confirmAvailabilityChange(
                                 product,
                                 !product.inStock,
                               ),
@@ -577,11 +642,15 @@ class _ProductsTabState extends State<ProductsTab> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          final snapshotProducts = snapshot.data;
+          if (_products.isEmpty && (snapshotProducts == null || snapshotProducts.isEmpty)) {
             return const Center(child: Text('No products found.'));
           }
 
-          final products = snapshot.data!;
+          // Prefer the locally cached list so toggle updates don't require a refetch.
+          final products = _products.isNotEmpty
+              ? _products
+              : (snapshotProducts ?? []);
 
           // For large screens: side-by-side layout
           if (isLargeScreen) {
@@ -707,14 +776,20 @@ class _ProductsTabState extends State<ProductsTab> {
                                   ),
                                 ),
                               ),
-                            // Available checkbox
+                            // Available switch
                             DataCell(
-                              Checkbox(
-                                value: product.inStock,
-                                onChanged: (v) {
-                                  if (v == null) return;
-                                  _setProductAvailability(product, v);
-                                },
+                              Transform.scale(
+                                scale: 0.9,
+                                child: Switch(
+                                  value: product.inStock,
+                                  onChanged: (v) => _confirmAvailabilityChange(
+                                    product,
+                                    v,
+                                  ),
+                                  activeColor: Colors.green,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
                               ),
                             ),
                             // Price
