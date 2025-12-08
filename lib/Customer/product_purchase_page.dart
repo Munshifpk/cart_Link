@@ -66,7 +66,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       }
 
       // Fetch product details from /api/products?ownerId=$shopId and filter by productId
-        final productResponse = await http
+      final productResponse = await http
           .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
           .timeout(const Duration(seconds: 8));
 
@@ -108,7 +108,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
         // Fetch shop details
         final shopResponse = await http
-          .get(backendUri('$kApiShops/$shopId'))
+            .get(backendUri('$kApiShops/$shopId'))
             .timeout(const Duration(seconds: 8));
 
         String shopName = 'Unknown Shop';
@@ -313,13 +313,13 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         return;
       }
 
-        final uri = backendUri(
-          '/api/orders',
-          queryParameters: {
-            'customerId': customerId.toString(),
-            'productId': productId,
-          },
-        );
+      final uri = backendUri(
+        '/api/orders',
+        queryParameters: {
+          'customerId': customerId.toString(),
+          'productId': productId,
+        },
+      );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -685,21 +685,50 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                         flex: 1,
                         child: Column(
                           children: [
-                            Container(
-                              height: 460,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(12),
+                            GestureDetector(
+                              onTap: () => _openImageViewer(
+                                context,
+                                images,
+                                _selectedImageIndex,
                               ),
-                              alignment: Alignment.center,
-                              child: mainImage != null
-                                  ? _buildImageWidget(mainImage)
-                                  : const Icon(
-                                      Icons.image,
-                                      size: 120,
-                                      color: Colors.grey,
-                                    ),
+                              onHorizontalDragEnd: (details) {
+                                if (images.isEmpty) return;
+                                if (details.primaryVelocity == null) return;
+
+                                if (details.primaryVelocity! > 0) {
+                                  // Swipe right - previous image
+                                  setState(() {
+                                    _selectedImageIndex =
+                                        (_selectedImageIndex -
+                                            1 +
+                                            images.length) %
+                                        images.length;
+                                  });
+                                } else if (details.primaryVelocity! < 0) {
+                                  // Swipe left - next image
+                                  setState(() {
+                                    _selectedImageIndex =
+                                        (_selectedImageIndex + 1) %
+                                        images.length;
+                                  });
+                                }
+                              },
+                              child: Container(
+                                height: 460,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                alignment: Alignment.center,
+                                child: mainImage != null
+                                    ? _buildImageWidget(mainImage)
+                                    : const Icon(
+                                        Icons.image,
+                                        size: 120,
+                                        color: Colors.grey,
+                                      ),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             if (images.isNotEmpty) thumbnails(90),
@@ -982,17 +1011,44 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  height: 380,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(12),
+                GestureDetector(
+                  onTap: () =>
+                      _openImageViewer(context, images, _selectedImageIndex),
+                  onHorizontalDragEnd: (details) {
+                    if (images.isEmpty) return;
+                    if (details.primaryVelocity == null) return;
+
+                    if (details.primaryVelocity! > 0) {
+                      // Swipe right - previous image
+                      setState(() {
+                        _selectedImageIndex =
+                            (_selectedImageIndex - 1 + images.length) %
+                            images.length;
+                      });
+                    } else if (details.primaryVelocity! < 0) {
+                      // Swipe left - next image
+                      setState(() {
+                        _selectedImageIndex =
+                            (_selectedImageIndex + 1) % images.length;
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 380,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: mainImage != null
+                        ? _buildImageWidget(mainImage)
+                        : const Icon(
+                            Icons.image,
+                            size: 100,
+                            color: Colors.grey,
+                          ),
                   ),
-                  alignment: Alignment.center,
-                  child: mainImage != null
-                      ? _buildImageWidget(mainImage)
-                      : const Icon(Icons.image, size: 100, color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
                 if (images.isNotEmpty) thumbnails(80),
@@ -1355,6 +1411,20 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     ];
   }
 
+  void _openImageViewer(
+    BuildContext context,
+    List<String> images,
+    int initialIndex,
+  ) {
+    if (images.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) =>
+          _ImageViewerDialog(images: images, initialIndex: initialIndex),
+    );
+  }
+
   Widget _buildImageWidget(String imageUrl) {
     if (imageUrl.trim().isEmpty) {
       return const Center(
@@ -1569,6 +1639,187 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               : const Text('Submit'),
         ),
       ],
+    );
+  }
+}
+
+class _ImageViewerDialog extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const _ImageViewerDialog({required this.images, required this.initialIndex});
+
+  @override
+  State<_ImageViewerDialog> createState() => _ImageViewerDialogState();
+}
+
+class _ImageViewerDialogState extends State<_ImageViewerDialog> {
+  late PageController _pageController;
+  late int _currentIndex;
+  late Future<void> _autoSwipeFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: _currentIndex);
+    _startAutoSwipe();
+  }
+
+  void _startAutoSwipe() {
+    _autoSwipeFuture = Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 5));
+      if (mounted) {
+        final nextPage = (_currentIndex + 1) % widget.images.length;
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+      return mounted;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: EdgeInsets.zero,
+      backgroundColor: Colors.black,
+      child: Stack(
+        children: [
+          // Image carousel with swipe navigation
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemCount: widget.images.length,
+            itemBuilder: (context, index) {
+              return Center(
+                child: _buildDialogImageWidget(widget.images[index]),
+              );
+            },
+          ),
+
+          // Top controls (close button and counter)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 12,
+                right: 12,
+                bottom: 8,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black87, Colors.transparent],
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${_currentIndex + 1} / ${widget.images.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Swipe indicator at bottom
+          if (widget.images.length > 1)
+            Positioned(
+              bottom: MediaQuery.of(context).padding.bottom + 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Auto-playing',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogImageWidget(String imageUrl) {
+    if (imageUrl.trim().isEmpty) {
+      return const Center(
+        child: Icon(Icons.image, size: 80, color: Colors.grey),
+      );
+    }
+
+    if (imageUrl.startsWith('data:')) {
+      try {
+        final parts = imageUrl.split(',');
+        final b64 = parts.length > 1 ? parts.last : '';
+        final bytes = base64Decode(b64);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => const Center(
+            child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
+          ),
+        );
+      } catch (_) {
+        return const Center(
+          child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
+        );
+      }
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => const Center(
+        child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
+      ),
     );
   }
 }
