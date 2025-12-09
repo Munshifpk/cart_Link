@@ -995,11 +995,10 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                     style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 24),
-                  // Similar products section
-                  _buildSimilarProductsSection(),
-                  const SizedBox(height: 24),
                   // Reviews & Feedback section
                   _buildReviewsSection(),
+                  const SizedBox(height: 24),
+                  _buildSimilarProductsSection(),
                 ],
               ),
             );
@@ -1065,11 +1064,11 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Similar products for small layout
-                _buildSimilarProductsSection(),
                 const SizedBox(height: 24),
                 // Reviews for small layout
                 _buildReviewsSection(),
+                const SizedBox(height: 24),
+                _buildSimilarProductsSection(),
               ],
             ),
           );
@@ -1086,27 +1085,47 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       );
     }
 
-    if (_similarProducts.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (_similarProducts.isEmpty) return const SizedBox.shrink();
+
+    final displayList = _similarProducts.take(10).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Similar Products',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Similar Products',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            if (_similarProducts.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            _AllSimilarProductsPage(items: _similarProducts),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('View All'),
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         SizedBox(
           height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: _similarProducts.length,
+            itemCount: displayList.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             padding: const EdgeInsets.only(right: 12),
             itemBuilder: (context, index) {
-              final item = _similarProducts[index];
+              final item = displayList[index];
               final images = (item['images'] is List)
                   ? (item['images'] as List).cast<String>()
                   : <String>[];
@@ -1114,7 +1133,6 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
               return GestureDetector(
                 onTap: () {
-                  // Open the product page for the tapped similar product
                   if (context.mounted) {
                     Navigator.push(
                       context,
@@ -1188,6 +1206,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       ],
     );
   }
+
+  // Full-page listing for "View All"
+  // (Moved to top-level to avoid nested-class syntax issues)
 
   List<Widget> _buildProductDetails(
     Map<String, dynamic> offer,
@@ -1559,6 +1580,103 @@ class _ReviewDialog extends StatefulWidget {
 
   @override
   State<_ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _AllSimilarProductsPage extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  const _AllSimilarProductsPage({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('All Similar Products'),
+        backgroundColor: ThemeColors.primary,
+        foregroundColor: ThemeColors.textColorWhite,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.72,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final images = (item['images'] is List)
+                ? (item['images'] as List).cast<String>()
+                : <String>[];
+            final thumb = images.isNotEmpty ? images[0] : '';
+
+            return GestureDetector(
+              onTap: () {
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProductPurchasePage(offer: item),
+                    ),
+                  );
+                }
+              },
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: thumb.isNotEmpty
+                              ? Image.network(thumb, fit: BoxFit.cover)
+                              : Container(
+                                  color: Colors.grey.shade200,
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.image,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        (item['name'] ?? item['product'] ?? item['title'] ?? '')
+                            .toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '₹${item['price'] ?? item['mrp'] ?? 0}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _ReviewDialogState extends State<_ReviewDialog> {
