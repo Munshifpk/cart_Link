@@ -24,6 +24,9 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   List<String> _categories = [];
   List<Map<String, dynamic>> _recommendedProducts = [];
   bool _loadingProducts = false;
+  // products shown under Popular Shops (8 random)
+  List<Map<String, dynamic>> _popularAreaProducts = [];
+  bool _loadingPopularAreaProducts = false;
   List<Map<String, dynamic>> _followingShops = [];
   bool _loadingFollowingShops = false;
 
@@ -43,6 +46,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       _loadShops(),
       _loadCategories(),
       _loadRecommendedProducts(),
+      _loadPopularAreaProducts(),
       _loadFollowingShops(),
     ]);
   }
@@ -50,7 +54,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Future<void> _loadCategories() async {
     try {
       final resp = await http
-            .get(backendUri(kApiShops))
+          .get(backendUri(kApiShops))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -81,18 +85,20 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
             .toList();
 
         // Fetch images for each product in parallel (backend excludes images in list)
-        products = await Future.wait(products.map<Future<Map<String, dynamic>>>((p) async {
-          try {
-            final id = (p['_id'] ?? p['id'] ?? '').toString();
-            if (id.isNotEmpty) {
-              final imgs = await ProductService.getProductImages(id);
-              if (imgs.isNotEmpty) p['images'] = imgs;
+        products = await Future.wait(
+          products.map<Future<Map<String, dynamic>>>((p) async {
+            try {
+              final id = (p['_id'] ?? p['id'] ?? '').toString();
+              if (id.isNotEmpty) {
+                final imgs = await ProductService.getProductImages(id);
+                if (imgs.isNotEmpty) p['images'] = imgs;
+              }
+            } catch (_) {
+              // ignore image fetch errors
             }
-          } catch (_) {
-            // ignore image fetch errors
-          }
-          return p;
-        }));
+            return p;
+          }),
+        );
 
         // Shuffle and take 8 random products
         products.shuffle();
@@ -101,7 +107,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
         // Fetch shops once to map ownerId -> shopName
         try {
           final shopsResp = await http
-                .get(backendUri(kApiShops))
+              .get(backendUri(kApiShops))
               .timeout(const Duration(seconds: 10));
           if (shopsResp.statusCode == 200) {
             final shopsData = jsonDecode(shopsResp.body);
@@ -149,6 +155,44 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
     }
   }
 
+  Future<void> _loadPopularAreaProducts() async {
+    try {
+      setState(() => _loadingPopularAreaProducts = true);
+      final result = await ProductService.getProducts();
+      if (result['success'] == true && mounted) {
+        var products = (result['data'] as List? ?? [])
+            .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
+            .toList();
+
+        // Fetch images in parallel
+        products = await Future.wait(
+          products.map<Future<Map<String, dynamic>>>((p) async {
+            try {
+              final id = (p['_id'] ?? p['id'] ?? '').toString();
+              if (id.isNotEmpty) {
+                final imgs = await ProductService.getProductImages(id);
+                if (imgs.isNotEmpty) p['images'] = imgs;
+              }
+            } catch (_) {}
+            return p;
+          }),
+        );
+
+        products.shuffle();
+        final random = products.take(8).toList();
+
+        setState(() {
+          _popularAreaProducts = random;
+          _loadingPopularAreaProducts = false;
+        });
+      } else {
+        if (mounted) setState(() => _loadingPopularAreaProducts = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingPopularAreaProducts = false);
+    }
+  }
+
   Future<void> _loadFollowingShops() async {
     try {
       final customerId = AuthState.currentCustomer?['_id'] as String?;
@@ -162,7 +206,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
       setState(() => _loadingFollowingShops = true);
 
-        final uri = backendUri('$kApiCustomers/$customerId/following');
+      final uri = backendUri('$kApiCustomers/$customerId/following');
       final resp = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (resp.statusCode == 200) {
@@ -178,7 +222,12 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           if (shopId.isNotEmpty) {
             try {
               final resp2 = await http
-                    .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
+                  .get(
+                    backendUri(
+                      kApiProducts,
+                      queryParameters: {'ownerId': shopId},
+                    ),
+                  )
                   .timeout(const Duration(seconds: 10));
               if (resp2.statusCode == 200) {
                 final pData = jsonDecode(resp2.body);
@@ -217,7 +266,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Future<void> _loadShops() async {
     try {
       final resp = await http
-            .get(backendUri(kApiShops))
+          .get(backendUri(kApiShops))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -231,7 +280,12 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           if (shopId.isNotEmpty) {
             try {
               final resp2 = await http
-                    .get(backendUri(kApiProducts, queryParameters: {'ownerId': shopId}))
+                  .get(
+                    backendUri(
+                      kApiProducts,
+                      queryParameters: {'ownerId': shopId},
+                    ),
+                  )
                   .timeout(const Duration(seconds: 10));
               if (resp2.statusCode == 200) {
                 final pData = jsonDecode(resp2.body);
@@ -434,40 +488,55 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                     ),
             ),
             const SizedBox(height: 16),
-            // Popular Shops Section (moved up)
+
+            // Followed shops moved above recommended products with 'View All'
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Popular Shops',
+                  'Shops You Follow',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ShopsPage()),
-                    );
-                  },
-                  child: const Text('View All'),
-                ),
+                if (_followingShops.isNotEmpty)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              _AllFollowedShopsPage(items: _followingShops),
+                        ),
+                      );
+                    },
+                    child: const Text('View All'),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
             SizedBox(
               height: 160,
-              child: _loading
+              child: _loadingFollowingShops
                   ? const Center(child: CircularProgressIndicator())
+                  : _followingShops.isEmpty
+                  ? Center(
+                      child: Text(
+                        'You are not following any shops yet.\nTap follow on a shop to see updates here.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    )
                   : ListView(
                       scrollDirection: Axis.horizontal,
                       children: List.generate(
-                        _shops.isNotEmpty
-                            ? (_shops.length < 5 ? _shops.length : 5)
-                            : 0,
-                        (i) => _buildShopCardFromData(_shops[i]),
+                        _followingShops.length,
+                        (i) => _buildShopCardFromData(_followingShops[i]),
                       ),
                     ),
             ),
+
             const SizedBox(height: 24),
             const Text(
               'Recommended Products',
@@ -623,37 +692,221 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                       );
                     },
                   ),
-            const SizedBox(height: 24),
-            // Following Shops Section (added at bottom)
-            const Text(
-              'Shops You Follow',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            // Popular Shops placed at the end of the page per request
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Popular Shops',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ShopsPage()),
+                    );
+                  },
+                  child: const Text('View All'),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             SizedBox(
               height: 160,
-              child: _loadingFollowingShops
+              child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _followingShops.isEmpty
-                  ? Center(
-                      child: Text(
-                        'You are not following any shops yet.\nTap follow on a shop to see updates here.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    )
                   : ListView(
                       scrollDirection: Axis.horizontal,
                       children: List.generate(
-                        _followingShops.length,
-                        (i) => _buildShopCardFromData(_followingShops[i]),
+                        _shops.isNotEmpty
+                            ? (_shops.length < 5 ? _shops.length : 5)
+                            : 0,
+                        (i) => _buildShopCardFromData(_shops[i]),
                       ),
                     ),
             ),
+            const SizedBox(height: 12),
+
+            // Random products under Popular Shops (vertical grid: 3 columns)
+            if (_loadingPopularAreaProducts)
+              const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_popularAreaProducts.isNotEmpty)
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  // Make tiles wider/taller so images are more prominent
+                  childAspectRatio: 0.95,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: _popularAreaProducts.length,
+                itemBuilder: (context, index) {
+                  final p = _popularAreaProducts[index];
+
+                  final images = (p['images'] is List)
+                      ? (p['images'] as List).cast<String>()
+                      : <String>[];
+                  final thumb = images.isNotEmpty ? images[0] : '';
+                  final price = p['price'] ?? 0;
+                  final double pr = (price is num)
+                      ? price.toDouble()
+                      : double.tryParse(price.toString()) ?? 0.0;
+
+                  return GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductPurchasePage(offer: p),
+                      ),
+                    ),
+                    child: Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: thumb.isNotEmpty
+                                    ? Image.network(
+                                        thumb,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                      )
+                                    : Container(
+                                        color: Colors.grey.shade200,
+                                        alignment: Alignment.center,
+                                        child: const Icon(
+                                          Icons.image,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              (p['name'] ?? p['product'] ?? '').toString(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '₹${pr.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+            const SizedBox(height: 24),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AllFollowedShopsPage extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  const _AllFollowedShopsPage({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Followed Shops'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.9,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final shop = items[index];
+            final name = (shop['shopName'] ?? shop['name'] ?? 'Shop')
+                .toString();
+            final icon = shop['icon'] ?? '🏪';
+            final count = shop['productCount'] ?? 0;
+
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ShopProductsPage(shop: shop),
+                  ),
+                );
+              },
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        icon.toString(),
+                        style: const TextStyle(fontSize: 34),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$count products',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
