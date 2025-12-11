@@ -8,10 +8,16 @@ router.post('/', orderController.createOrder);
 // Get orders by customer ID
 router.get('/customer/:customerId', orderController.getByCustomer);
 
+// Get orders by shop ID
+router.get('/shop/:shopId', orderController.getByShop);
+
 // Get order by ID
 router.get('/:orderId', orderController.getById);
 
 // Update order status
 router.patch('/:orderId/status', orderController.updateStatus);
+
+// Verify OTP and mark order as delivered
+router.patch('/:orderId/verify-otp', orderController.verifyOtpAndDeliver);
 
 module.exports = router;

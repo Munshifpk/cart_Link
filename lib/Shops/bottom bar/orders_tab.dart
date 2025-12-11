@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../constant.dart';
+import '../../services/auth_state.dart';
+import '../shop_order_detail_page.dart';
 
 class OrdersTab extends StatefulWidget {
   const OrdersTab({super.key});
@@ -14,6 +16,8 @@ class OrdersTab extends StatefulWidget {
 
 class _OrdersTabState extends State<OrdersTab> {
   List<Order> _orders = [];
+  bool _loading = true;
+  String? _shopId;
 
   static const Map<String, String> _valueToDisplay = {
     'pending': 'Pending',
@@ -24,15 +28,6 @@ class _OrdersTabState extends State<OrdersTab> {
   };
 
   // keep for reference (may be used later)
-  // ignore: unused_field
-  static const List<String> _statusOptions = [
-    'Pending',
-    'Confirmed',
-    'Shipped',
-    'Delivered',
-    'Cancelled',
-  ];
-
   // ignore: unused_element
   Future<void> _fetchOrdersByCustomerId(String customerId) async {
     try {
@@ -52,9 +47,19 @@ class _OrdersTabState extends State<OrdersTab> {
       final fetched = data.map((e) {
         final m = e as Map<String, dynamic>;
         final id = (m['_id'] ?? m['id'] ?? '').toString();
-        final cust = (m['customerId'] is Map)
-            ? (m['customerId']['name'] ?? '')
-            : (m['customerId'] ?? '');
+        
+        String cust = '';
+        String custPhone = '';
+        String custEmail = '';
+        
+        if (m['customerId'] is Map) {
+          cust = (m['customerId']['name'] ?? '').toString();
+          custPhone = (m['customerId']['phone'] ?? '').toString();
+          custEmail = (m['customerId']['email'] ?? '').toString();
+        } else {
+          cust = (m['customerId'] ?? '').toString();
+        }
+        
         final products = (m['products'] as List<dynamic>?) ?? [];
         final total = (m['totalAmount'] is num)
             ? (m['totalAmount'] as num).toDouble()
@@ -68,11 +73,14 @@ class _OrdersTabState extends State<OrdersTab> {
             DateTime.now();
         return Order(
           id: id,
-          customerName: cust.toString(),
+          customerName: cust,
+          customerPhone: custPhone,
+          customerEmail: custEmail,
           items: products.length,
           total: total,
           status: status,
           time: created,
+          products: products,
         );
       }).toList();
 
@@ -87,6 +95,103 @@ class _OrdersTabState extends State<OrdersTab> {
           context,
         ).showSnackBar(const SnackBar(content: Text('Error loading orders')));
     }
+  }
+
+  Future<void> _fetchOrdersByShopId(String shopId) async {
+    try {
+      final uri = backendUri('api/orders/shop/$shopId');
+      final resp = await http.get(uri);
+      if (resp.statusCode != 200) {
+        if (context.mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to load orders')),
+          );
+        setState(() => _loading = false);
+        return;
+      }
+      final j = jsonDecode(resp.body) as Map<String, dynamic>;
+      final data = j['data'] as List<dynamic>?;
+      if (data == null) {
+        setState(() => _loading = false);
+        return;
+      }
+
+      print('Orders data: $data');
+
+      final fetched = data.map((e) {
+        final m = e as Map<String, dynamic>;
+        final id = (m['_id'] ?? m['id'] ?? '').toString();
+
+        String cust = '';
+        String custPhone = '';
+        String custEmail = '';
+
+        final custObj = m['customerId'];
+        if (custObj is Map) {
+          cust = (custObj['customerName'] ?? custObj['name'] ?? '').toString().trim();
+          custPhone = (custObj['mobile'] ?? custObj['phone'] ?? '').toString().trim();
+          custEmail = (custObj['email'] ?? '').toString().trim();
+        } else {
+          cust = (m['customerId'] ?? '').toString();
+        }
+
+        if (cust.isEmpty) cust = 'Customer';
+
+        final products = (m['products'] as List<dynamic>?) ?? [];
+        final total = (m['totalAmount'] is num)
+            ? (m['totalAmount'] as num).toDouble()
+            : double.tryParse((m['totalAmount'] ?? '0').toString()) ?? 0.0;
+        final statusRaw = (m['orderStatus'] ?? '').toString();
+        final status =
+            _valueToDisplay[statusRaw.toLowerCase()] ??
+            (statusRaw.isNotEmpty ? statusRaw : 'Pending');
+        final created =
+            DateTime.tryParse((m['createdAt'] ?? '').toString()) ??
+            DateTime.now();
+        return Order(
+          id: id,
+          customerName: cust,
+          customerPhone: custPhone,
+          customerEmail: custEmail,
+          items: products.length,
+          total: total,
+          status: status,
+          time: created,
+          products: products,
+        );
+      }).toList();
+
+      setState(() {
+        _orders = fetched;
+        _loading = false;
+      });
+    } catch (e) {
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error loading orders')),
+        );
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final shopId = AuthState.currentOwner?['_id'] ?? AuthState.currentOwner?['id'];
+    print('Shop ID from auth: $shopId');
+    print('Current owner: ${AuthState.currentOwner}');
+    if (shopId != null) {
+      _shopId = shopId.toString();
+      _fetchOrdersByShopId(_shopId!);
+    } else {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refreshOrders() async {
+    if (_shopId == null) return;
+    setState(() => _loading = true);
+    await _fetchOrdersByShopId(_shopId!);
   }
 
   Future<bool> _updateOrderStatus(String orderId, String displayStatus) async {
@@ -121,6 +226,9 @@ class _OrdersTabState extends State<OrdersTab> {
               o.status.toLowerCase().contains('confirm'),
         )
         .toList();
+    final readyForDelivery = _orders
+        .where((o) => o.status.toLowerCase().contains('shipped'))
+        .toList();
     final completed = _orders
         .where(
           (o) =>
@@ -132,71 +240,142 @@ class _OrdersTabState extends State<OrdersTab> {
         .where((o) => o.status.toLowerCase().contains('cancel'))
         .toList();
 
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          Container(
-            color: const Color(0xFF0D47A1),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: TabBar(
-              indicatorColor: Colors.white,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              tabs: const [
-                Tab(text: 'Pending Orders'),
-                Tab(text: 'Completed'),
-                Tab(text: 'Cancelled'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
+    return _loading
+        ? const Center(child: CircularProgressIndicator())
+        : DefaultTabController(
+            length: 4,
+            child: Column(
               children: [
-                _OrdersList(
-                  orders: pending,
-                  onUpdateStatus: (order, status) async {
-                    final ok = await _updateOrderStatus(order.id, status);
-                    if (ok) {
-                      setState(() => order.status = status);
-                    }
-                    return ok;
-                  },
+                Container(
+                  color: const Color(0xFF0D47A1),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: TabBar(
+                    indicatorColor: Colors.white,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white70,
+                    tabs: const [
+                      Tab(text: 'Pending'),
+                      Tab(text: 'Ready for Delivery'),
+                      Tab(text: 'Completed'),
+                      Tab(text: 'Cancelled'),
+                    ],
+                  ),
                 ),
-                _OrdersList(
-                  orders: completed,
-                  onUpdateStatus: (order, status) async {
-                    final ok = await _updateOrderStatus(order.id, status);
-                    if (ok) {
-                      setState(() => order.status = status);
-                    }
-                    return ok;
-                  },
-                ),
-                _OrdersList(
-                  orders: cancelled,
-                  onUpdateStatus: (order, status) async {
-                    final ok = await _updateOrderStatus(order.id, status);
-                    if (ok) {
-                      setState(() => order.status = status);
-                    }
-                    return ok;
-                  },
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _OrdersList(
+                        orders: pending,
+                        onUpdateStatus: (order, status) async {
+                          final ok = await _updateOrderStatus(order.id, status);
+                          if (ok) {
+                            setState(() => order.status = status);
+                          }
+                          return ok;
+                        },
+                        onRefresh: _refreshOrders,
+                        onOpenOrder: (order) async {
+                          final changed = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ShopOrderDetailPage(order: order),
+                            ),
+                          );
+                          if (changed == true) {
+                            await _refreshOrders();
+                          } else {
+                            setState(() {});
+                          }
+                        },
+                      ),
+                      _OrdersList(
+                        orders: readyForDelivery,
+                        onUpdateStatus: (order, status) async {
+                          final ok = await _updateOrderStatus(order.id, status);
+                          if (ok) {
+                            setState(() => order.status = status);
+                          }
+                          return ok;
+                        },
+                        onRefresh: _refreshOrders,
+                        onOpenOrder: (order) async {
+                          final changed = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ShopOrderDetailPage(order: order),
+                            ),
+                          );
+                          if (changed == true) {
+                            await _refreshOrders();
+                          } else {
+                            setState(() {});
+                          }
+                        },
+                      ),
+                      _OrdersList(
+                        orders: completed,
+                        onUpdateStatus: (order, status) async {
+                          final ok = await _updateOrderStatus(order.id, status);
+                          if (ok) {
+                            setState(() => order.status = status);
+                          }
+                          return ok;
+                        },
+                        onRefresh: _refreshOrders,
+                        onOpenOrder: (order) async {
+                          final changed = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ShopOrderDetailPage(order: order),
+                            ),
+                          );
+                          if (changed == true) {
+                            await _refreshOrders();
+                          } else {
+                            setState(() {});
+                          }
+                        },
+                      ),
+                      _OrdersList(
+                        orders: cancelled,
+                        onUpdateStatus: (order, status) async {
+                          final ok = await _updateOrderStatus(order.id, status);
+                          if (ok) {
+                            setState(() => order.status = status);
+                          }
+                          return ok;
+                        },
+                        onRefresh: _refreshOrders,
+                        onOpenOrder: (order) async {
+                          final changed = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ShopOrderDetailPage(order: order),
+                            ),
+                          );
+                          if (changed == true) {
+                            await _refreshOrders();
+                          } else {
+                            setState(() {});
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
+          );
   }
 }
 
 class _OrdersList extends StatelessWidget {
   final List<Order> orders;
   final Future<bool> Function(Order order, String status) onUpdateStatus;
+   final Future<void> Function()? onRefresh;
+   final Future<void> Function(Order order)? onOpenOrder;
 
-  const _OrdersList({required this.orders, required this.onUpdateStatus});
+  const _OrdersList({required this.orders, required this.onUpdateStatus, this.onRefresh, this.onOpenOrder});
 
   @override
   Widget build(BuildContext context) {
@@ -208,8 +387,11 @@ class _OrdersList extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        // TODO: Implement refresh logic
-        await Future.delayed(const Duration(milliseconds: 800));
+        if (onRefresh != null) {
+          await onRefresh!();
+        } else {
+          await Future.delayed(const Duration(milliseconds: 800));
+        }
       },
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
@@ -240,7 +422,7 @@ class _OrdersList extends StatelessWidget {
               title: Row(
                 children: [
                   Text(
-                    order.id,
+                    order.customerName,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
@@ -271,7 +453,7 @@ class _OrdersList extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-                  Text(order.customerName),
+                  Text('ID: ${order.id}'),
                   const SizedBox(height: 4),
                   Text(
                     '${order.items} items • ₹${order.total.toStringAsFixed(2)}',
@@ -285,87 +467,16 @@ class _OrdersList extends StatelessWidget {
                 ],
               ),
               onTap: () async {
-                // show order details with status change option
-                final options = [
-                  'Pending',
-                  'Confirmed',
-                  'Shipped',
-                  'Delivered',
-                  'Cancelled',
-                ];
-                await showDialog<void>(
-                  context: context,
-                  builder: (ctx) {
-                    return AlertDialog(
-                      title: Text('Order ${order.id}'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Customer: ${order.customerName}'),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${order.items} items • ₹${order.total.toStringAsFixed(2)}',
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Text('Status: '),
-                              const SizedBox(width: 8),
-                              DropdownButton<String>(
-                                value: options.contains(order.status)
-                                    ? order.status
-                                    : null,
-                                hint: Text(order.status),
-                                items: options
-                                    .map(
-                                      (s) => DropdownMenuItem(
-                                        value: s,
-                                        child: Text(s),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (v) async {
-                                  if (v == null) return;
-                                  // optimistic update in UI via callback return
-                                  final ok = await onUpdateStatus(order, v);
-                                  if (!ok) {
-                                    if (context.mounted)
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Failed to update status',
-                                          ),
-                                        ),
-                                      );
-                                  } else {
-                                    if (context.mounted)
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Status updated'),
-                                        ),
-                                      );
-                                  }
-                                  Navigator.of(ctx).pop();
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    );
-                  },
-                );
+                if (onOpenOrder != null) {
+                  await onOpenOrder!(order);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ShopOrderDetailPage(order: order),
+                    ),
+                  );
+                }
               },
             ),
           );
@@ -393,17 +504,23 @@ class _OrdersList extends StatelessWidget {
 class Order {
   final String id;
   final String customerName;
+  final String? customerPhone;
+  final String? customerEmail;
   final int items;
   final double total;
   String status;
   final DateTime time;
+  final List<dynamic> products;
 
   Order({
     required this.id,
     required this.customerName,
+    this.customerPhone,
+    this.customerEmail,
     required this.items,
     required this.total,
     required this.status,
     required this.time,
+    this.products = const [],
   });
 }
