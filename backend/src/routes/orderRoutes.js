@@ -20,4 +20,9 @@ router.patch('/:orderId/status', orderController.updateStatus);
 // Cancel product from order by quantity
 router.post('/:orderId/cancel-product', orderController.cancelProduct);
 
+
+// Verify OTP and mark order as delivered
+router.patch('/:orderId/verify-otp', orderController.verifyOtpAndDeliver);
+
+
 module.exports = router;
