@@ -87,6 +87,7 @@ exports.getByCustomer = async (req, res) => {
             .populate('customerId', 'name email phone')
             .populate('shopId', 'shopName name contact phone mobile')
             .populate('products.productId', 'name price mrp')
+            .populate('cancelledProducts.productId', 'name price mrp')
             .sort({ createdAt: -1 });
 
         return res.status(200).json({
@@ -110,7 +111,8 @@ exports.getById = async (req, res) => {
         const order = await Order.findById(orderId)
             .populate('customerId', 'name email phone')
             .populate('shopId', 'shopName name contact phone mobile')
-            .populate('products.productId', 'name price mrp');
+            .populate('products.productId', 'name price mrp')
+            .populate('cancelledProducts.productId', 'name price mrp');
 
         if (!order) {
             return res.status(404).json({
@@ -169,6 +171,112 @@ exports.updateStatus = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: error.message || 'Error updating order status',
+        });
+    }
+};
+
+// Cancel product from order by quantity
+exports.cancelProduct = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { productId, quantityToCancel, customerId } = req.body;
+
+        // Validate inputs
+        if (!productId || !quantityToCancel || quantityToCancel <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Product ID and valid quantity to cancel are required',
+            });
+        }
+
+        // Find the order
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found',
+            });
+        }
+
+        // Find the product in the order
+        const productIndex = order.products.findIndex(
+            p => p.productId.toString() === productId
+        );
+
+        if (productIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found in this order',
+            });
+        }
+
+        const currentQuantity = order.products[productIndex].quantity;
+
+        // Validate cancellation quantity
+        if (quantityToCancel > currentQuantity) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot cancel ${quantityToCancel} items. Only ${currentQuantity} available in order`,
+            });
+        }
+
+        // Store product info for history
+        const cancelledProduct = {
+            productId: order.products[productIndex].productId,
+            productName: order.products[productIndex].productName || 'Product',
+            quantity: quantityToCancel,
+            price: order.products[productIndex].price,
+            cancelledAt: new Date(),
+            customerId: customerId,
+        };
+
+        // Remove or update product quantity
+        if (quantityToCancel === currentQuantity) {
+            // Remove product entirely if all quantity is cancelled
+            order.products.splice(productIndex, 1);
+        } else {
+            // Reduce quantity
+            order.products[productIndex].quantity -= quantityToCancel;
+        }
+
+        // Initialize cancelledProducts array if it doesn't exist
+        if (!order.cancelledProducts) {
+            order.cancelledProducts = [];
+        }
+
+        // Add to cancellation history
+        order.cancelledProducts.push(cancelledProduct);
+
+        // Recalculate total amount
+        let newTotal = 0;
+        order.products.forEach(p => {
+            newTotal += (p.price * p.quantity);
+        });
+        order.totalAmount = newTotal;
+
+        // Update timestamp
+        order.updatedAt = new Date();
+
+        // Save the updated order
+        const updatedOrder = await order.save();
+
+        // Populate before sending response
+        await updatedOrder.populate('customerId', 'name email phone');
+        await updatedOrder.populate('shopId', 'shopName name contact phone mobile');
+        await updatedOrder.populate('products.productId', 'name price mrp');
+        await updatedOrder.populate('cancelledProducts.productId', 'name price mrp');
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully cancelled ${quantityToCancel} item${quantityToCancel > 1 ? 's' : ''} from order`,
+            data: updatedOrder,
+        });
+
+    } catch (error) {
+        console.error('Error cancelling product:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error cancelling product',
         });
     }
 };

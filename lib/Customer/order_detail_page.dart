@@ -7,6 +7,7 @@ import '../theme_data.dart';
 import '../constant.dart';
 import 'product_purchase_page.dart';
 import '../services/auth_state.dart';
+import '../services/order_service.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final Map<String, dynamic> order;
@@ -20,16 +21,54 @@ class OrderDetailPage extends StatefulWidget {
 class _OrderDetailPageState extends State<OrderDetailPage> {
   Map<String, List<dynamic>> _productReviews = {};
   bool _loadingReviews = false;
+  Map<String, dynamic> _order = {};
+  bool _loadingOrder = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchAllProductReviews();
+    _order = widget.order;
+    _fetchOrderFromDatabase();
+  }
+
+  Future<void> _fetchOrderFromDatabase() async {
+    try {
+      setState(() => _loadingOrder = true);
+      final orderId = widget.order['_id'] ?? widget.order['id'];
+      if (orderId != null) {
+        final result = await OrderService.getOrderById(orderId.toString());
+        if (result['success'] == true && mounted) {
+          setState(() {
+            _order = result['data'] ?? widget.order;
+            _loadingOrder = false;
+          });
+          _fetchAllProductReviews();
+        } else {
+          if (mounted) {
+            setState(() {
+              _loadingOrder = false;
+              _order = widget.order;
+            });
+            _fetchAllProductReviews();
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() => _loadingOrder = false);
+          _fetchAllProductReviews();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingOrder = false);
+        _fetchAllProductReviews();
+      }
+    }
   }
 
   Future<void> _fetchAllProductReviews() async {
     setState(() => _loadingReviews = true);
-    final products = (widget.order['products'] as List?) ?? [];
+    final products = (_order['products'] as List?) ?? [];
     for (var p in products) {
       final prod = p['productId'];
       final productId = prod is Map ? (prod['_id'] ?? '') : '';
@@ -123,7 +162,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       final customerId =
           AuthState.currentCustomer?['_id'] ?? AuthState.currentCustomer?['id'];
       final customerName = AuthState.currentCustomer?['name'] ?? 'Anonymous';
-      final orderId = widget.order['_id'] ?? widget.order['id'];
+      final orderId = _order['_id'] ?? _order['id'];
       if (customerId == null || orderId == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -236,25 +275,24 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final shop = widget.order['shopId'] is Map ? widget.order['shopId'] : null;
+    final shop = _order['shopId'] is Map ? _order['shopId'] : null;
     final shopName = shop != null
         ? (shop['shopName'] ?? shop['name'] ?? 'Shop')
         : 'Shop';
     final shopPhone = shop != null
-        ? ((shop['contact'] ?? shop['phone'] ?? shop['mobile'] ?? '')
+        ? ((_order['shopId']['contact'] ??
+                  _order['shopId']['phone'] ??
+                  _order['shopId']['mobile'] ??
+                  '')
               .toString()
               .trim())
         : '';
-    final status = widget.order['orderStatus'] ?? 'pending';
-    final date = widget.order['createdAt'] != null
-        ? widget.order['createdAt']
-              .toString()
-              .replaceFirst('T', ' ')
-              .split('.')
-              .first
+    final status = _order['orderStatus'] ?? 'pending';
+    final date = _order['createdAt'] != null
+        ? _order['createdAt'].toString().replaceFirst('T', ' ').split('.').first
         : '';
-    final total = (widget.order['totalAmount'] ?? 0).toDouble();
-    final products = (widget.order['products'] as List?) ?? [];
+    final total = (_order['totalAmount'] ?? 0).toDouble();
+    final products = (_order['products'] as List?) ?? [];
 
     Color statusColor;
     switch (status) {
@@ -277,223 +315,670 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         backgroundColor: ThemeColors.primary,
         foregroundColor: ThemeColors.textColorWhite,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.store, color: Colors.deepOrange),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
+      body: _loadingOrder
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        shopName,
-                        style: const TextStyle(
-                          fontSize: 18,
+                      const Icon(Icons.store, color: Colors.deepOrange),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              shopName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (shopPhone.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  'Phone: $shopPhone',
+                                  style: const TextStyle(color: Colors.black54),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          status[0].toUpperCase() + status.substring(1),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Order ID: ${_order['_id'] ?? ''}',
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  Text(
+                    'Date: $date',
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: shopPhone.isNotEmpty
+                              ? () => _contactShopWhatsApp(shopPhone)
+                              : null,
+                          icon: const Icon(Icons.chat),
+                          label: const Text('WhatsApp'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: shopPhone.isNotEmpty
+                                ? const Color(0xFF25D366)
+                                : Colors.grey,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: shopPhone.isNotEmpty
+                              ? () => _showCallDialog(context, shopPhone)
+                              : null,
+                          icon: const Icon(Icons.call),
+                          label: const Text('Call'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: shopPhone.isNotEmpty
+                                ? Colors.green
+                                : Colors.grey,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (status == 'cancelled')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              _showCancellationFeedbackDialog(context),
+                          icon: const Icon(Icons.feedback_outlined),
+                          label: const Text('Share Cancellation Feedback'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  _buildOrderItemsSection(products),
+                  const SizedBox(height: 16),
+                  _buildCancelledProductsSection(
+                    (_order['cancelledProducts'] as List?) ?? [],
+                  ),
+                  const Divider(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (shopPhone.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            'Phone: $shopPhone',
-                            style: const TextStyle(color: Colors.black54),
-                          ),
+                      Text(
+                        '₹${total.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepOrange,
                         ),
+                      ),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    status[0].toUpperCase() + status.substring(1),
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Order ID: ${widget.order['_id'] ?? ''}',
-              style: const TextStyle(color: Colors.black54),
-            ),
-            Text('Date: $date', style: const TextStyle(color: Colors.black54)),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: shopPhone.isNotEmpty
-                        ? () => _contactShopWhatsApp(shopPhone)
-                        : null,
-                    icon: const Icon(Icons.chat),
-                    label: const Text('WhatsApp'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: shopPhone.isNotEmpty
-                          ? const Color(0xFF25D366)
-                          : Colors.grey,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: shopPhone.isNotEmpty
-                        ? () => _showCallDialog(context, shopPhone)
-                        : null,
-                    icon: const Icon(Icons.call),
-                    label: const Text('Call'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: shopPhone.isNotEmpty
-                          ? Colors.green
-                          : Colors.grey,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (status == 'cancelled')
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showCancellationFeedbackDialog(context),
-                    icon: const Icon(Icons.feedback_outlined),
-                    label: const Text('Share Cancellation Feedback'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
+                  const SizedBox(height: 24),
+                  _buildReviewsSection(products),
+                ],
               ),
-            const SizedBox(height: 16),
+            ),
+    );
+  }
+
+  Widget _buildOrderItemsSection(List<dynamic> products) {
+    if (products.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'No items in this order',
+            style: TextStyle(color: Colors.black54),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
             const Text(
-              'Items',
+              'Order Items',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            ...products.map<Widget>((p) {
-              final prod = p['productId'];
-              final name = prod is Map
-                  ? (prod['name'] ?? 'Product')
-                  : 'Product';
-              final productId = prod is Map ? (prod['_id'] ?? '') : '';
-              final qty = p['quantity'] ?? 0;
-              final price = (p['price'] ?? 0).toDouble();
-              final mrp = (p['mrp'] ?? price).toDouble();
-              final reviews = _productReviews[productId] ?? [];
-              final avgRating = reviews.isNotEmpty
-                  ? reviews.fold<double>(
-                          0,
-                          (sum, r) => sum + ((r['rating'] ?? 0) as num),
-                        ) /
-                        reviews.length
-                  : 0.0;
-              return InkWell(
-                onTap: productId.isNotEmpty
-                    ? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductPurchasePage(
-                              offer: {'_id': productId, 'name': name},
-                            ),
-                          ),
-                        );
-                      }
-                    : null,
-                child: Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: ListTile(
-                    title: Text(
-                      name,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Column(
+            Chip(
+              label: Text(
+                '${products.length} Item${products.length > 1 ? 's' : ''}',
+                style: const TextStyle(fontSize: 12),
+              ),
+              backgroundColor: Colors.deepOrange.withOpacity(0.2),
+              labelStyle: const TextStyle(color: Colors.deepOrange),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...products.asMap().entries.map<Widget>((entry) {
+          final index = entry.key + 1;
+          final p = entry.value;
+          final prod = p['productId'];
+          final productId = prod is Map ? (prod['_id'] ?? '') : '';
+          final name = prod is Map ? (prod['name'] ?? 'Product') : 'Product';
+          final category = prod is Map ? (prod['category'] ?? '') : '';
+          final qty = p['quantity'] ?? 0;
+          final price = (p['price'] ?? 0).toDouble();
+          final mrp = (p['mrp'] ?? price).toDouble();
+          final discount = mrp > 0
+              ? (((mrp - price) / mrp) * 100).toStringAsFixed(0)
+              : '0';
+          final itemTotal = price * qty;
+          final reviews = _productReviews[productId] ?? [];
+          final avgRating = reviews.isNotEmpty
+              ? reviews.fold<double>(
+                      0,
+                      (sum, r) => sum + ((r['rating'] ?? 0) as num),
+                    ) /
+                    reviews.length
+              : 0.0;
+
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: InkWell(
+              onTap: productId.isNotEmpty
+                  ? () => _showItemDetailsDialog(context, p, reviews, avgRating)
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Qty: $qty'),
-                        if (reviews.isNotEmpty)
-                          Row(
-                            children: [
-                              Icon(Icons.star, size: 14, color: Colors.amber),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${avgRating.toStringAsFixed(1)} (${reviews.length})',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                      ],
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '₹${price.toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        if ((mrp - price) > 0)
-                          Text(
-                            'MRP: ₹${mrp.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.black45,
-                              fontSize: 12,
+                          child: Center(
+                            child: Text(
+                              index.toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepOrange,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (category.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    category,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '₹${price.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                            if (mrp > price)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '₹${mrp.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    decoration: TextDecoration.lineThrough,
+                                    color: Colors.black45,
+                                  ),
+                                ),
+                              ),
+                            if (mrp > price)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '$discount% off',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Divider(height: 1, color: Colors.grey[300]),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Qty: $qty',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Total: ₹${itemTotal.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.deepOrange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (reviews.isNotEmpty)
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star,
+                                    size: 14,
+                                    color: Colors.amber,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${avgRating.toStringAsFixed(1)} (${reviews.length})',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              )
+                            else
+                              const Text(
+                                'No reviews',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Product ID: ${productId.substring(0, productId.length > 8 ? 8 : productId.length)}...',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  void _showItemDetailsDialog(
+    BuildContext context,
+    Map<String, dynamic> item,
+    List<dynamic> reviews,
+    double avgRating,
+  ) {
+    final prod = item['productId'];
+    final productId = prod is Map ? (prod['_id'] ?? '') : '';
+    final name = prod is Map ? (prod['name'] ?? 'Product') : 'Product';
+    final description = prod is Map ? (prod['description'] ?? '') : '';
+    final category = prod is Map ? (prod['category'] ?? '') : '';
+    final qty = item['quantity'] ?? 0;
+    final price = (item['price'] ?? 0).toDouble();
+    final mrp = (item['mrp'] ?? price).toDouble();
+    final discount = mrp > 0
+        ? (((mrp - price) / mrp) * 100).toStringAsFixed(0)
+        : '0';
+    final itemTotal = price * qty;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Item Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (category.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Chip(
+                    label: Text(category, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: Colors.deepOrange.withOpacity(0.2),
                   ),
                 ),
-              );
-            }).toList(),
-            const Divider(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              if (description.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    description,
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
                 ),
-                Text(
-                  '₹${total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepOrange,
+              Divider(color: Colors.grey[300]),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Price per item:', style: TextStyle(fontSize: 12)),
+                  Text(
+                    '₹${price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('MRP:', style: TextStyle(fontSize: 12)),
+                  Text(
+                    '₹${mrp.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      decoration: TextDecoration.lineThrough,
+                      color: Colors.black45,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Discount:', style: TextStyle(fontSize: 12)),
+                  Text(
+                    '$discount% off',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Quantity:', style: TextStyle(fontSize: 12)),
+                  Text(
+                    qty.toString(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              Divider(color: Colors.grey[300]),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Item Total:',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '₹${itemTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepOrange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (reviews.isNotEmpty) ...[
+                Divider(color: Colors.grey[300]),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Customer Rating:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.star, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${avgRating.toStringAsFixed(1)} (${reviews.length})',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 8),
+              Text(
+                'Product ID: $productId',
+                style: const TextStyle(fontSize: 10, color: Colors.black45),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          if (productId.isNotEmpty)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showCancelProductConfirmation(context, productId, name);
+                  },
+                  icon: const Icon(Icons.cancel, size: 16),
+                  label: const Text('Cancel Product'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: qty > 0
+                      ? () async {
+                          Navigator.pop(context);
+                          await _cancelProductByQuantity(productId, name, qty);
+                        }
+                      : null,
+                  icon: const Icon(Icons.delete_forever, size: 16),
+                  label: const Text('Cancel All'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            _buildReviewsSection(products),
-          ],
-        ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildCancelledProductsSection(List<dynamic> cancelled) {
+    if (cancelled.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Cancelled Items',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        ...cancelled.map<Widget>((c) {
+          final prod = c['productId'];
+          final name = prod is Map
+              ? (prod['name'] ?? c['productName'] ?? 'Product')
+              : (c['productName'] ?? 'Product');
+          final qty = c['quantity'] ?? 0;
+          final price = (c['price'] ?? 0).toDouble();
+          final cancelledAt = c['cancelledAt'] != null
+              ? c['cancelledAt']
+                    .toString()
+                    .replaceFirst('T', ' ')
+                    .split('.')
+                    .first
+              : '';
+
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text('Qty: $qty', style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Price: ₹${price.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.deepOrange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        cancelledAt,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.black45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ],
     );
   }
 
@@ -501,7 +986,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     if (products.isEmpty) return const SizedBox.shrink();
 
     // Only show reviews section if order is delivered or completed
-    final status = widget.order['orderStatus'] ?? 'pending';
+    final status = _order['orderStatus'] ?? 'pending';
     if (status != 'delivered' && status != 'completed') {
       return const SizedBox.shrink();
     }
@@ -806,5 +1291,192 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         ],
       ),
     );
+  }
+
+  void _showCancelProductConfirmation(
+    BuildContext context,
+    String productId,
+    String productName,
+  ) {
+    // Find the product in the order to get available quantity
+    int availableQty = 0;
+    final products = (_order['products'] as List?) ?? [];
+    for (var p in products) {
+      final prod = p['productId'];
+      final pId = prod is Map ? (prod['_id'] ?? '') : '';
+      if (pId == productId) {
+        availableQty = p['quantity'] ?? 0;
+        break;
+      }
+    }
+
+    int cancelQty = availableQty;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          return AlertDialog(
+            title: const Text('Cancel Product'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Product: $productName',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Available Quantity: $availableQty',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Quantity to Cancel:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: cancelQty > 1
+                          ? () => setState(() => cancelQty--)
+                          : null,
+                      icon: const Icon(Icons.remove),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.grey[200],
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          cancelQty.toString(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: cancelQty < availableQty
+                          ? () => setState(() => cancelQty++)
+                          : null,
+                      icon: const Icon(Icons.add),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.grey[200],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Note: This will cancel $cancelQty item${cancelQty > 1 ? 's' : ''} of this product.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('No, Keep it'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _cancelProductByQuantity(
+                    productId,
+                    productName,
+                    cancelQty,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Yes, Cancel'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _cancelProductByQuantity(
+    String productId,
+    String productName,
+    int quantityToCancel,
+  ) async {
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ?? AuthState.currentCustomer?['id'];
+      final orderId = _order['_id'] ?? _order['id'];
+
+      if (customerId == null || orderId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to process cancellation')),
+          );
+        }
+        return;
+      }
+
+      final uri = backendUri('/api/orders/$orderId/cancel-product');
+      final payload = {
+        'productId': productId,
+        'productName': productName,
+        'quantityToCancel': quantityToCancel,
+        'customerId': customerId,
+        'cancelledAt': DateTime.now().toIso8601String(),
+      };
+
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (mounted) {
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Successfully cancelled $quantityToCancel item${quantityToCancel > 1 ? 's' : ''} of $productName',
+              ),
+            ),
+          );
+          // Refresh order data
+          await _fetchOrderFromDatabase();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to cancel product. Status: ${res.statusCode}',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 }

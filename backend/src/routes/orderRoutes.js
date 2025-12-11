@@ -14,4 +14,7 @@ router.get('/:orderId', orderController.getById);
 // Update order status
 router.patch('/:orderId/status', orderController.updateStatus);
 
+// Cancel product from order by quantity
+router.post('/:orderId/cancel-product', orderController.cancelProduct);
+
 module.exports = router;
