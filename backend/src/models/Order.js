@@ -32,6 +32,25 @@ const OrderSchema = new mongoose.Schema({
             },
         },
     ],
+    cancelledProducts: [
+        {
+            productId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Product',
+            },
+            productName: String,
+            quantity: Number,
+            price: Number,
+            cancelledAt: {
+                type: Date,
+                default: Date.now,
+            },
+            customerId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Customers',
+            },
+        },
+    ],
     orderStatus: {
         type: String,
         enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
