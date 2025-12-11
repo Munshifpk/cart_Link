@@ -5,6 +5,7 @@ import '../theme_data.dart';
 import 'package:cart_link/services/auth_state.dart';
 import '../../services/product_service.dart';
 import 'package:cart_link/constant.dart';
+import 'checkout_page.dart';
 
 class ProductPurchasePage extends StatefulWidget {
   final Map<String, dynamic> offer;
@@ -547,6 +548,57 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     }
   }
 
+  Future<void> _createOrderAndNavigate(int qty) async {
+    // Build a single-shop checkout payload and navigate to CheckoutPage
+    final offer = _productData.isNotEmpty ? _productData : widget.offer;
+    final shopId = (offer['shopId'] ?? offer['ownerId'] ?? offer['shop'])
+        ?.toString();
+    final productId = (offer['_id'] ?? offer['id'] ?? offer['productId'])
+        ?.toString();
+    final shopName = (offer['shopName'] ?? _shopName ?? '').toString();
+
+    if (shopId == null || productId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid product or shop data')),
+        );
+      }
+      return;
+    }
+
+    final price = _parsePrice(offer['offerPrice'] ?? offer['price'] ?? 0);
+    final mrp = _parsePrice(offer['mrp'] ?? price);
+    final productName =
+        (offer['name'] ?? offer['product'] ?? offer['title'] ?? '')?.toString();
+
+    final items = [
+      {
+        'productId': productId,
+        'productName': productName,
+        'quantity': qty,
+        'price': price,
+        'mrp': mrp,
+        'total': price * qty,
+      },
+    ];
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Redirecting to checkout...')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CheckoutPage(
+            shopId: shopId,
+            shopName: shopName.isNotEmpty ? shopName : 'Shop',
+            items: items,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -599,8 +651,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     final double offerPrice = _parsePrice(
       offer['offerPrice'] ?? offer['price'] ?? 0,
     );
-    final double mrp = _parsePrice(offer['mrp'] ?? 0);
-    final double discount = _parsePrice(offer['discount'] ?? 0);
+    // `mrp` and `discount` are accessed via helpers in other places; avoid unused local vars
 
     final String productTitle =
         (offer['name'] ??
@@ -616,8 +667,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                 _shopName ??
                 offer['shopName'] ??
                 offer['shop'])
-            ?.toString() ??
-        'Unknown Shop';
+            .toString();
 
     final images = (offer['images'] is List)
         ? (offer['images'] as List).cast<String>()
@@ -938,20 +988,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                   height: 56,
                                   child: ElevatedButton.icon(
                                     onPressed: available
-                                        ? () {
+                                        ? () async {
                                             final qty = _quantityNotifier.value;
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Proceeding to checkout for $qty item(s)...',
-                                                ),
-                                                duration: const Duration(
-                                                  seconds: 2,
-                                                ),
-                                              ),
-                                            );
+                                            await _createOrderAndNavigate(qty);
                                           }
                                         : null,
                                     icon: const Icon(Icons.payment, size: 24),
@@ -1397,16 +1436,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
               height: 48,
               child: ElevatedButton.icon(
                 onPressed: available
-                    ? () {
+                    ? () async {
                         final qty = _quantityNotifier.value;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Proceeding to checkout for $qty item(s)...',
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
+                        await _createOrderAndNavigate(qty);
                       }
                     : null,
                 icon: const Icon(Icons.payment, size: 20),
@@ -1774,7 +1806,6 @@ class _ImageViewerDialog extends StatefulWidget {
 class _ImageViewerDialogState extends State<_ImageViewerDialog> {
   late PageController _pageController;
   late int _currentIndex;
-  late Future<void> _autoSwipeFuture;
 
   @override
   void initState() {
@@ -1785,7 +1816,7 @@ class _ImageViewerDialogState extends State<_ImageViewerDialog> {
   }
 
   void _startAutoSwipe() {
-    _autoSwipeFuture = Future.doWhile(() async {
+    Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 5));
       if (mounted) {
         final nextPage = (_currentIndex + 1) % widget.images.length;

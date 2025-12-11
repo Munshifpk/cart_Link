@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../theme_data.dart';
-
-
 import '../services/order_service.dart';
+import 'order_detail_page.dart';
 
 class OrderSuccessPage extends StatefulWidget {
   final String orderId;
 
-  const OrderSuccessPage({
-    super.key,
-    required this.orderId,
-  });
+  const OrderSuccessPage({super.key, required this.orderId});
 
   @override
   State<OrderSuccessPage> createState() => _OrderSuccessPageState();
 }
-
 
 class _OrderSuccessPageState extends State<OrderSuccessPage>
     with SingleTickerProviderStateMixin {
@@ -64,9 +59,6 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
     }
   }
 
-
-
-
   @override
   void dispose() {
     _controller.dispose();
@@ -81,10 +73,7 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              ThemeColors.primary,
-              ThemeColors.accent,
-            ],
+            colors: [ThemeColors.primary, ThemeColors.accent],
           ),
         ),
         child: SafeArea(
@@ -92,24 +81,27 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
             child: loading
                 ? const CircularProgressIndicator()
                 : errorMsg != null
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error, color: Colors.red, size: 60),
-                          const SizedBox(height: 16),
-                          Text(
-                            errorMsg!,
-                            style: const TextStyle(color: Colors.white, fontSize: 18),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: _fetchOrder,
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      )
-                    : _buildSuccessContent(),
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error, color: Colors.red, size: 60),
+                      const SizedBox(height: 16),
+                      Text(
+                        errorMsg!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _fetchOrder,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  )
+                : _buildSuccessContent(),
           ),
         ),
       ),
@@ -120,7 +112,10 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
     if (orderData == null) return const SizedBox();
     final products = (orderData!['products'] as List?) ?? [];
     final totalAmount = orderData!['totalAmount'] ?? 0.0;
-    final itemCount = products.fold<int>(0, (sum, p) => sum + ((p['quantity'] ?? 0) as int));
+    final itemCount = products.fold<int>(
+      0,
+      (sum, p) => sum + ((p['quantity'] ?? 0) as int),
+    );
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -147,10 +142,11 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
               repeat: false,
               delegates: LottieDelegates(
                 values: [
-                  ValueDelegate.color(
-                    const ['**', 'circle', '**'],
-                    value: Colors.green,
-                  ),
+                  ValueDelegate.color(const [
+                    '**',
+                    'circle',
+                    '**',
+                  ], value: Colors.green),
                 ],
               ),
             ),
@@ -179,10 +175,7 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
             children: [
               Text(
                 '$itemCount item(s) • ₹${totalAmount.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -194,7 +187,9 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
               // List products
               ...products.map<Widget>((p) {
                 final prod = p['productId'];
-                final name = prod is Map ? prod['name'] ?? 'Product' : 'Product';
+                final name = prod is Map
+                    ? prod['name'] ?? 'Product'
+                    : 'Product';
                 final qty = p['quantity'] ?? 0;
                 final price = p['price'] ?? 0.0;
                 final mrp = p['mrp'] ?? price;
@@ -205,7 +200,10 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
                     children: [
                       Text(
                         '$name',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -222,7 +220,10 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
                           padding: const EdgeInsets.only(left: 8.0),
                           child: Text(
                             'MRP: ₹${mrp.toStringAsFixed(2)}',
-                            style: const TextStyle(color: Colors.white54, decoration: TextDecoration.lineThrough),
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              decoration: TextDecoration.lineThrough,
+                            ),
                           ),
                         ),
                     ],
@@ -260,24 +261,25 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
                 icon: const Icon(Icons.shopping_cart),
                 label: const Text(
                   'Back to Cart',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
-                onPressed: () {
-                  // Navigate to orders page (implement later)
-                  Navigator.pop(context);
-                  Navigator.pop(context, true);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('View Orders feature coming soon!'),
-                    ),
-                  );
-                },
+                onPressed: orderData != null
+                    ? () {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => OrderDetailPage(
+                              order: Map<String, dynamic>.from(orderData!),
+                            ),
+                          ),
+                        );
+                      }
+                    : null,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white, width: 2),
@@ -291,11 +293,8 @@ class _OrderSuccessPageState extends State<OrderSuccessPage>
                 ),
                 icon: const Icon(Icons.receipt_long),
                 label: const Text(
-                  'View Orders',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'View Order Details',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
