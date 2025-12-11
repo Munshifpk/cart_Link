@@ -40,6 +40,8 @@ dependencies:
   geolocator: ^14.0.2
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.0
+  google_maps_flutter: ^2.14.0
+  geocoding: ^4.0.0
 
 dev_dependencies:
   flutter_test:

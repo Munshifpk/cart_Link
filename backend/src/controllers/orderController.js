@@ -4,7 +4,7 @@ const Cart = require('../models/Cart');
 // Create a new order from cart items (one customer, one shop)
 exports.createOrder = async (req, res) => {
     try {
-        const { customerId, shopId, products } = req.body;
+        const { customerId, shopId, products, deliveryAddress, deliveryLat, deliveryLng } = req.body;
 
         if (!customerId) {
             return res.status(400).json({
@@ -61,6 +61,11 @@ exports.createOrder = async (req, res) => {
             totalAmount,
             orderStatus: 'pending',
             deliveryOtp: otp,
+            deliveryAddress: deliveryAddress || '',
+            deliveryLocation: {
+                lat: typeof deliveryLat === 'number' ? deliveryLat : (deliveryLat ? Number(deliveryLat) : undefined),
+                lng: typeof deliveryLng === 'number' ? deliveryLng : (deliveryLng ? Number(deliveryLng) : undefined),
+            },
         });
 
         const savedOrder = await newOrder.save();

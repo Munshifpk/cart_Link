@@ -521,6 +521,73 @@ class _ShopOrderDetailPageState extends State<ShopOrderDetailPage> {
             ),
             const SizedBox(height: 20),
 
+            // Delivery Details
+            if ((widget.order.deliveryAddress ?? '').isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Delivery Details',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if ((widget.order.deliveryAddress ?? '').isNotEmpty) ...[
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on, color: Colors.deepOrange),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Delivery Address',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        widget.order.deliveryAddress ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (widget.order.deliveryLat != null && widget.order.deliveryLng != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8, left: 36),
+                                child: Text(
+                                  'Coordinates: ${widget.order.deliveryLat!.toStringAsFixed(5)}, ${widget.order.deliveryLng!.toStringAsFixed(5)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+
             // Order Items
             const Text(
               'Order Items',

@@ -148,6 +148,13 @@ class _OrdersTabState extends State<OrdersTab> {
         final created =
             DateTime.tryParse((m['createdAt'] ?? '').toString()) ??
             DateTime.now();
+        
+        final deliveryAddress = (m['deliveryAddress'] ?? '').toString();
+        final deliveryOtp = (m['deliveryOtp'] ?? '').toString();
+        final deliveryLoc = m['deliveryLocation'] is Map ? m['deliveryLocation'] as Map<String, dynamic> : null;
+        final deliveryLat = deliveryLoc != null ? (deliveryLoc['lat'] as num?)?.toDouble() : null;
+        final deliveryLng = deliveryLoc != null ? (deliveryLoc['lng'] as num?)?.toDouble() : null;
+        
         return Order(
           id: id,
           customerName: cust,
@@ -158,6 +165,10 @@ class _OrdersTabState extends State<OrdersTab> {
           status: status,
           time: created,
           products: products,
+          deliveryAddress: deliveryAddress,
+          deliveryOtp: deliveryOtp,
+          deliveryLat: deliveryLat,
+          deliveryLng: deliveryLng,
         );
       }).toList();
 
@@ -511,6 +522,10 @@ class Order {
   String status;
   final DateTime time;
   final List<dynamic> products;
+  final String? deliveryAddress;
+  final String? deliveryOtp;
+  final double? deliveryLat;
+  final double? deliveryLng;
 
   Order({
     required this.id,
@@ -522,5 +537,9 @@ class Order {
     required this.status,
     required this.time,
     this.products = const [],
+    this.deliveryAddress,
+    this.deliveryOtp,
+    this.deliveryLat,
+    this.deliveryLng,
   });
 }

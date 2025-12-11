@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme_data.dart';
 import '../services/order_service.dart';
 import '../services/auth_state.dart';
@@ -23,6 +27,10 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   bool _processing = false;
+  final TextEditingController _addressCtrl = TextEditingController();
+  double? _lat;
+  double? _lng;
+  static const LatLng _fallbackCenter = LatLng(20.5937, 78.9629); // India centroid fallback
 
   double _calcTotal() {
     double total = 0.0;
@@ -75,6 +83,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
+    // Require delivery address
+    if (_addressCtrl.text.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter your delivery address'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() => _processing = false);
+      return;
+    }
+
     // Build products list for this shop
     final products = widget.items.map((item) => {
       'productId': item['productId'],
@@ -88,6 +110,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
       customerId: customerId,
       shopId: shopId,
       products: products,
+      deliveryAddress: _addressCtrl.text.trim().isNotEmpty ? _addressCtrl.text.trim() : null,
+      deliveryLat: _lat,
+      deliveryLng: _lng,
     );
 
     if (!mounted) return;
@@ -115,6 +140,170 @@ class _CheckoutPageState extends State<CheckoutPage> {
             duration: const Duration(seconds: 2),
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _useMyLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'Location services are disabled. Please enable GPS.';
+      }
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+        throw 'Location permission denied. Please grant permission in Settings.';
+      }
+
+      Position pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+        );
+      } catch (_) {
+        pos = await Geolocator.getLastKnownPosition() ??
+            (throw 'Could not get current position');
+      }
+
+      _lat = pos.latitude;
+      _lng = pos.longitude;
+
+      try {
+        final placemarks = await placemarkFromCoordinates(_lat!, _lng!);
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final address = [
+            p.name,
+            p.street,
+            p.subLocality,
+            p.locality,
+            p.administrativeArea,
+            p.postalCode,
+            p.country,
+          ].where((e) => e != null && e!.trim().isNotEmpty).map((e) => e!.trim()).join(', ');
+          setState(() {
+            _addressCtrl.text = address.isNotEmpty
+                ? address
+                : '${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}';
+          });
+        } else {
+          setState(() {
+            _addressCtrl.text = '${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}';
+          });
+        }
+      } catch (geocodeErr) {
+        setState(() {
+          _addressCtrl.text = '${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}';
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Reverse geocode failed, using coordinates. ($geocodeErr)')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Location error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickOnMap() async {
+    LatLng? chosen;
+    final start = (_lat != null && _lng != null)
+        ? LatLng(_lat!, _lng!)
+        : _fallbackCenter;
+
+    await showModalBottomSheet<LatLng>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SizedBox(
+          height: MediaQuery.of(ctx).size.height * 0.75,
+          child: StatefulBuilder(
+            builder: (context, setSheetState) {
+              return Stack(
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: start,
+                      zoom: 14,
+                    ),
+                    myLocationButtonEnabled: true,
+                    myLocationEnabled: true,
+                    onTap: (latLng) {
+                      setSheetState(() {
+                        chosen = latLng;
+                      });
+                    },
+                    markers: {
+                      if (chosen != null)
+                        Marker(
+                          markerId: const MarkerId('delivery'),
+                          position: chosen!,
+                          infoWindow: const InfoWindow(title: 'Delivery location'),
+                        ),
+                    },
+                  ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: ElevatedButton.icon(
+                      onPressed: chosen == null
+                          ? null
+                          : () {
+                              Navigator.of(context).pop(chosen);
+                            },
+                      icon: const Icon(Icons.check),
+                      label: const Text('Use this location'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ThemeColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    ).then((value) {
+      if (value != null) {
+        chosen = value;
+      }
+    });
+
+    if (chosen != null) {
+      _lat = chosen!.latitude;
+      _lng = chosen!.longitude;
+      try {
+        final placemarks = await placemarkFromCoordinates(_lat!, _lng!);
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final address = [
+            p.name,
+            p.street,
+            p.subLocality,
+            p.locality,
+            p.administrativeArea,
+            p.postalCode,
+            p.country,
+          ].where((e) => e != null && e!.trim().isNotEmpty).map((e) => e!.trim()).join(', ');
+          setState(() {
+            _addressCtrl.text = address;
+          });
+        }
+      } catch (_) {
+        // Keep coords even if reverse geocode fails
+        setState(() {});
       }
     }
   }
@@ -218,6 +407,57 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Column(
                   children: [
+                    // Delivery address and location selector
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Delivery Details',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _addressCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Delivery Address',
+                              hintText: 'House/Flat, Street, Area, City',
+                              border: OutlineInputBorder(),
+                              helperText: 'Required',
+                            ),
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _processing ? null : _useMyLocation,
+                                  icon: const Icon(Icons.my_location),
+                                  label: const Text('Use my location'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _processing ? null : () {
+                                    if (kIsWeb) {
+                                      // On web, ensure the Maps JS API is loaded; otherwise show a hint.
+                                      _pickOnMap();
+                                    } else {
+                                      _pickOnMap();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.map),
+                                  label: const Text('Pick on map'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                     if (widget.items.isEmpty) ...[
                       const SizedBox(height: 24),
                       const Center(child: Text('No items to checkout')),
@@ -387,6 +627,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 12),
+                                  // Address summary directly under Grand Total
+                                  if (_addressCtrl.text.trim().isNotEmpty)
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        const Text(
+                                          'Deliver To',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(Icons.location_on, color: Colors.deepOrange),
+                                            const SizedBox(width: 8),
+                                            Expanded(child: Text(_addressCtrl.text.trim())),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                 ],
                               ),
                             ),

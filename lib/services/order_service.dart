@@ -8,6 +8,9 @@ class OrderService {
     required String customerId,
     required String shopId,
     required List<Map<String, dynamic>> products,
+    String? deliveryAddress,
+    double? deliveryLat,
+    double? deliveryLng,
   }) async {
     try {
       final uri = backendUri('/api/orders');
@@ -16,6 +19,10 @@ class OrderService {
         'shopId': shopId,
         'products': products,
       };
+
+      if (deliveryAddress != null) body['deliveryAddress'] = deliveryAddress;
+      if (deliveryLat != null) body['deliveryLat'] = deliveryLat;
+      if (deliveryLng != null) body['deliveryLng'] = deliveryLng;
 
       print('OrderService.createOrder -> $uri');
       print('Order body: ${jsonEncode(body)}');
