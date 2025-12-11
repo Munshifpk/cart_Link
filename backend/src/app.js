@@ -7,6 +7,7 @@ const customerAuthRoutes = require('./routes/customerAuthRoutes');
 const customersRoutes = require('./routes/customerRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/customersAuth', customerAuthRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Backend is running ✓', timestamp: new Date() });

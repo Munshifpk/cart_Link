@@ -135,19 +135,23 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           // ignore shops fetch errors; products keep whatever shopName they have
         }
 
-        setState(() {
-          _recommendedProducts = randomProducts;
-          _loadingProducts = false;
-        });
+        if (mounted) {
+          setState(() {
+            _recommendedProducts = randomProducts;
+            _loadingProducts = false;
+          });
+        }
 
         // Automatic periodic refresh removed — recommended products set once
       } else {
-        setState(() => _loadingProducts = false);
+        if (mounted) {
+          setState(() => _loadingProducts = false);
+        }
       }
     } catch (e) {
       print('Error loading recommended products: $e');
-      setState(() => _loadingProducts = false);
       if (mounted) {
+        setState(() => _loadingProducts = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load recommended products: $e')),
         );

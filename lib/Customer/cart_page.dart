@@ -62,10 +62,12 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
     try {
       final customerId = AuthState.currentCustomer?['_id'];
       if (customerId == null) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Not logged in. Please log in first.';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Not logged in. Please log in first.';
+          });
+        }
         return;
       }
 
@@ -131,22 +133,28 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
           _fetchShopName(shopId);
         }
 
-        setState(() {
-          _cartsByShop = shopMap;
-          _isLoading = false;
-          _errorMessage = shopMap.isEmpty ? 'Your cart is empty' : null;
-        });
+        if (mounted) {
+          setState(() {
+            _cartsByShop = shopMap;
+            _isLoading = false;
+            _errorMessage = shopMap.isEmpty ? 'Your cart is empty' : null;
+          });
+        }
       } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Failed to load cart. Please try again.';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Failed to load cart. Please try again.';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Error: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Error: $e';
+        });
+      }
     }
   }
 
@@ -1043,9 +1051,9 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                             borderRadius: BorderRadius.circular(8 * s),
                           ),
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           final shopName = _shopNames[shopId] ?? 'Shop $shopId';
-                          Navigator.push(
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => CheckoutPage(
@@ -1055,6 +1063,10 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                               ),
                             ),
                           );
+                          // Refresh cart if order was placed successfully
+                          if (result == true && mounted) {
+                            _fetchCarts();
+                          }
                         },
                         icon: Icon(Icons.payment, size: 20 * s),
                         label: Text(

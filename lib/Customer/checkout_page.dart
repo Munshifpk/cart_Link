@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme_data.dart';
+import '../services/order_service.dart';
+import '../services/auth_state.dart';
+import 'order_success_page.dart';
 
 class CheckoutPage extends StatefulWidget {
   final String? shopId; // null means all shops
@@ -39,18 +42,80 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Future<void> _confirmOrder() async {
     setState(() => _processing = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _processing = false);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Order placed for ${_calcItems()} item(s) — ₹${_calcTotal().toStringAsFixed(2)}',
+    final customerId = AuthState.currentCustomer?['_id'] ??
+        AuthState.currentCustomer?['id'];
+
+    if (customerId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Customer not logged in'),
+            backgroundColor: Colors.red,
           ),
-        ),
-      );
-      Navigator.pop(context);
+        );
+      }
+      setState(() => _processing = false);
+      return;
+    }
+
+    // Prepare order data
+    // Use the shopId passed to this page
+    final shopId = widget.shopId;
+    if (shopId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Shop ID is missing'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() => _processing = false);
+      return;
+    }
+
+    // Build products list for this shop
+    final products = widget.items.map((item) => {
+      'productId': item['productId'],
+      'quantity': item['quantity'] ?? 1,
+      'price': item['price'] ?? 0.0,
+      'mrp': item['mrp'],
+    }).toList();
+
+    // Create order (one customer, one shop)
+    final result = await OrderService.createOrder(
+      customerId: customerId,
+      shopId: shopId,
+      products: products,
+    );
+
+    if (!mounted) return;
+
+    if (result['success'] == true && result['data'] != null) {
+      final orderId = result['data']['_id'] ?? result['data']['id'];
+      if (orderId != null && mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderSuccessPage(orderId: orderId),
+          ),
+        );
+        // After success page, cart will be refreshed automatically
+      }
+    } else {
+      setState(() => _processing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message'] ?? 'Failed to place order',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -98,13 +163,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
         backgroundColor: ThemeColors.primary,
         foregroundColor: ThemeColors.textColorWhite,
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
+          Column(
+            children: [
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
                   ThemeColors.primary,
                   ThemeColors.accent.withOpacity(0.9),
                 ],
@@ -365,6 +432,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ),
               ),
             ),
+          ),
+            ],
           ),
         ],
       ),
