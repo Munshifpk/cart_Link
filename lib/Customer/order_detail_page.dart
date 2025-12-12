@@ -683,6 +683,68 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 ),
                               ),
                             ),
+                            if (productId.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: qty > 0
+                                          ? () async {
+                                              await _completeProductByQuantity(
+                                                productId,
+                                                name,
+                                                qty,
+                                              );
+                                            }
+                                          : null,
+                                      icon: const Icon(
+                                        Icons.check_circle,
+                                        size: 14,
+                                      ),
+                                      label: const Text('Complete'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton.icon(
+                                      onPressed: qty > 0
+                                          ? () async {
+                                              await _cancelProductByQuantity(
+                                                productId,
+                                                name,
+                                                qty,
+                                              );
+                                            }
+                                          : null,
+                                      icon: const Icon(
+                                        Icons.delete_forever,
+                                        size: 14,
+                                      ),
+                                      label: const Text('Cancel'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.redAccent,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ],
@@ -1412,6 +1474,72 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         },
       ),
     );
+  }
+
+  Future<void> _completeProductByQuantity(
+    String productId,
+    String productName,
+    int quantityToComplete,
+  ) async {
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ?? AuthState.currentCustomer?['id'];
+      final orderId = _order['_id'] ?? _order['id'];
+
+      if (customerId == null || orderId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to process completion')),
+          );
+        }
+        return;
+      }
+
+      final uri = backendUri('/api/orders/$orderId/complete-product');
+      final payload = {
+        'productId': productId,
+        'productName': productName,
+        'quantityToComplete': quantityToComplete,
+        'customerId': customerId,
+        'completedAt': DateTime.now().toIso8601String(),
+      };
+
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (mounted) {
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Successfully completed $quantityToComplete item${quantityToComplete > 1 ? 's' : ''} of $productName',
+              ),
+            ),
+          );
+          // Refresh order data
+          await _fetchOrderFromDatabase();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to complete product. Status: ${res.statusCode}',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
   Future<void> _cancelProductByQuantity(
