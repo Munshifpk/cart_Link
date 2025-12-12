@@ -697,9 +697,34 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Qty: $qty',
-                              style: const TextStyle(fontSize: 12),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Qty: $qty',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                if (productId.isNotEmpty && (qty ?? 0) > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8.0),
+                                    child: IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      icon: const Icon(
+                                        Icons.remove_circle_outline,
+                                        size: 18,
+                                        color: Colors.redAccent,
+                                      ),
+                                      tooltip: 'Remove 1',
+                                      onPressed: () {
+                                        _showRemoveOneConfirmation(
+                                          context,
+                                          productId.toString(),
+                                          name,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                              ],
                             ),
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
@@ -784,28 +809,44 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    ElevatedButton.icon(
-                                      onPressed: qty > 0
-                                          ? () {
-                                              _showCancelProductConfirmation(
-                                                context,
-                                                productId,
-                                                name,
-                                              );
-                                            }
-                                          : null,
-                                      icon: const Icon(Icons.cancel, size: 14),
-                                      label: const Text('Cancel'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.redAccent,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
+                                    // Show Cancel (quantity-wise) only when order status allows
+                                    Builder(
+                                      builder: (ctx) {
+                                        final orderStatus =
+                                            _order['orderStatus'] ?? 'pending';
+                                        final canCancel =
+                                            orderStatus != 'delivered' &&
+                                            orderStatus != 'cancelled' &&
+                                            orderStatus != 'shipped';
+                                        return ElevatedButton.icon(
+                                          onPressed: (qty > 0 && canCancel)
+                                              ? () {
+                                                  _showCancelProductConfirmation(
+                                                    context,
+                                                    productId,
+                                                    name,
+                                                  );
+                                                }
+                                              : null,
+                                          icon: const Icon(
+                                            Icons.cancel,
+                                            size: 14,
+                                          ),
+                                          label: const Text('Cancel'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: canCancel
+                                                ? Colors.redAccent
+                                                : Colors.grey,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
@@ -1014,6 +1055,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         const SizedBox(height: 8),
         ...cancelled.map<Widget>((c) {
           final prod = c['productId'];
+          final productId = prod is Map
+              ? (prod['_id'] ?? '')
+              : (c['productId'] ?? '');
           final name = prod is Map
               ? (prod['name'] ?? c['productName'] ?? 'Product')
               : (c['productName'] ?? 'Product');
@@ -1068,6 +1112,39 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       ),
                     ],
                   ),
+                  if ((productId ?? '').toString().isNotEmpty && qty > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              // Attempt to restore the cancelled quantity
+                              await _undoCancelProductByQuantity(
+                                productId.toString(),
+                                name,
+                                qty,
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.restore_from_trash,
+                              size: 14,
+                            ),
+                            label: const Text('Restore'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1505,6 +1582,39 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _showRemoveOneConfirmation(
+    BuildContext context,
+    String productId,
+    String productName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove 1 Item'),
+        content: Text(
+          'Are you sure you want to remove 1 unit of "$productName" from this order? This will update the order in the database.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _cancelProductByQuantity(productId, productName, 1);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Yes, Remove 1'),
+          ),
+        ],
       ),
     );
   }
