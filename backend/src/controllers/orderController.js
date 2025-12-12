@@ -4,7 +4,7 @@ const Cart = require('../models/Cart');
 // Create a new order from cart items (one customer, one shop)
 exports.createOrder = async (req, res) => {
     try {
-        const { customerId, shopId, products } = req.body;
+        const { customerId, shopId, products, deliveryAddress, deliveryLat, deliveryLng } = req.body;
 
         if (!customerId) {
             return res.status(400).json({
@@ -50,6 +50,9 @@ exports.createOrder = async (req, res) => {
             });
         }
 
+        // Generate a 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
         // Create the order
         const newOrder = new Order({
             customerId,
@@ -57,6 +60,12 @@ exports.createOrder = async (req, res) => {
             products: processedProducts,
             totalAmount,
             orderStatus: 'pending',
+            deliveryOtp: otp,
+            deliveryAddress: deliveryAddress || '',
+            deliveryLocation: {
+                lat: typeof deliveryLat === 'number' ? deliveryLat : (deliveryLat ? Number(deliveryLat) : undefined),
+                lng: typeof deliveryLng === 'number' ? deliveryLng : (deliveryLng ? Number(deliveryLng) : undefined),
+            },
         });
 
         const savedOrder = await newOrder.save();
@@ -84,7 +93,31 @@ exports.getByCustomer = async (req, res) => {
         const { customerId } = req.params;
 
         const orders = await Order.find({ customerId })
-            .populate('customerId', 'name email phone')
+            .populate('customerId', 'customerName name email mobile phone')
+            .populate('shopId', 'shopName name contact phone mobile')
+            .populate('products.productId', 'name price mrp')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            data: orders,
+        });
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error fetching orders',
+        });
+    }
+};
+
+// Get orders by shop ID
+exports.getByShop = async (req, res) => {
+    try {
+        const { shopId } = req.params;
+
+        const orders = await Order.find({ shopId })
+            .populate('customerId', 'customerName name email mobile phone')
             .populate('shopId', 'shopName name contact phone mobile')
             .populate('products.productId', 'name price mrp')
             .populate('cancelledProducts.productId', 'name price mrp')
@@ -109,7 +142,7 @@ exports.getById = async (req, res) => {
         const { orderId } = req.params;
 
         const order = await Order.findById(orderId)
-            .populate('customerId', 'name email phone')
+            .populate('customerId', 'customerName name email mobile phone')
             .populate('shopId', 'shopName name contact phone mobile')
             .populate('products.productId', 'name price mrp')
             .populate('cancelledProducts.productId', 'name price mrp');
@@ -175,6 +208,53 @@ exports.updateStatus = async (req, res) => {
     }
 };
 
+// Verify OTP and update order status to delivered
+exports.verifyOtpAndDeliver = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { otp } = req.body;
+
+        if (!otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'OTP is required',
+            });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found',
+            });
+        }
+        // Verify OTP
+        if (order.deliveryOtp !== otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid OTP',
+            });
+        }
+
+        // Update order status to delivered
+        order.orderStatus = 'delivered';
+        order.updatedAt = Date.now();
+        const updatedOrder = await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Order marked as delivered',
+            data: updatedOrder,
+        });
+    } catch (error) {
+        console.error('Error verifying OTP:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error verifying OTP',
+        });
+    }
+};
+
 // Cancel product from order by quantity
 exports.cancelProduct = async (req, res) => {
     try {
@@ -200,7 +280,7 @@ exports.cancelProduct = async (req, res) => {
 
         // Find the product in the order
         const productIndex = order.products.findIndex(
-            p => p.productId.toString() === productId
+            p => p.productId.toString() === productId,
         );
 
         if (productIndex === -1) {
@@ -227,7 +307,7 @@ exports.cancelProduct = async (req, res) => {
             quantity: quantityToCancel,
             price: order.products[productIndex].price,
             cancelledAt: new Date(),
-            customerId: customerId,
+            customerId,
         };
 
         // Remove or update product quantity
@@ -261,7 +341,7 @@ exports.cancelProduct = async (req, res) => {
         const updatedOrder = await order.save();
 
         // Populate before sending response
-        await updatedOrder.populate('customerId', 'name email phone');
+        await updatedOrder.populate('customerId', 'customerName name email mobile phone');
         await updatedOrder.populate('shopId', 'shopName name contact phone mobile');
         await updatedOrder.populate('products.productId', 'name price mrp');
         await updatedOrder.populate('cancelledProducts.productId', 'name price mrp');

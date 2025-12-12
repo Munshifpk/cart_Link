@@ -293,6 +293,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         : '';
     final total = (_order['totalAmount'] ?? 0).toDouble();
     final products = (_order['products'] as List?) ?? [];
+    final deliveryAddress = (_order['deliveryAddress'] ?? '').toString();
+    final otp = (_order['deliveryOtp'] ?? '').toString();
+    final loc = _order['deliveryLocation'] is Map ? _order['deliveryLocation'] as Map<String, dynamic> : null;
+    final lat = loc != null ? (loc['lat'] as num?)?.toDouble() : null;
+    final lng = loc != null ? (loc['lng'] as num?)?.toDouble() : null;
 
     Color statusColor;
     switch (status) {
@@ -378,6 +383,48 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     style: const TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 16),
+                  if (deliveryAddress.isNotEmpty || otp.isNotEmpty)
+                    Card(
+                      elevation: 1,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Delivery Details',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            if (deliveryAddress.isNotEmpty)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.location_on, color: Colors.deepOrange),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(deliveryAddress)),
+                                ],
+                              ),
+                            if (lat != null && lng != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text('Coords: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}', style: const TextStyle(color: Colors.black54)),
+                              ),
+                            if (otp.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.lock, color: Colors.deepOrange),
+                                    const SizedBox(width: 8),
+                                    Text('Delivery OTP: $otp', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Row(
                     children: [
                       Expanded(
