@@ -52,10 +52,13 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   }
 
   Future<void> _loadCategories() async {
+    if (!mounted) return;
     try {
       final resp = await http
           .get(backendUri(kApiShops))
           .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final shops = (data['data'] as List? ?? []);
@@ -76,9 +79,12 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   }
 
   Future<void> _loadRecommendedProducts() async {
+    if (!mounted) return;
     try {
       setState(() => _loadingProducts = true);
       final result = await ProductService.getProducts();
+      if (!mounted) return;
+      
       if (result['success'] == true && mounted) {
         var products = (result['data'] as List? ?? [])
             .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
@@ -99,6 +105,8 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
             return p;
           }),
         );
+        
+        if (!mounted) return;
 
         // Shuffle and take 8 random products
         products.shuffle();
@@ -160,9 +168,12 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   }
 
   Future<void> _loadPopularAreaProducts() async {
+    if (!mounted) return;
     try {
       setState(() => _loadingPopularAreaProducts = true);
       final result = await ProductService.getProducts();
+      if (!mounted) return;
+      
       if (result['success'] == true && mounted) {
         var products = (result['data'] as List? ?? [])
             .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
@@ -182,6 +193,8 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           }),
         );
 
+        if (!mounted) return;
+        
         products.shuffle();
         final random = products.take(8).toList();
 
@@ -198,9 +211,11 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   }
 
   Future<void> _loadFollowingShops() async {
+    if (!mounted) return;
     try {
       final customerId = AuthState.currentCustomer?['_id'] as String?;
       if (customerId == null || customerId.isEmpty) {
+        if (!mounted) return;
         setState(() {
           _followingShops = [];
           _loadingFollowingShops = false;
@@ -212,6 +227,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
       final uri = backendUri('$kApiCustomers/$customerId/following');
       final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (!mounted) return;
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -263,15 +279,18 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       }
     } catch (e) {
       print('Error loading following shops: $e');
-      setState(() => _loadingFollowingShops = false);
+      if (mounted) setState(() => _loadingFollowingShops = false);
     }
   }
 
   Future<void> _loadShops() async {
+    if (!mounted) return;
     try {
       final resp = await http
           .get(backendUri(kApiShops))
           .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final list = (data['data'] as List? ?? [])
@@ -305,6 +324,8 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
         }).toList();
 
         final enriched = await Future.wait(futures);
+        if (!mounted) return;
+        
         // sort by productCount desc and limit to top 6
         enriched.sort(
           (a, b) =>

@@ -22,8 +22,11 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
   }
 
   Future<void> _loadProducts() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     final res = await ProductService.getProducts();
+    if (!mounted) return;
+    
     print('🔍 _loadProducts response: $res');
     if (res['success'] == true) {
       var data = res['data'] ?? [];
@@ -41,6 +44,9 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
         } catch (_) {}
         return map;
       }));
+      
+      if (!mounted) return;
+      
       // sanitize incoming data: convert possible JS interop objects to plain Dart types
       final sanitized = data.map<Map<String, dynamic>>((raw) {
         final m = Map<String, dynamic>.from(raw as Map);
@@ -63,6 +69,7 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
         return m;
       }).toList();
 
+      if (!mounted) return;
       setState(() {
         _products = sanitized;
       });

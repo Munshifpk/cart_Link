@@ -25,7 +25,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _fetchOrders();
   }
 
@@ -123,6 +123,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
           labelColor: ThemeColors.textColorWhite,
           tabs: const [
             Tab(text: 'Pending'),
+            Tab(text: 'Ready for Delivery'),
             Tab(text: 'Completed'),
             Tab(text: 'Cancelled'),
           ],
@@ -140,6 +141,10 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
                 _buildOrderList(
                   _orders.where((o) => _isPending(o['orderStatus'])).toList(),
                   emptyLabel: 'No pending orders.',
+                ),
+                _buildOrderList(
+                  _orders.where((o) => _isReadyForDelivery(o['orderStatus'])).toList(),
+                  emptyLabel: 'No ready for delivery orders.',
                 ),
                 _buildOrderList(
                   _orders.where((o) => _isCompleted(o['orderStatus'])).toList(),
@@ -170,6 +175,10 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
     return status == 'cancelled';
   }
 
+  bool _isReadyForDelivery(String? status) {
+    return status == 'ready_for_delivery' || status == 'readyForDelivery';
+  }
+
   Widget _buildOrderList(List<dynamic> orders, {required String emptyLabel}) {
     if (orders.isEmpty) {
       return Center(child: Text(emptyLabel));
@@ -191,7 +200,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
               ? Colors.blue
               : Colors.orange;
           final shop = order['shopId'] is Map
-              ? order['shopId']['name'] ?? ''
+              ? order['shopId']['shopName'] ?? order['shopId']['name'] ?? ''
               : '';
           final date = order['createdAt'] != null
               ? order['createdAt'].toString().substring(0, 10)
@@ -203,6 +212,8 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
             (sum, p) => sum + ((p['quantity'] ?? 0) as int),
           );
 
+          final needsScroll = products.length > 5;
+
           return Card(
             elevation: 3,
             shape: RoundedRectangleBorder(
@@ -211,14 +222,32 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
               onTap: () {
+                final parentContext = context; // keep parent for navigation after sheet closes
                 showModalBottomSheet(
                   context: context,
+                  isScrollControlled: true,
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(18),
                     ),
                   ),
-                  builder: (context) => _buildOrderDetailsSheet(order),
+                  builder: (context) {
+                    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+                    final content = _buildOrderDetailsContent(order, parentContext);
+                    return SafeArea(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewInsets.bottom,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxHeight: maxHeight),
+                          child: needsScroll
+                              ? SingleChildScrollView(child: content)
+                              : content,
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
               child: Padding(
@@ -247,15 +276,19 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Order #${_shortId(order['_id'])}',
+                            shop.isNotEmpty
+                                ? shop
+                                : 'Order #${_shortId(order['_id'])}',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '$shop • $date',
+                            '${_shortId(order['_id'])} • $date',
                             style: const TextStyle(color: Colors.black54),
                           ),
                           const SizedBox(height: 2),
@@ -320,10 +353,8 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
     }
   }
 
-  Widget _buildOrderDetailsSheet(dynamic order) {
-    // Capture parent context for navigation after closing the sheet
-    final parentContext = context;
-    final shop = order['shopId'] is Map ? order['shopId']['name'] ?? '' : '';
+  Widget _buildOrderDetailsContent(dynamic order, BuildContext parentContext) {
+    final shop = order['shopId'] is Map ? order['shopId']['shopName'] ?? order['shopId']['name'] ?? '' : '';
     final date = order['createdAt'] != null
         ? order['createdAt'].toString().substring(0, 19).replaceAll('T', ' ')
         : '';

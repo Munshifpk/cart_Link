@@ -67,35 +67,51 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   Future<void> _fetchAllProductReviews() async {
+    if (!mounted) return;
     setState(() => _loadingReviews = true);
-    final products = (_order['products'] as List?) ?? [];
-    for (var p in products) {
-      final prod = p['productId'];
-      final productId = prod is Map ? (prod['_id'] ?? '') : '';
-      if (productId.isNotEmpty) {
-        await _fetchReviews(productId);
+    try {
+      final products = (_order['products'] as List?) ?? [];
+      final ids = <String>[];
+      for (var p in products) {
+        final prod = p['productId'];
+        final productId = prod is Map ? (prod['_id'] ?? '') : '';
+        if (productId.isNotEmpty) ids.add(productId);
       }
+
+      final futures = ids.map((id) => _fetchReviews(id)).toList();
+      final results = await Future.wait(futures);
+
+      if (mounted) {
+        final map = <String, List<dynamic>>{};
+        for (var i = 0; i < ids.length; i++) {
+          map[ids[i]] = results[i];
+        }
+        setState(() {
+          _productReviews = map;
+          _loadingReviews = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingReviews = false);
     }
-    setState(() => _loadingReviews = false);
   }
 
-  Future<void> _fetchReviews(String productId) async {
+  Future<List<dynamic>> _fetchReviews(String productId) async {
     try {
       final uri = backendUri(
         '/api/reviews',
         queryParameters: {'productId': productId},
       );
-      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      final res = await http.get(uri).timeout(const Duration(seconds: 6));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         final List<dynamic> list = body is Map && body.containsKey('data')
             ? (body['data'] as List<dynamic>)
             : (body is List ? body : []);
-        setState(() {
-          _productReviews[productId] = list;
-        });
+        return list;
       }
     } catch (_) {}
+    return const [];
   }
 
   Future<void> _submitReview(
@@ -326,209 +342,351 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.store, color: Colors.deepOrange),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              shopName,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isBigDisplay = constraints.maxWidth > 900;
+                  
+                  if (isBigDisplay) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left side: Order Items (60% width)
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildOrderItemsSection(products),
+                              const SizedBox(height: 16),
+                              _buildCancelledProductsSection(
+                                (_order['cancelledProducts'] as List?) ?? [],
                               ),
-                            ),
-                            if (shopPhone.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Text(
-                                  'Phone: $shopPhone',
-                                  style: const TextStyle(color: Colors.black54),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          status[0].toUpperCase() + status.substring(1),
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.w600,
+                              const SizedBox(height: 16),
+                              _buildReviewsSection(products),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Order ID: ${_order['_id'] ?? ''}',
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                  Text(
-                    'Date: $date',
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 16),
-                  if (deliveryAddress.isNotEmpty || otp.isNotEmpty)
-                    Card(
-                      elevation: 1,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Delivery Details',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (deliveryAddress.isNotEmpty)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(
-                                    Icons.location_on,
-                                    color: Colors.deepOrange,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(deliveryAddress)),
-                                ],
-                              ),
-                            if (lat != null && lng != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  'Coords: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}',
-                                  style: const TextStyle(color: Colors.black54),
-                                ),
-                              ),
-                            if (otp.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.lock,
-                                      color: Colors.deepOrange,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Delivery OTP: $otp',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
+                        const SizedBox(width: 16),
+                        // Right side: Details (40% width)
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildShopDetailsCard(shopName, shopPhone, status, statusColor, date),
+                              const SizedBox(height: 12),
+                              if (deliveryAddress.isNotEmpty || otp.isNotEmpty)
+                                _buildDeliveryDetailsCard(deliveryAddress, lat, lng, otp),
+                              const SizedBox(height: 12),
+                              _buildActionButtonsCard(shopPhone, status),
+                              const SizedBox(height: 12),
+                              _buildTotalCard(total, products),
+                              if (status == 'cancelled')
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _showCancellationFeedbackDialog(context),
+                                      icon: const Icon(Icons.feedback_outlined),
+                                      label: const Text('Feedback'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.deepOrange,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildShopDetailsCard(shopName, shopPhone, status, statusColor, date),
+                        const SizedBox(height: 12),
+                        if (deliveryAddress.isNotEmpty || otp.isNotEmpty)
+                          _buildDeliveryDetailsCard(deliveryAddress, lat, lng, otp),
+                        const SizedBox(height: 12),
+                        _buildActionButtonsCard(shopPhone, status),
+                        const SizedBox(height: 16),
+                        _buildOrderItemsSection(products),
+                        const SizedBox(height: 16),
+                        _buildCancelledProductsSection(
+                          (_order['cancelledProducts'] as List?) ?? [],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTotalCard(total, products),
+                        if (status == 'cancelled')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showCancellationFeedbackDialog(context),
+                                icon: const Icon(Icons.feedback_outlined),
+                                label: const Text('Share Cancellation Feedback'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepOrange,
+                                  foregroundColor: Colors.white,
                                 ),
                               ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: shopPhone.isNotEmpty
-                              ? () => _contactShopWhatsApp(shopPhone)
-                              : null,
-                          icon: const Icon(Icons.chat),
-                          label: const Text('WhatsApp'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: shopPhone.isNotEmpty
-                                ? const Color(0xFF25D366)
-                                : Colors.grey,
-                            foregroundColor: Colors.white,
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: shopPhone.isNotEmpty
-                              ? () => _showCallDialog(context, shopPhone)
-                              : null,
-                          icon: const Icon(Icons.call),
-                          label: const Text('Call'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: shopPhone.isNotEmpty
-                                ? Colors.green
-                                : Colors.grey,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (status == 'cancelled')
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              _showCancellationFeedbackDialog(context),
-                          icon: const Icon(Icons.feedback_outlined),
-                          label: const Text('Share Cancellation Feedback'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepOrange,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  _buildOrderItemsSection(products),
-                  const SizedBox(height: 16),
-                  const SizedBox(height: 16),
-                  _buildCancelledProductsSection(
-                    (_order['cancelledProducts'] as List?) ?? [],
-                  ),
-                  const Divider(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Total',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '₹${total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildReviewsSection(products),
-                ],
+                        const SizedBox(height: 24),
+                        _buildReviewsSection(products),
+                      ],
+                    );
+                  }
+                },
               ),
             ),
+    );
+  }
+
+  Widget _buildShopDetailsCard(String shopName, String shopPhone, String status, Color statusColor, String date) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.store, color: Colors.deepOrange, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        shopName,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      if (shopPhone.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            shopPhone,
+                            style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    status[0].toUpperCase() + status.substring(1),
+                    style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            Divider(height: 12),
+            Text('Order ID: ${_order['_id'] ?? ''}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text('Date: $date', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeliveryDetailsCard(String deliveryAddress, double? lat, double? lng, String otp) {
+    return Card(
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Delivery Details', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            if (deliveryAddress.isNotEmpty)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, size: 16, color: Colors.deepOrange),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(deliveryAddress, style: const TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            if (lat != null && lng != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}',
+                    style: const TextStyle(fontSize: 11, color: Colors.black54)),
+              ),
+            if (otp.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock, size: 14, color: Colors.deepOrange),
+                    const SizedBox(width: 4),
+                    Text('OTP: $otp', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtonsCard(String shopPhone, String status) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton.icon(
+          onPressed: shopPhone.isNotEmpty ? () => _contactShopWhatsApp(shopPhone) : null,
+          icon: const Icon(Icons.chat, size: 16),
+          label: const Text('WhatsApp'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: shopPhone.isNotEmpty ? const Color(0xFF25D366) : Colors.grey,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ElevatedButton.icon(
+          onPressed: shopPhone.isNotEmpty ? () => _showCallDialog(context, shopPhone) : null,
+          icon: const Icon(Icons.call, size: 16),
+          label: const Text('Call'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: shopPhone.isNotEmpty ? Colors.green : Colors.grey,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTotalCard(double total, List<dynamic> products) {
+    double computedGrandTotal = 0.0;
+    final rows = <TableRow>[
+      TableRow(
+        decoration: BoxDecoration(color: Colors.grey[100]),
+        children: const [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Si.No', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Product', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Rate', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Total', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      )
+    ];
+
+    for (var i = 0; i < products.length; i++) {
+      final p = products[i];
+      final prod = p['productId'];
+      final name = prod is Map ? (prod['name'] ?? 'Product') : (p['productName'] ?? 'Product');
+      final qty = (p['quantity'] ?? 0) as int;
+      final rate = ((p['price'] ?? 0) as num).toDouble();
+      final lineTotal = rate * qty;
+      computedGrandTotal += lineTotal;
+
+      rows.add(
+        TableRow(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('${i + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(name, style: const TextStyle(fontSize: 12)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('$qty', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('₹${rate.toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontSize: 12)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('₹${lineTotal.toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Total Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Table(
+              columnWidths: const {
+                0: FixedColumnWidth(48),
+                1: FlexColumnWidth(),
+                2: FixedColumnWidth(48),
+                3: FixedColumnWidth(80),
+                4: FixedColumnWidth(90),
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: rows,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Grand Total', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                Text(
+                  '₹${computedGrandTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+                ),
+              ],
+            ),
+            if ((total).toStringAsFixed(2) != computedGrandTotal.toStringAsFixed(2))
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Note: Backend total ₹${total.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 11, color: Colors.black45),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -591,229 +749,145 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 8),
+            elevation: 1,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             child: InkWell(
               onTap: productId.isNotEmpty
                   ? () => _showItemDetailsDialog(context, p, reviews, avgRating)
                   : null,
+              borderRadius: BorderRadius.circular(10),
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.deepOrange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              index.toString(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.deepOrange,
-                                fontSize: 18,
-                              ),
+                    // Product image with styling
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!, width: 1),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildProductImage(prod),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Product info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.deepOrange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'Qty: $qty',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.deepOrange,
+                                  ),
+                                ),
+                              ),
+                              if (discount != '0') ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '$discount% OFF',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
                             children: [
                               Text(
-                                name,
+                                '₹${price.toStringAsFixed(2)}',
                                 style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (category.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    category,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black54,
-                                    ),
+                              if (mrp > price) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '₹${mrp.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    decoration: TextDecoration.lineThrough,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              if (reviews.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.star, size: 12, color: Colors.amber),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        avgRating.toStringAsFixed(1),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                             ],
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '₹${price.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.deepOrange,
-                              ),
-                            ),
-                            if (mrp > price)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  '₹${mrp.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.black45,
-                                  ),
-                                ),
-                              ),
-                            if (mrp > price)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  '$discount% off',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Text(
+                            '$qty × ₹${price.toStringAsFixed(2)} = ₹${itemTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    Divider(height: 1, color: Colors.grey[300]),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Qty: $qty',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                'Total: ₹${itemTotal.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.deepOrange,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (reviews.isNotEmpty)
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.star,
-                                    size: 14,
-                                    color: Colors.amber,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${avgRating.toStringAsFixed(1)} (${reviews.length})',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              )
-                            else
-                              const Text(
-                                'No reviews',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                'Product ID: ${productId.substring(0, productId.length > 8 ? 8 : productId.length)}...',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.black45,
-                                ),
-                              ),
-                            ),
-                            if (productId.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    ElevatedButton.icon(
-                                      onPressed: qty > 0
-                                          ? () {
-                                              _confirmCompleteProduct(
-                                                context,
-                                                productId,
-                                                name,
-                                                qty,
-                                              );
-                                            }
-                                          : null,
-                                      icon: const Icon(
-                                        Icons.check_circle,
-                                        size: 14,
-                                      ),
-                                      label: const Text('Complete'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    ElevatedButton.icon(
-                                      onPressed: qty > 0
-                                          ? () {
-                                              _showCancelProductConfirmation(
-                                                context,
-                                                productId,
-                                                name,
-                                              );
-                                            }
-                                          : null,
-                                      icon: const Icon(Icons.cancel, size: 14),
-                                      label: const Text('Cancel'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.redAccent,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    // Tap indicator
+                    Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
                   ],
                 ),
               ),
@@ -995,7 +1069,32 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
-          // Cancel button removed from item details per request
+          if (productId.isNotEmpty)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                final shopId = (_order['shopId'] is Map)
+                    ? (_order['shopId']['_id'] ?? _order['shopId']['id'])
+                    : _order['shopId'];
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProductPurchasePage(
+                      offer: {
+                        '_id': productId,
+                        'shopId': shopId,
+                      },
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.visibility),
+              label: const Text('View Product'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ThemeColors.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
         ],
       ),
     );
@@ -1967,5 +2066,85 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
+  }
+
+  Widget _buildProductImage(dynamic prod) {
+    // Prefer backend image by product id first
+    if (prod is Map) {
+      final productId = (prod['_id'] ?? prod['id'])?.toString();
+      if (productId != null && productId.isNotEmpty) {
+        try {
+          final uri = backendUri('/api/products/$productId/image');
+          return Image.network(
+            uri.toString(),
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                      : null,
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.deepOrange.withOpacity(0.5)),
+                ),
+              );
+            },
+            errorBuilder: (_, __, ___) {
+              // Fallback to local fields if backend image not available
+              String? imageUrlOrData;
+              final images = (prod['images'] as List?) ?? [];
+              if (images.isNotEmpty && images.first is String) {
+                imageUrlOrData = images.first as String;
+              } else if (prod['image'] is String) {
+                imageUrlOrData = prod['image'] as String;
+              }
+              if (imageUrlOrData != null && imageUrlOrData.isNotEmpty) {
+                final val = imageUrlOrData;
+                if (val.startsWith('data:image')) {
+                  try {
+                    final base64String = val.split(',').length > 1 ? val.split(',')[1] : val;
+                    final bytes = base64.decode(base64String);
+                    return Image.memory(bytes, fit: BoxFit.cover);
+                  } catch (_) {}
+                }
+                final base64Regex = RegExp(r'^[A-Za-z0-9+/=]+$');
+                if (!val.startsWith('http') && base64Regex.hasMatch(val)) {
+                  try {
+                    final bytes = base64.decode(val);
+                    return Image.memory(bytes, fit: BoxFit.cover);
+                  } catch (_) {}
+                }
+                if (val.startsWith('http')) {
+                  return Image.network(val, fit: BoxFit.cover);
+                }
+              }
+              return _buildImagePlaceholder();
+            },
+          );
+        } catch (_) {}
+      }
+    }
+    // Final fallback
+    return _buildImagePlaceholder();
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Container(
+      color: Colors.grey[100],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_bag_outlined, color: Colors.grey[400], size: 28),
+            const SizedBox(height: 4),
+            Text(
+              'No Image',
+              style: TextStyle(fontSize: 9, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
