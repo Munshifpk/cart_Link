@@ -5,7 +5,7 @@ import '../theme_data.dart';
 import 'package:cart_link/services/auth_state.dart';
 import '../../services/product_service.dart';
 import 'package:cart_link/constant.dart';
-import 'checkout_page.dart';
+import 'order/checkout_page.dart';
 
 class ProductPurchasePage extends StatefulWidget {
   final Map<String, dynamic> offer;

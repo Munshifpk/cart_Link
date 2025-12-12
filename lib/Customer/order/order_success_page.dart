@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import '../theme_data.dart';
-import '../services/order_service.dart';
+import '../../theme_data.dart';
+import '../../services/order_service.dart';
 import 'order_detail_page.dart';
 
 class OrderSuccessPage extends StatefulWidget {

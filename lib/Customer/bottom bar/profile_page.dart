@@ -10,7 +10,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import '../customer_home.dart';
-import '../orders_history_page.dart';
+import '../order/orders_history_page.dart';
 import 'package:cart_link/constant.dart';
 
 class CustomerProfilePage extends StatefulWidget {

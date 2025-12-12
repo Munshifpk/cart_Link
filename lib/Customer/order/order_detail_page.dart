@@ -3,11 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../theme_data.dart';
-import '../constant.dart';
-import 'product_purchase_page.dart';
-import '../services/auth_state.dart';
-import '../services/order_service.dart';
+import '../../theme_data.dart';
+import '../../constant.dart';
+import '../product_purchase_page.dart';
+import '../../services/auth_state.dart';
+import '../../services/order_service.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final Map<String, dynamic> order;

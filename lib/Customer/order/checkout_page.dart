@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../theme_data.dart';
-import '../services/order_service.dart';
-import '../services/auth_state.dart';
+import '../../theme_data.dart';
+import '../../services/order_service.dart';
+import '../../services/auth_state.dart';
 import 'order_success_page.dart';
 
 class CheckoutPage extends StatefulWidget {
