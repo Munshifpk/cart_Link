@@ -39,17 +39,17 @@ class _ShopOrderDetailPageState extends State<ShopOrderDetailPage> {
     }
   }
 
-  Future<void> _callCustomer(String phone) async {
-    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    final uri = Uri(scheme: 'tel', path: cleanPhone);
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
-    } catch (e) {
-      print('Error making call: $e');
-    }
-  }
+  // Future<void> _callCustomer(String phone) async {
+  //   final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+  //   final uri = Uri(scheme: 'tel', path: cleanPhone);
+  //   try {
+  //     if (await canLaunchUrl(uri)) {
+  //       await launchUrl(uri);
+  //     }
+  //   } catch (e) {
+  //     print('Error making call: $e');
+  //   }
+  // }
 
   Future<void> _showCallDialog(BuildContext context, String phone) async {
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -186,7 +186,7 @@ class _ShopOrderDetailPageState extends State<ShopOrderDetailPage> {
       );
 
       if (resp.statusCode == 200) {
-        final json = jsonDecode(resp.body) as Map<String, dynamic>;
+        // final json = jsonDecode(resp.body) as Map<String, dynamic>;
         setState(() {
           _selectedStatus = 'Delivered';
           widget.order.status = 'Delivered';
