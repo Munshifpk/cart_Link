@@ -1113,6 +1113,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         const SizedBox(height: 8),
         ...cancelled.map<Widget>((c) {
           final prod = c['productId'];
+          final productId = prod is Map
+              ? (prod['_id'] ?? '')
+              : (c['productId'] ?? '');
           final name = prod is Map
               ? (prod['name'] ?? c['productName'] ?? 'Product')
               : (c['productName'] ?? 'Product');
@@ -1167,6 +1170,39 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       ),
                     ],
                   ),
+                  if ((productId ?? '').toString().isNotEmpty && qty > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              // Attempt to restore the cancelled quantity
+                              await _undoCancelProductByQuantity(
+                                productId.toString(),
+                                name,
+                                qty,
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.restore_from_trash,
+                              size: 14,
+                            ),
+                            label: const Text('Restore'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1604,6 +1640,39 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _showRemoveOneConfirmation(
+    BuildContext context,
+    String productId,
+    String productName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove 1 Item'),
+        content: Text(
+          'Are you sure you want to remove 1 unit of "$productName" from this order? This will update the order in the database.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _cancelProductByQuantity(productId, productName, 1);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Yes, Remove 1'),
+          ),
+        ],
       ),
     );
   }
