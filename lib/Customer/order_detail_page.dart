@@ -295,7 +295,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     final products = (_order['products'] as List?) ?? [];
     final deliveryAddress = (_order['deliveryAddress'] ?? '').toString();
     final otp = (_order['deliveryOtp'] ?? '').toString();
-    final loc = _order['deliveryLocation'] is Map ? _order['deliveryLocation'] as Map<String, dynamic> : null;
+    final loc = _order['deliveryLocation'] is Map
+        ? _order['deliveryLocation'] as Map<String, dynamic>
+        : null;
     final lat = loc != null ? (loc['lat'] as num?)?.toDouble() : null;
     final lng = loc != null ? (loc['lng'] as num?)?.toDouble() : null;
 
@@ -393,14 +395,20 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           children: [
                             const Text(
                               'Delivery Details',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             if (deliveryAddress.isNotEmpty)
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.location_on, color: Colors.deepOrange),
+                                  const Icon(
+                                    Icons.location_on,
+                                    color: Colors.deepOrange,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(child: Text(deliveryAddress)),
                                 ],
@@ -408,16 +416,27 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             if (lat != null && lng != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 6),
-                                child: Text('Coords: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}', style: const TextStyle(color: Colors.black54)),
+                                child: Text(
+                                  'Coords: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}',
+                                  style: const TextStyle(color: Colors.black54),
+                                ),
                               ),
                             if (otp.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.lock, color: Colors.deepOrange),
+                                    const Icon(
+                                      Icons.lock,
+                                      color: Colors.deepOrange,
+                                    ),
                                     const SizedBox(width: 8),
-                                    Text('Delivery OTP: $otp', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    Text(
+                                      'Delivery OTP: $otp',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -479,6 +498,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   const SizedBox(height: 16),
                   _buildOrderItemsSection(products),
+                  const SizedBox(height: 16),
                   const SizedBox(height: 16),
                   _buildCancelledProductsSection(
                     (_order['cancelledProducts'] as List?) ?? [],
@@ -738,8 +758,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                   children: [
                                     ElevatedButton.icon(
                                       onPressed: qty > 0
-                                          ? () async {
-                                              await _completeProductByQuantity(
+                                          ? () {
+                                              _confirmCompleteProduct(
+                                                context,
                                                 productId,
                                                 name,
                                                 qty,
@@ -765,18 +786,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                     const SizedBox(width: 8),
                                     ElevatedButton.icon(
                                       onPressed: qty > 0
-                                          ? () async {
-                                              await _cancelProductByQuantity(
+                                          ? () {
+                                              _showCancelProductConfirmation(
+                                                context,
                                                 productId,
                                                 name,
-                                                qty,
                                               );
                                             }
                                           : null,
-                                      icon: const Icon(
-                                        Icons.delete_forever,
-                                        size: 14,
-                                      ),
+                                      icon: const Icon(Icons.cancel, size: 14),
                                       label: const Text('Cancel'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.redAccent,
@@ -977,39 +995,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
-          if (productId.isNotEmpty)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showCancelProductConfirmation(context, productId, name);
-                  },
-                  icon: const Icon(Icons.cancel, size: 16),
-                  label: const Text('Cancel Product'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: qty > 0
-                      ? () async {
-                          Navigator.pop(context);
-                          await _cancelProductByQuantity(productId, name, qty);
-                        }
-                      : null,
-                  icon: const Icon(Icons.delete_forever, size: 16),
-                  label: const Text('Cancel All'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
+          // Cancel button removed from item details per request
         ],
       ),
     );
@@ -1523,6 +1509,113 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
+  // Completion flow: allow marking product(s) as completed by quantity.
+  void _confirmCompleteProduct(
+    BuildContext context,
+    String productId,
+    String productName,
+    int availableQty,
+  ) {
+    int completeQty = availableQty;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          return AlertDialog(
+            title: const Text('Mark Product Complete'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Product: $productName',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Available Quantity: $availableQty',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Quantity to mark complete:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: completeQty > 1
+                          ? () => setState(() => completeQty--)
+                          : null,
+                      icon: const Icon(Icons.remove),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.grey[200],
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          completeQty.toString(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: completeQty < availableQty
+                          ? () => setState(() => completeQty++)
+                          : null,
+                      icon: const Icon(Icons.add),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.grey[200],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This will mark $completeQty item${completeQty > 1 ? 's' : ''} as completed.',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('No'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _completeProductByQuantity(
+                    productId,
+                    productName,
+                    completeQty,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Yes, Complete'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _completeProductByQuantity(
     String productId,
     String productName,
@@ -1561,15 +1654,39 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
       if (mounted) {
         if (res.statusCode == 200 || res.statusCode == 201) {
+          String? completedRecordId;
+          int returnedQty = quantityToComplete;
+          try {
+            final body = jsonDecode(res.body);
+            if (body is Map && body.containsKey('data')) {
+              final data = body['data'];
+              if (data is Map) {
+                completedRecordId = (data['_id'] ?? data['id'])?.toString();
+                returnedQty = (data['quantity'] ?? returnedQty) as int;
+              }
+            } else if (body is Map) {
+              completedRecordId = (body['_id'] ?? body['id'])?.toString();
+              returnedQty = (body['quantity'] ?? returnedQty) as int;
+            }
+          } catch (_) {}
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Successfully completed $quantityToComplete item${quantityToComplete > 1 ? 's' : ''} of $productName',
+                'Successfully completed $returnedQty item${returnedQty > 1 ? 's' : ''} of $productName',
               ),
             ),
           );
-          // Refresh order data
+
           await _fetchOrderFromDatabase();
+
+          _showCompletionRecordedDialog(
+            context,
+            productId,
+            productName,
+            returnedQty,
+            completedRecordId,
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1587,6 +1704,44 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
+  }
+
+  void _showCompletionRecordedDialog(
+    BuildContext context,
+    String productId,
+    String productName,
+    int completedQty,
+    String? completedRecordId,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Completion Recorded'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Product: $productName'),
+            const SizedBox(height: 8),
+            Text('Quantity completed: $completedQty'),
+            if (completedRecordId != null && completedRecordId.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Record ID: $completedRecordId',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _cancelProductByQuantity(
@@ -1627,10 +1782,169 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
       if (mounted) {
         if (res.statusCode == 200 || res.statusCode == 201) {
+          // Try to parse returned data from backend so we can show DB-linked confirmation
+          String? cancelledRecordId;
+          int returnedQty = quantityToCancel;
+          try {
+            final body = jsonDecode(res.body);
+            if (body is Map && body.containsKey('data')) {
+              final data = body['data'];
+              if (data is Map) {
+                cancelledRecordId = (data['_id'] ?? data['id'])?.toString();
+                returnedQty = (data['quantity'] ?? returnedQty) as int;
+              }
+            } else if (body is Map) {
+              cancelledRecordId = (body['_id'] ?? body['id'])?.toString();
+              returnedQty = (body['quantity'] ?? returnedQty) as int;
+            }
+          } catch (_) {}
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Successfully cancelled $quantityToCancel item${quantityToCancel > 1 ? 's' : ''} of $productName',
+                'Successfully cancelled $returnedQty item${returnedQty > 1 ? 's' : ''} of $productName',
+              ),
+            ),
+          );
+          // Refresh order data
+          await _fetchOrderFromDatabase();
+
+          // Show DB-linked cancellation confirmation (no undo option)
+          _showCancellationRecordedDialog(
+            context,
+            productId,
+            productName,
+            returnedQty,
+            cancelledRecordId,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to cancel product. Status: ${res.statusCode}',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  void _showCancellationRecordedDialog(
+    BuildContext context,
+    String productId,
+    String productName,
+    int cancelledQty,
+    String? cancelledRecordId,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Cancellation Recorded'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Product: $productName'),
+            const SizedBox(height: 8),
+            Text('Quantity cancelled: $cancelledQty'),
+            if (cancelledRecordId != null && cancelledRecordId.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Record ID: $cancelledRecordId',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Completion-recorded dialog removed (completion flow disabled)
+
+  Future<void> _undoCancelProductByQuantity(
+    String productId,
+    String productName,
+    int quantityToRestore,
+  ) async {
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ?? AuthState.currentCustomer?['id'];
+      final orderId = _order['_id'] ?? _order['id'];
+
+      if (customerId == null || orderId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to process undo')),
+          );
+        }
+        return;
+      }
+
+      // Attempt to link undo to the DB cancelledProducts entry in the
+      // refreshed `_order`. Prefer using the DB record's id and quantity
+      // when available so backend can restore the exact cancellation record.
+      final cancelledList = (_order['cancelledProducts'] as List?) ?? [];
+      Map<String, dynamic>? cancelledRecord;
+      for (var i = cancelledList.length - 1; i >= 0; i--) {
+        final c = cancelledList[i];
+        final prod = c['productId'];
+        final pId = prod is Map ? (prod['_id'] ?? '') : (c['productId'] ?? '');
+        if (pId == productId) {
+          cancelledRecord = c as Map<String, dynamic>?;
+          break;
+        }
+      }
+
+      String? cancelledRecordId;
+      int payloadQuantity = quantityToRestore;
+      if (cancelledRecord != null) {
+        cancelledRecordId = cancelledRecord['_id'] ?? cancelledRecord['id'];
+        payloadQuantity =
+            (cancelledRecord['quantity'] ?? payloadQuantity) as int;
+      }
+
+      final uri = backendUri('/api/orders/$orderId/undo-cancel-product');
+      final payload = {
+        'productId': productId,
+        'productName': productName,
+        'quantityToRestore': payloadQuantity,
+        'customerId': customerId,
+        'restoredAt': DateTime.now().toIso8601String(),
+      };
+      if (cancelledRecordId != null &&
+          cancelledRecordId.toString().isNotEmpty) {
+        payload['cancelledRecordId'] = cancelledRecordId;
+      }
+
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (mounted) {
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Successfully restored $quantityToRestore item${quantityToRestore > 1 ? 's' : ''} of $productName',
               ),
             ),
           );
@@ -1640,7 +1954,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Failed to cancel product. Status: ${res.statusCode}',
+                'Failed to undo cancellation. Status: ${res.statusCode}',
               ),
             ),
           );
