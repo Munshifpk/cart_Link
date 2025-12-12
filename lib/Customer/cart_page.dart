@@ -7,7 +7,7 @@ import 'package:cart_link/Customer/customer_home.dart';
 import 'package:cart_link/services/auth_state.dart';
 import 'package:cart_link/Customer/shop_products_page.dart';
 import 'package:cart_link/Customer/product_purchase_page.dart';
-import 'package:cart_link/Customer/checkout_page.dart';
+import 'package:cart_link/Customer/order/checkout_page.dart';
 import 'package:cart_link/constant.dart';
 
 class CustomerCartPage extends StatefulWidget {
