@@ -183,7 +183,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             p.administrativeArea,
             p.postalCode,
             p.country,
-          ].where((e) => e != null && e!.trim().isNotEmpty).map((e) => e!.trim()).join(', ');
+          ].where((e) => e != null && e.trim().isNotEmpty).map((e) => e!.trim()).join(', ');
           setState(() {
             _addressCtrl.text = address.isNotEmpty
                 ? address
@@ -296,7 +296,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             p.administrativeArea,
             p.postalCode,
             p.country,
-          ].where((e) => e != null && e!.trim().isNotEmpty).map((e) => e!.trim()).join(', ');
+          ].where((e) => e != null && e.trim().isNotEmpty).map((e) => e!.trim()).join(', ');
           setState(() {
             _addressCtrl.text = address;
           });
