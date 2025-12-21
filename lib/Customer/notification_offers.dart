@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cart_link/Customer/app_updates_page.dart';
 import 'package:cart_link/Customer/product_purchase_page.dart';
 import 'package:cart_link/services/auth_state.dart';
@@ -18,41 +16,40 @@ class OffersFollowedShopsPage extends StatefulWidget {
 }
 
 class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
-  List<Map<String, dynamic>> _offers = [];
+  List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
   String? _errorMessage;
-  bool _offersEnabled = true;
-  static const String _offersEnabledKey = 'offers_notifications_enabled';
 
   @override
   void initState() {
     super.initState();
-    _loadNotificationSettings();
-    _fetchOffers();
+    _fetchNotifications();
   }
 
-  Future<void> _loadNotificationSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool(_offersEnabledKey);
-    setState(() => _offersEnabled = enabled ?? true);
-  }
-
-  Future<void> _fetchOffers() async {
+  Future<void> _fetchNotifications() async {
     try {
       setState(() => _isLoading = true);
-      final uri = backendUri(kApiProducts);
+      final customerId =
+          AuthState.currentCustomer?['_id'] ?? AuthState.currentCustomer?['id'];
+      if (customerId == null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Customer not logged in';
+        });
+        return;
+      }
+      final uri = backendUri('$kApiNotifications/$customerId');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-        final List<dynamic> productsList =
+        final List<dynamic> notificationsList =
             (body is Map && body.containsKey('data'))
             ? (body['data'] as List<dynamic>)
             : (body is List ? body : []);
         if (mounted) {
           setState(() {
-            _offers = productsList
-                .map((p) => Map<String, dynamic>.from(p as Map))
-                .take(10)
+            _notifications = notificationsList
+                .map((n) => Map<String, dynamic>.from(n as Map))
                 .toList();
             _isLoading = false;
             _errorMessage = null;
@@ -62,7 +59,7 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Failed to load offers';
+            _errorMessage = 'Failed to load notifications';
           });
         }
       }
@@ -70,7 +67,7 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Error loading offers: $e';
+          _errorMessage = 'Error loading notifications: $e';
         });
       }
     }
@@ -105,52 +102,32 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
     }
   }
 
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+      if (diff.inDays > 0) {
+        return '${diff.inDays}d ago';
+      } else if (diff.inHours > 0) {
+        return '${diff.inHours}h ago';
+      } else {
+        return '${diff.inMinutes}m ago';
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications - Offers'),
+        title: const Text('Notifications - Products'),
         foregroundColor: ThemeColors.textColorWhite,
         backgroundColor: ThemeColors.primary,
         actions: [
-          IconButton(
-            tooltip: 'Notification settings',
-            icon: const Icon(Icons.tune),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: const Text('Notification Preferences'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SwitchListTile(
-                        title: const Text('Offers & Promotions'),
-                        value: _offersEnabled,
-                        onChanged: (val) async {
-                          setState(() => _offersEnabled = val);
-                          try {
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setBool(_offersEnabledKey, val);
-                            if (val) _fetchOffers();
-                          } catch (e) {
-                            if (kDebugMode)
-                              print('Error saving preference: $e');
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
           IconButton(
             tooltip: 'App updates',
             icon: const Icon(Icons.info_outline),
@@ -175,14 +152,14 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
                   Text(_errorMessage!),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _fetchOffers,
+                    onPressed: _fetchNotifications,
                     child: const Text('Retry'),
                   ),
                 ],
               ),
             )
-          : _offers.isEmpty
-          ? const Center(child: Text('No offers available'))
+          : _notifications.isEmpty
+          ? const Center(child: Text('No notifications available'))
           : SafeArea(
               child: Container(
                 width: double.infinity,
@@ -190,99 +167,95 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
                 padding: const EdgeInsets.all(12),
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: _offers.length,
+                  itemCount: _notifications.length,
                   separatorBuilder: (_, __) => const Divider(),
                   itemBuilder: (context, i) {
-                    final offer = _offers[i];
-                    final image = (offer['image'] is String)
-                        ? (offer['image'] as String)
-                        : '';
-                    // Safely get shop name for avatar and text
-                    final shopName =
-                        offer['shop'] ??
-                        offer['shopName'] ??
-                        offer['owner'] ??
-                        '';
-                    final shopInitial =
-                        (shopName is String && shopName.isNotEmpty)
-                        ? shopName[0]
-                        : '?';
+                    final notification = _notifications[i];
+                    final isRead = notification['isRead'] ?? false;
                     return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductPurchasePage(offer: offer),
-                          ),
-                        );
-                      },
-                      onLongPress: () async {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Adding to cart...')),
-                        );
-                        final ok = await _quickAddToCart(offer);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ok ? 'Added to cart' : 'Failed to add to cart',
-                              ),
-                            ),
-                          );
+                      onTap: () async {
+                        // Mark as read
+                        final notificationId =
+                            notification['_id'] ?? notification['id'];
+                        if (notificationId != null && !isRead) {
+                          try {
+                            final uri = backendUri(
+                              '$kApiNotifications/$notificationId/read',
+                            );
+                            await http.put(
+                              uri,
+                              headers: {'Content-Type': 'application/json'},
+                            );
+                            setState(() => notification['isRead'] = true);
+                          } catch (e) {
+                            // Ignore error
+                          }
+                        }
+                        // If offer type, navigate to product
+                        if (notification['type'] == 'offer' &&
+                            notification['data'] != null) {
+                          final productId = notification['data']['productId'];
+                          if (productId != null) {
+                            // Fetch product details
+                            try {
+                              final productUri = backendUri(
+                                '$kApiProducts/$productId',
+                              );
+                              final res = await http.get(productUri);
+                              if (res.statusCode == 200) {
+                                final body = jsonDecode(res.body);
+                                final product = body['data'];
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ProductPurchasePage(offer: product),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              // Ignore
+                            }
+                          }
                         }
                       },
                       child: ListTile(
-                        leading: image.isNotEmpty
+                        leading:
+                            (notification['data'] != null &&
+                                notification['data']['image'] != null)
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: Image.network(
-                                  image,
+                                  notification['data']['image'],
                                   width: 48,
                                   height: 48,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      CircleAvatar(child: Text(shopInitial)),
+                                  errorBuilder: (_, __, ___) => Icon(
+                                    notification['type'] == 'offer'
+                                        ? Icons.local_offer
+                                        : Icons.notifications,
+                                    color: isRead ? Colors.grey : Colors.blue,
+                                  ),
                                 ),
                               )
-                            : CircleAvatar(
-                                backgroundColor: Colors.blue.shade50,
-                                child: Text(shopInitial),
+                            : Icon(
+                                notification['type'] == 'offer'
+                                    ? Icons.local_offer
+                                    : Icons.notifications,
+                                color: isRead ? Colors.grey : Colors.blue,
                               ),
                         title: Text(
-                          offer['product'] ?? offer['productName'] ?? 'Product',
+                          notification['title'] ?? 'Notification',
+                          style: TextStyle(
+                            fontWeight: isRead
+                                ? FontWeight.normal
+                                : FontWeight.bold,
+                          ),
                         ),
-                        subtitle: Text(
-                          '${shopName is String && shopName.isNotEmpty ? shopName : 'Shop'} • Valid till ${offer['validTill'] ?? 'N/A'}',
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '₹${offer['price'] ?? 0}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '-${offer['discount'] ?? 0}%',
-                                style: const TextStyle(
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
+                        subtitle: Text(notification['message'] ?? ''),
+                        trailing: Text(
+                          _formatDate(notification['createdAt']),
+                          style: const TextStyle(fontSize: 12),
                         ),
                       ),
                     );

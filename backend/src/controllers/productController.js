@@ -29,6 +29,32 @@ exports.createProduct = async (req, res) => {
         });
 
         await product.save();
+
+        // Send notifications to followers
+        if (product.ownerId) {
+            try {
+                const Shop = require('../models/Shop');
+                const Notification = require('../models/Notification');
+
+                const shop = await Shop.findById(product.ownerId).select('followers shopName').lean();
+                if (shop && shop.followers && shop.followers.length > 0) {
+                    const notifications = shop.followers.map(followerId => ({
+                        customerId: followerId,
+                        title: 'New Product Available',
+                        message: `Check out the new product: ${product.name}${product.category ? ` (${product.category})` : ''} from ${shop.shopName}`,
+                        type: 'offer',
+                        data: { productId: product._id, shopId: product.ownerId, image: product.images?.[0] || null, category: product.category || null }
+                    }));
+
+                    await Notification.insertMany(notifications);
+                    console.log(`Sent ${notifications.length} notifications for new product: ${product.name}`);
+                }
+            } catch (notifErr) {
+                console.error('Error sending notifications:', notifErr);
+                // Don't fail the product creation if notifications fail
+            }
+        }
+
         return res.status(201).json({ success: true, message: 'Product created', data: product });
     } catch (err) {
         console.error('createProduct error:', err);
@@ -128,6 +154,60 @@ exports.updateProduct = async (req, res) => {
         return res.json({ success: true, message: 'Product updated', data: updated });
     } catch (err) {
         console.error('updateProduct error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.getFollowedShopsProducts = async (req, res) => {
+    try {
+        const { customerId } = req.query;
+
+        if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
+            return res.status(400).json({ success: false, message: 'Valid customerId is required' });
+        }
+
+        const Customer = require('../models/Customer');
+
+        // Get customer's following list
+        const customer = await Customer.findById(customerId).select('following').lean();
+        if (!customer) {
+            return res.status(404).json({ success: false, message: 'Customer not found' });
+        }
+
+        const followingIds = customer.following || [];
+        if (followingIds.length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+
+        // Get products from followed shops
+        const products = await Product.find({ 
+            ownerId: { $in: followingIds },
+            isActive: true 
+        }).lean();
+
+        return res.json({ success: true, data: products });
+    } catch (err) {
+        console.error('getFollowedShopsProducts error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.getProductById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: 'Invalid product ID' });
+        }
+
+        const product = await Product.findById(id).lean();
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        return res.json({ success: true, data: product });
+    } catch (err) {
+        console.error('getProductById error:', err);
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 };
