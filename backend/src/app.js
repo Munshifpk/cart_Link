@@ -1,5 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const session = require('express-session');
+const { MongoStore } = require('connect-mongo');
+const mongoose = require('mongoose');
 require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const shopRoutes = require('./routes/shopRoutes');
@@ -15,11 +18,29 @@ const app = express();
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Configure session middleware with MongoDB store for persistence
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'cart-link-session-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    store: new MongoStore({
+        client: mongoose.connection.getClient(),
+        touchAfter: 24 * 3600, // Update session once per 24 hours unless changed
+    }),
+    cookie: {
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        sameSite: 'lax'
+    }
+}));
 
 // Set request timeout to 2 minutes
 app.use((req, res, next) => {

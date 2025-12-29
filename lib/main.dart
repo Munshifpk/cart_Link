@@ -1,4 +1,8 @@
 import 'package:cart_link/Admin/admin_home.dart';
+import 'package:cart_link/Customer/customer_home.dart';
+import 'package:cart_link/Shops/bottom bar/home-shops.dart';
+import 'package:cart_link/services/auth_state.dart';
+import 'package:cart_link/services/auth_storage.dart';
 import 'package:flutter/material.dart';
 import 'Customer/login.dart';
 import 'Shops/login-Shops.dart';
@@ -20,7 +24,122 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Cart Link',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const HomePage(),
+      home: const SplashScreen(),
+    );
+  }
+}
+
+/// Splash screen that checks for existing sessions and auto-logins
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    // Wait a moment for splash effect
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    try {
+      // Check for existing sessions
+      final userType = await AuthStorage.getCurrentUserType();
+
+      if (!mounted) return;
+
+      if (userType == 'customer') {
+        // Load customer session
+        await AuthState.loadCustomerFromStorage();
+        final customerData = AuthState.currentCustomer;
+        
+        if (customerData != null) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => CustomerHome(
+                customer: Customer(
+                  id: customerData['_id']?.toString(),
+                  customerName: customerData['customerName'] ?? '',
+                  email: customerData['email'],
+                  mobile: customerData['mobile'] is int
+                      ? customerData['mobile']
+                      : (int.tryParse(customerData['mobile']?.toString() ?? '')),
+                  address: customerData['address'],
+                  createdAt: customerData['createdAt'] != null
+                      ? DateTime.tryParse(customerData['createdAt'])
+                      : null,
+                ),
+              ),
+            ),
+          );
+          return;
+        }
+      } else if (userType == 'shop') {
+        // Load shop session
+        await AuthState.loadOwnerFromStorage();
+        
+        if (AuthState.currentOwner != null) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const ShopHomePage()),
+          );
+          return;
+        }
+      }
+
+      // No valid session found, go to home page
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } catch (e) {
+      print('Session check error: $e');
+      // On error, go to home page
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1E88E5), Color(0xFF0D47A1)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.shopping_cart, size: 80, color: Colors.white),
+              SizedBox(height: 20),
+              Text(
+                'Cart Link',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: 20),
+              CircularProgressIndicator(color: Colors.white),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

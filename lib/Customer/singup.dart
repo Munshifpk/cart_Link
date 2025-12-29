@@ -71,27 +71,38 @@ class _SignUpPageState extends State<SignUpPage> {
 
       if (result['success'] == true) {
         _showMessage('Welcome, ${_nameController.text}!');
-        // Save customer into shared AuthState so other pages can access id
+        // Save customer into shared AuthState and persistent storage
         try {
           // Backend returns customer data under 'customer' key
           final serverCustomer =
               result['customer'] as Map<String, dynamic>? ??
               result['data'] as Map<String, dynamic>?;
+          final token = result['token'] as String?;
+          
           if (serverCustomer != null && serverCustomer['_id'] != null) {
             // Use server-returned customer data (includes _id)
-            AuthState.setCustomer(serverCustomer);
+            if (token != null) {
+              await AuthState.setCustomer(serverCustomer, token: token);
+            } else {
+              await AuthState.setCustomer(serverCustomer);
+            }
           } else {
             // Fallback: use local data but this won't have _id (cart will fail)
-            AuthState.setCustomer({
+            final fallbackData = {
               '_id': null, // Will cause cart to fail - user must log in instead
               'customerName': _nameController.text,
               'mobile': mobileParsed,
               'email': _emailController.text,
-            });
+            };
+            if (token != null) {
+              await AuthState.setCustomer(fallbackData, token: token);
+            } else {
+              await AuthState.setCustomer(fallbackData);
+            }
           }
         } catch (e) {
           print('Error setting customer auth: $e');
-          AuthState.setCustomer({
+          await AuthState.setCustomer({
             'customerName': _nameController.text,
             'mobile': mobileParsed,
             'email': _emailController.text,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'bottom bar/home-shops.dart';
 import '../services/auth_service.dart';
+import '../services/auth_state.dart';
 
 /// Simple AuthService implementation — replace endpoints with your real API.
 
@@ -155,6 +156,18 @@ class _ShopSignUpPageState extends State<ShopSignUpPage> {
 
       if (result['success'] == true) {
         print('✅ Signup successful');
+
+        // Save shop owner session to persistent storage
+        try {
+          final owner = result['owner'] as Map<String, dynamic>?;
+          final token = result['token'] as String?;
+          
+          if (owner != null && token != null) {
+            await AuthState.setOwner(owner, token: token);
+          }
+        } catch (e) {
+          print('Error saving shop session: $e');
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

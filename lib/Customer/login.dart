@@ -66,15 +66,24 @@ class _LoginPageState extends State<LoginPage> {
         if (data['success'] == true) {
           print('✅ Login successful');
 
-          // final token = data['token'];
+          final token = data['token'];
           final customer = data['owner'];
+          
+          // Save session to persistent storage
           try {
-            if (customer is Map<String, dynamic>) {
-              AuthState.setCustomer(customer);
-            } else if (customer is Map) {
-              AuthState.setCustomer(Map<String, dynamic>.from(customer));
+            final customerMap = customer is Map<String, dynamic>
+                ? customer
+                : Map<String, dynamic>.from(customer as Map);
+            
+            // Save to persistent storage with token
+            if (token != null) {
+              await AuthState.setCustomer(customerMap, token: token);
+            } else {
+              await AuthState.setCustomer(customerMap);
             }
-          } catch (_) {}
+          } catch (e) {
+            print('Error saving customer session: $e');
+          }
           // print('data : $data');
           // print(  '👤 Customer data: $customer');
 

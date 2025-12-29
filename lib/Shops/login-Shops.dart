@@ -68,13 +68,24 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
         if (data['success'] == true) {
           print('✅ Login successful');
 
-          // final token = data['token'];
+          final token = data['token'];
           final owner = data['owner'];
 
-          // Save owner into AuthState so other pages can access owner id
+          // Save owner into AuthState and persistent storage
           try {
-            AuthState.setOwner(owner as Map<String, dynamic>?);
-          } catch (_) {}
+            final ownerMap = owner is Map<String, dynamic>
+                ? owner
+                : Map<String, dynamic>.from(owner as Map);
+            
+            // Save to persistent storage with token
+            if (token != null) {
+              await AuthState.setOwner(ownerMap, token: token);
+            } else {
+              await AuthState.setOwner(ownerMap);
+            }
+          } catch (e) {
+            print('Error saving shop session: $e');
+          }
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

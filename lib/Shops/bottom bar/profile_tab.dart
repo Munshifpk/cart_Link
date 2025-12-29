@@ -339,7 +339,11 @@ class _ProfileTabState extends State<ProfileTab> {
       ),
     );
 
-    if (confirm == true && mounted) {
+    if (confirm == true) {
+      // Clear shop owner session
+      await AuthState.logoutOwner();
+      
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomePage()),
         (route) => false,

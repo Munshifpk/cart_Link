@@ -502,13 +502,18 @@ class _CustomerProfilePageState extends State<CustomerProfilePage> {
                       child: const Text('Cancel'),
                     ),
                     TextButton(
-                      onPressed: () {
+                      onPressed: () async {
+                        // Clear customer session
+                        await AuthState.logoutCustomer();
+                        
+                        if (!context.mounted) return;
                         Navigator.pop(context);
-                        Navigator.push(
+                        Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
                             builder: (context) => app_main.HomePage(),
                           ),
+                          (route) => false,
                         );
                       },
                       child: const Text(

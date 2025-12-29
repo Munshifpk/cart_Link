@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'login-Shops.dart';
 import '../main.dart';
+import '../services/auth_state.dart';
 
 class ShopSettingsPage extends StatefulWidget {
   const ShopSettingsPage({super.key});
@@ -34,7 +35,10 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
     );
 
     if (confirm == true) {
-      // TODO: clear auth/session data if any
+      // Clear shop owner session
+      await AuthState.logoutOwner();
+      
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
