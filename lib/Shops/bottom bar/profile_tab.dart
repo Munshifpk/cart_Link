@@ -28,7 +28,7 @@ class _ProfileTabState extends State<ProfileTab> {
   final ImagePicker _picker = ImagePicker();
 
   final _formKey = GlobalKey<FormState>();
-  
+
   String? _shopId;
   int _followersCount = 0;
   bool _loadingShop = true;
@@ -43,7 +43,7 @@ class _ProfileTabState extends State<ProfileTab> {
     try {
       final shopId = AuthState.currentOwner?['_id']?.toString();
       print('🔍 Loading shop data for ID: $shopId');
-      
+
       if (shopId == null || shopId.isEmpty) {
         print('❌ No shop ID found in AuthState');
         if (mounted) {
@@ -56,28 +56,29 @@ class _ProfileTabState extends State<ProfileTab> {
       final resp = await http
           .get(backendUri('$kApiShops/$shopId'))
           .timeout(const Duration(seconds: 10));
-      
+
       print('📡 Response status: ${resp.statusCode}');
-      
+
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final shop = data['data'];
-        
+
         print('📦 Shop data: $shop');
 
         if (shop != null && mounted) {
           _shopId = shop['_id']?.toString();
           final followers = shop['followers'] as List? ?? [];
-          
+
           final loadedShopName = shop['shopName']?.toString() ?? '';
-          final loadedAddress = shop['location']?.toString() ?? shop['address']?.toString() ?? '';
+          final loadedAddress =
+              shop['location']?.toString() ?? shop['address']?.toString() ?? '';
           final loadedEmail = shop['email']?.toString() ?? '';
           final loadedPhone = shop['mobile']?.toString() ?? '';
           final loadedName = shop['ownerName']?.toString() ?? '';
-          
+
           print('📱 Loaded phone: $loadedPhone');
           print('📧 Loaded email: $loadedEmail');
-          
+
           setState(() {
             shopName = loadedShopName;
             address = loadedAddress;
@@ -109,9 +110,9 @@ class _ProfileTabState extends State<ProfileTab> {
 
   Future<void> _showFollowersList() async {
     if (_shopId == null || _shopId!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Shop ID not found')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Shop ID not found')));
       return;
     }
 
@@ -146,7 +147,10 @@ class _ProfileTabState extends State<ProfileTab> {
                     padding: EdgeInsets.all(16),
                     child: Text(
                       'Followers',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -155,14 +159,22 @@ class _ProfileTabState extends State<ProfileTab> {
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final follower = followers[index];
-                        final followerName = follower['customerName']?.toString() ?? 'Customer';
-                        final followerEmail = follower['email']?.toString() ?? '';
+                        final followerName =
+                            follower['customerName']?.toString() ?? 'Customer';
+                        final followerEmail =
+                            follower['email']?.toString() ?? '';
                         return ListTile(
                           leading: CircleAvatar(
-                            child: Text(followerName.isNotEmpty ? followerName[0].toUpperCase() : 'C'),
+                            child: Text(
+                              followerName.isNotEmpty
+                                  ? followerName[0].toUpperCase()
+                                  : 'C',
+                            ),
                           ),
                           title: Text(followerName),
-                          subtitle: followerEmail.isNotEmpty ? Text(followerEmail) : null,
+                          subtitle: followerEmail.isNotEmpty
+                              ? Text(followerEmail)
+                              : null,
                         );
                       },
                     ),
@@ -179,9 +191,9 @@ class _ProfileTabState extends State<ProfileTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading followers: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading followers: $e')));
       }
     }
   }
@@ -308,6 +320,33 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
+  Future<void> _confirmLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+        (route) => false,
+      );
+    }
+  }
+
   Widget _infoTile(IconData icon, String title, String subtitle) {
     return ListTile(
       leading: Icon(icon, color: Colors.blueGrey),
@@ -384,7 +423,11 @@ class _ProfileTabState extends State<ProfileTab> {
                 ListTile(
                   leading: const Icon(Icons.group, color: Colors.blueGrey),
                   title: const Text('Followers'),
-                  subtitle: Text(_loadingShop ? 'Loading...' : '$_followersCount follower(s)'),
+                  subtitle: Text(
+                    _loadingShop
+                        ? 'Loading...'
+                        : '$_followersCount follower(s)',
+                  ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: _loadingShop ? null : _showFollowersList,
                 ),
@@ -427,12 +470,7 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const HomePage()),
-                (route) => false,
-              );
-            },
+            onPressed: _confirmLogout,
             icon: const Icon(Icons.logout),
             label: const Text('Logout'),
           ),

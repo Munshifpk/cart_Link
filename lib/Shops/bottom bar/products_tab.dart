@@ -90,9 +90,7 @@ class _ProductsTabState extends State<ProductsTab> {
   void _applyLocalAvailability(String productId, bool inStock) {
     setState(() {
       _products = _products
-          .map((p) => p.id == productId
-              ? _copyWithAvailability(p, inStock)
-              : p)
+          .map((p) => p.id == productId ? _copyWithAvailability(p, inStock) : p)
           .toList();
     });
   }
@@ -643,7 +641,8 @@ class _ProductsTabState extends State<ProductsTab> {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           final snapshotProducts = snapshot.data;
-          if (_products.isEmpty && (snapshotProducts == null || snapshotProducts.isEmpty)) {
+          if (_products.isEmpty &&
+              (snapshotProducts == null || snapshotProducts.isEmpty)) {
             return const Center(child: Text('No products found.'));
           }
 
@@ -782,10 +781,8 @@ class _ProductsTabState extends State<ProductsTab> {
                                 scale: 0.9,
                                 child: Switch(
                                   value: product.inStock,
-                                  onChanged: (v) => _confirmAvailabilityChange(
-                                    product,
-                                    v,
-                                  ),
+                                  onChanged: (v) =>
+                                      _confirmAvailabilityChange(product, v),
                                   activeColor: Colors.green,
                                   materialTapTargetSize:
                                       MaterialTapTargetSize.shrinkWrap,

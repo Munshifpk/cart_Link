@@ -1029,7 +1029,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    offer['description'] ?? 'High-quality product with excellent quality and durability.',
+                    offer['description'] ??
+                        'High-quality product with excellent quality and durability.',
                     style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 24),
