@@ -71,35 +71,33 @@ class _SearchPageState extends State<SearchPage> {
     try {
       final encodedQuery = Uri.encodeQueryComponent(trimmed);
 
-      // Fetch products
-      final productsResponse = await http
-          .get(backendUri('/api/products/search', queryParameters: {'q': encodedQuery}))
-          .timeout(const Duration(seconds: 10));
-
-      // Fetch shops
-      final shopsResponse = await http
-          .get(backendUri('/api/Shops/search', queryParameters: {'q': encodedQuery}))
-          .timeout(const Duration(seconds: 10));
-
-      // Fetch categories
-      final categoriesResponse = await http
-          .get(backendUri('/api/categories/search', queryParameters: {'q': encodedQuery}))
-          .timeout(const Duration(seconds: 10));
+      // Fetch all three in parallel for faster loading
+      final results = await Future.wait([
+        http.get(backendUri('/api/products/search', queryParameters: {'q': encodedQuery}))
+            .timeout(const Duration(seconds: 5)),
+        http.get(backendUri('/api/Shops/search', queryParameters: {'q': encodedQuery}))
+            .timeout(const Duration(seconds: 5)),
+        http.get(backendUri('/api/categories/search', queryParameters: {'q': encodedQuery}))
+            .timeout(const Duration(seconds: 5)),
+      ]);
 
       if (mounted) {
         setState(() {
-          if (productsResponse.statusCode == 200) {
-            final data = jsonDecode(productsResponse.body);
+          // Products
+          if (results[0].statusCode == 200) {
+            final data = jsonDecode(results[0].body);
             _products = data['data'] ?? data ?? [];
           }
 
-          if (shopsResponse.statusCode == 200) {
-            final data = jsonDecode(shopsResponse.body);
+          // Shops
+          if (results[1].statusCode == 200) {
+            final data = jsonDecode(results[1].body);
             _shops = data['data'] ?? data ?? [];
           }
 
-          if (categoriesResponse.statusCode == 200) {
-            final data = jsonDecode(categoriesResponse.body);
+          // Categories
+          if (results[2].statusCode == 200) {
+            final data = jsonDecode(results[2].body);
             _categories = data['data'] ?? data ?? [];
           }
 

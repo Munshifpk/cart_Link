@@ -87,8 +87,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   Future<void> _loadCategoryData() async {
     try {
-      // Fetch all shops via ShopService
-      final shopsResult = await ShopService.getAllShops();
+      // Fetch shops and products in parallel for faster loading
+      final results = await Future.wait([
+        ShopService.getAllShops(),
+        ProductService.getProducts(),
+      ]);
+
+      final shopsResult = results[0];
+      final productsResult = results[1];
+
       if (shopsResult['success'] != true) {
         if (!mounted) return;
         setState(() => _loading = false);
@@ -103,53 +110,51 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         return shopCategory.toString() == widget.category;
       }).toList();
 
-        // Get shop IDs for product fetching
-        final shopIds = filteredShops
+      // Get shop IDs for product filtering
+      final shopIds = filteredShops
           .map((s) => s['_id']?.toString() ?? '')
           .where((id) => id.isNotEmpty)
           .toList();
 
-        // Fetch all products via ProductService (returns lightweight list without images)
-        final result = await ProductService.getProducts();
-        if (result['data'] != null) {
-          final allProducts = (result['data'] as List? ?? [])
-              .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
-              .toList();
+      if (productsResult['data'] != null) {
+        final allProducts = (productsResult['data'] as List? ?? [])
+            .map<Map<String, dynamic>>((p) => Map<String, dynamic>.from(p))
+            .toList();
 
-          // Filter products by category shops
-          final filteredProducts = allProducts.where((product) {
-            final ownerId = product['ownerId'] ?? product['shopId'] ?? '';
-            return shopIds.contains(ownerId.toString());
-          }).toList();
+        // Filter products by category shops
+        final filteredProducts = allProducts.where((product) {
+          final ownerId = product['ownerId'] ?? product['shopId'] ?? '';
+          return shopIds.contains(ownerId.toString());
+        }).toList();
 
-          // For each filtered product, try to fetch images and attach them
-          final productsWithImages = await Future.wait(
-              filteredProducts.map<Future<Map<String, dynamic>>>((product) async {
-            try {
-              final id = (product['_id'] ?? product['id'] ?? '').toString();
-              if (id.isNotEmpty) {
-                final imgs = await ProductService.getProductImages(id);
-                if (imgs.isNotEmpty) product['images'] = imgs;
-              }
-            } catch (e) {
-              // ignore image fetch issues for now
+        // Fetch images for all filtered products in parallel
+        final productsWithImages = await Future.wait(
+            filteredProducts.map<Future<Map<String, dynamic>>>((product) async {
+          try {
+            final id = (product['_id'] ?? product['id'] ?? '').toString();
+            if (id.isNotEmpty) {
+              final imgs = await ProductService.getProductImages(id);
+              if (imgs.isNotEmpty) product['images'] = imgs;
             }
-            return product;
-          }));
-
-          if (!mounted) return;
-          setState(() {
-            _categoryShops = filteredShops
-                .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
-                .toList();
-            _categoryProducts = productsWithImages;
-            _loading = false;
-          });
-          } else {
-            if (!mounted) return;
-            setState(() => _loading = false);
+          } catch (e) {
+            // ignore image fetch issues for now
           }
-      } catch (e) {
+          return product;
+        }));
+
+        if (!mounted) return;
+        setState(() {
+          _categoryShops = filteredShops
+              .map<Map<String, dynamic>>((s) => Map<String, dynamic>.from(s))
+              .toList();
+          _categoryProducts = productsWithImages;
+          _loading = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() => _loading = false);
+      }
+    } catch (e) {
       print('Error loading category data: $e');
       setState(() => _loading = false);
     }
