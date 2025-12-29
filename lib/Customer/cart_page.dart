@@ -9,6 +9,9 @@ import 'package:cart_link/Customer/shop_products_page.dart';
 import 'package:cart_link/Customer/product_purchase_page.dart';
 import 'package:cart_link/Customer/order/checkout_page.dart';
 import 'package:cart_link/constant.dart';
+import 'package:cart_link/shared/notification_actions.dart';
+import 'package:cart_link/Customer/search_page.dart';
+import '../theme_data.dart';
 
 class CustomerCartPage extends StatefulWidget {
   final Customer? customer;
@@ -478,7 +481,72 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
           )
         : _buildCartContent(width, s);
 
-    return content;
+    final canPop = Navigator.canPop(context);
+
+    return Scaffold(
+      appBar: canPop
+          ? AppBar(
+              backgroundColor: ThemeColors.primary,
+              foregroundColor: Colors.white,
+              toolbarHeight: 64,
+              centerTitle: false,
+              elevation: 2,
+              leading: BackButton(color: Colors.white),
+              title: Row(
+                children: [
+                  // Search bar shortcut (matches home style)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SearchPage()),
+                        );
+                      },
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search, color: Colors.grey[600], size: 18),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: Text(
+                                'Search products...',
+                                style: TextStyle(fontSize: 13, color: Colors.black54),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // Notifications icon
+                  const NotificationActions(),
+
+                  const SizedBox(width: 4),
+
+                  // Cart icon (no-op since we're already on cart page)
+                  IconButton(
+                    icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                    onPressed: () {},
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            )
+          : null,
+      body: content,
+    );
   }
 
   Widget _buildCartContent(double width, double s) {

@@ -753,98 +753,179 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
             ),
             const SizedBox(height: 12),
 
-            // Random products under Popular Shops (vertical grid: 3 columns)
+            // Random products under Popular Shops (responsive grid matching recommended products)
             if (_loadingPopularAreaProducts)
               const SizedBox(
                 height: 120,
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (_popularAreaProducts.isNotEmpty)
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  // Make tiles wider/taller so images are more prominent
-                  childAspectRatio: 0.95,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: _popularAreaProducts.length,
-                itemBuilder: (context, index) {
-                  final p = _popularAreaProducts[index];
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  // Dynamic column count based on screen width (same as recommended products)
+                  int cols = 2;
+                  if (constraints.maxWidth >= 600) cols = 3;
+                  if (constraints.maxWidth >= 900) cols = 4;
+                  if (constraints.maxWidth >= 1200) cols = 5;
 
-                  final images = (p['images'] is List)
-                      ? (p['images'] as List).cast<String>()
-                      : <String>[];
-                  final thumb = images.isNotEmpty ? images[0] : '';
-                  final price = p['price'] ?? 0;
-                  final double pr = (price is num)
-                      ? price.toDouble()
-                      : double.tryParse(price.toString()) ?? 0.0;
-
-                  return GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ProductPurchasePage(offer: p),
-                      ),
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: cols,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 0.65,
                     ),
-                    child: Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: thumb.isNotEmpty
-                                    ? Image.network(
-                                        thumb,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                      )
-                                    : Container(
-                                        color: Colors.grey.shade200,
-                                        alignment: Alignment.center,
-                                        child: const Icon(
-                                          Icons.image,
-                                          color: Colors.grey,
+                    itemCount: _popularAreaProducts.length,
+                    itemBuilder: (context, index) {
+                      final p = _popularAreaProducts[index];
+
+                      final name = p['name'] ?? 'Product';
+                      final price = p['price'] ?? 0;
+                      final mrp = p['mrp'] ?? p['listPrice'] ?? price;
+                      final double pr = (price is num)
+                          ? price.toDouble()
+                          : double.tryParse(price.toString()) ?? 0.0;
+                      final double m = (mrp is num)
+                          ? mrp.toDouble()
+                          : double.tryParse(mrp.toString()) ?? pr;
+                      final int discount = (m > 0 && m > pr)
+                          ? (((m - pr) / m) * 100).round()
+                          : 0;
+                      final shopName = p['shopName'] ?? 'Shop';
+
+                      final images = (p['images'] is List)
+                          ? (p['images'] as List).cast<String>()
+                          : <String>[];
+                      final thumb = images.isNotEmpty ? images[0] : '';
+
+                      return GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProductPurchasePage(offer: p),
+                          ),
+                        ),
+                        child: Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(8),
+                                    topRight: Radius.circular(8),
+                                  ),
+                                  child: thumb.isNotEmpty
+                                      ? Image.network(
+                                          thumb,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  Container(
+                                                    color: Colors.grey[300],
+                                                    child: const Icon(
+                                                      Icons.image_not_supported,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                        )
+                                      : Container(
+                                          color: Colors.grey[300],
+                                          child: const Icon(
+                                            Icons.image_not_supported,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      shopName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '₹${pr.toStringAsFixed(0)}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                        if (m > pr) ...[
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '₹${m.toStringAsFixed(0)}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[500],
+                                              decoration:
+                                                  TextDecoration.lineThrough,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    if (discount > 0)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 4.0),
+                                        child: Text(
+                                          '$discount% off',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
                                       ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              (p['name'] ?? p['product'] ?? '').toString(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '₹${pr.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'No products available',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
 
             const SizedBox(height: 24),

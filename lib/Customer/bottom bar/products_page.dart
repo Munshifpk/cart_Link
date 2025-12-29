@@ -263,11 +263,11 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
 
   Widget _placeholder(int index) {
     final col = ThemeColors.primary;
-    final color = col.withValues(alpha: 0.08);
+    final color = col.withOpacity(0.08);
     return Container(
       color: color,
       child: Center(
-        child: Icon(Icons.image, color: col.withValues(alpha: 0.6)),
+        child: Icon(Icons.image, color: col.withOpacity(0.6)),
       ),
     );
   }

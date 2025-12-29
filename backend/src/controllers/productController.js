@@ -180,9 +180,9 @@ exports.getFollowedShopsProducts = async (req, res) => {
         }
 
         // Get products from followed shops
-        const products = await Product.find({ 
+        const products = await Product.find({
             ownerId: { $in: followingIds },
-            isActive: true 
+            isActive: true
         }).lean();
 
         return res.json({ success: true, data: products });
@@ -228,6 +228,36 @@ exports.getProductImages = async (req, res) => {
         return res.json({ success: true, data: product.images || [] });
     } catch (err) {
         console.error('getProductImages error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.searchProducts = async (req, res) => {
+    try {
+        const { q } = req.query;
+
+        if (!q || q.trim().length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+
+        // Search in product name, description, and category using regex for case-insensitive search
+        const searchQuery = {
+            $or: [
+                { name: { $regex: q, $options: 'i' } },
+                { description: { $regex: q, $options: 'i' } },
+                { category: { $regex: q, $options: 'i' } }
+            ]
+        };
+
+        const products = await Product.find(searchQuery)
+            // include fields needed by client; ownerId is required to fetch shop/products
+            .select('name description price mrp category images inStock ownerId')
+            .limit(50)
+            .lean();
+
+        return res.json({ success: true, data: products });
+    } catch (err) {
+        console.error('searchProducts error:', err);
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 };
