@@ -10,6 +10,7 @@ import 'category_products_page.dart';
 import 'shop_products_page.dart';
 import 'cart_page.dart';
 import 'notification_offers.dart';
+import 'dart:async';
 
 class SearchPage extends StatefulWidget {
   final String? initialQuery;
@@ -28,11 +29,13 @@ class _SearchPageState extends State<SearchPage> {
   List<dynamic> _shops = [];
   List<dynamic> _categories = [];
   List<String> _searchHistory = [];
+  List<String> _suggestions = [];
   bool _isLoading = false;
   String _selectedFilter = 'all'; // all, products, shops, categories
   int _currentPage = 0;
   static const int _itemsPerPage = 6;
   static const String _historyKey = 'searchHistory';
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -51,6 +54,7 @@ class _SearchPageState extends State<SearchPage> {
     _pageController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -61,6 +65,7 @@ class _SearchPageState extends State<SearchPage> {
         _products = [];
         _shops = [];
         _categories = [];
+        _suggestions = [];
         _currentPage = 0;
       });
       return;
@@ -73,11 +78,29 @@ class _SearchPageState extends State<SearchPage> {
 
       // Fetch all three in parallel for faster loading
       final results = await Future.wait([
-        http.get(backendUri('/api/products/search', queryParameters: {'q': encodedQuery}))
+        http
+            .get(
+              backendUri(
+                '/api/products/search',
+                queryParameters: {'q': encodedQuery},
+              ),
+            )
             .timeout(const Duration(seconds: 5)),
-        http.get(backendUri('/api/Shops/search', queryParameters: {'q': encodedQuery}))
+        http
+            .get(
+              backendUri(
+                '/api/Shops/search',
+                queryParameters: {'q': encodedQuery},
+              ),
+            )
             .timeout(const Duration(seconds: 5)),
-        http.get(backendUri('/api/categories/search', queryParameters: {'q': encodedQuery}))
+        http
+            .get(
+              backendUri(
+                '/api/categories/search',
+                queryParameters: {'q': encodedQuery},
+              ),
+            )
             .timeout(const Duration(seconds: 5)),
       ]);
 
@@ -103,10 +126,11 @@ class _SearchPageState extends State<SearchPage> {
 
           _currentPage = 0;
           _isLoading = false;
+          _suggestions = [];
         });
 
         _updateHistory(trimmed);
-        
+
         // Reset page controller position
         if (_pageController.hasClients) {
           _pageController.jumpToPage(0);
@@ -119,6 +143,41 @@ class _SearchPageState extends State<SearchPage> {
         ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _fetchSuggestions(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+
+    try {
+      final encodedQuery = Uri.encodeQueryComponent(query.trim());
+      final response = await http
+          .get(
+            backendUri(
+              '/api/products/search',
+              queryParameters: {'q': encodedQuery},
+            ),
+          )
+          .timeout(const Duration(seconds: 2));
+
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body);
+        final products = data['data'] ?? [];
+        final names = products
+            .map((p) => p['name'] ?? p['productName'] ?? '')
+            .toSet()
+            .toList();
+        setState(
+          () => _suggestions = names
+              .where((n) => n.toString().isNotEmpty)
+              .toList(),
+        );
+      }
+    } catch (e) {
+      setState(() => _suggestions = []);
     }
   }
 
@@ -153,33 +212,35 @@ class _SearchPageState extends State<SearchPage> {
     _searchController.selection = TextSelection.fromPosition(
       TextPosition(offset: query.length),
     );
-    setState(() {});
+    setState(() {
+      _suggestions = [];
+    });
     _performSearch(query);
   }
 
   List<String> _getFilteredHistory() {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) return _searchHistory;
-    
+
     // Filter and sort by relevance
     final matches = _searchHistory.where((item) {
       return item.toLowerCase().contains(query);
     }).toList();
-    
+
     // Sort: exact matches first, then starts-with, then contains
     matches.sort((a, b) {
       final aLower = a.toLowerCase();
       final bLower = b.toLowerCase();
-      
+
       if (aLower == query && bLower != query) return -1;
       if (aLower != query && bLower == query) return 1;
-      
+
       if (aLower.startsWith(query) && !bLower.startsWith(query)) return -1;
       if (!aLower.startsWith(query) && bLower.startsWith(query)) return 1;
-      
+
       return 0;
     });
-    
+
     return matches;
   }
 
@@ -195,8 +256,8 @@ class _SearchPageState extends State<SearchPage> {
     final available = _isAvailable(product);
     final shopName = product['shopName'];
     final images = product['images'] as List?;
-    final image = (images != null && images.isNotEmpty) 
-        ? images[0] 
+    final image = (images != null && images.isNotEmpty)
+        ? images[0]
         : (product['image'] ?? product['productImage'] ?? '');
 
     return GestureDetector(
@@ -368,11 +429,7 @@ class _SearchPageState extends State<SearchPage> {
                   color: ThemeColors.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.store,
-                  size: 22,
-                  color: ThemeColors.primary,
-                ),
+                child: Icon(Icons.store, size: 22, color: ThemeColors.primary),
               ),
               const SizedBox(height: 8),
               // Shop Name
@@ -393,10 +450,7 @@ class _SearchPageState extends State<SearchPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 9, color: Colors.grey),
                 ),
               ],
             ],
@@ -434,11 +488,7 @@ class _SearchPageState extends State<SearchPage> {
                   color: Colors.teal.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.category,
-                  size: 22,
-                  color: Colors.teal,
-                ),
+                child: const Icon(Icons.category, size: 22, color: Colors.teal),
               ),
               const SizedBox(height: 8),
               // Category Name
@@ -463,7 +513,7 @@ class _SearchPageState extends State<SearchPage> {
     if (image.isEmpty) {
       return _buildErrorImage();
     }
-    
+
     if (image.startsWith('data:')) {
       try {
         final base64String = image.split(',')[1];
@@ -486,7 +536,7 @@ class _SearchPageState extends State<SearchPage> {
             child: CircularProgressIndicator(
               value: loadingProgress.expectedTotalBytes != null
                   ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
+                        loadingProgress.expectedTotalBytes!
                   : null,
             ),
           );
@@ -494,7 +544,7 @@ class _SearchPageState extends State<SearchPage> {
         errorBuilder: (_, __, ___) => _buildErrorImage(),
       );
     }
-    
+
     return _buildErrorImage();
   }
 
@@ -502,7 +552,7 @@ class _SearchPageState extends State<SearchPage> {
     if (image.isEmpty) {
       return _buildErrorImage();
     }
-    
+
     if (image.startsWith('data:')) {
       try {
         final base64String = image.split(',')[1];
@@ -525,7 +575,7 @@ class _SearchPageState extends State<SearchPage> {
             child: CircularProgressIndicator(
               value: loadingProgress.expectedTotalBytes != null
                   ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
+                        loadingProgress.expectedTotalBytes!
                   : null,
             ),
           );
@@ -533,7 +583,7 @@ class _SearchPageState extends State<SearchPage> {
         errorBuilder: (_, __, ___) => _buildErrorImage(),
       );
     }
-    
+
     return _buildErrorImage();
   }
 
@@ -541,7 +591,7 @@ class _SearchPageState extends State<SearchPage> {
     if (image.isEmpty) {
       return _buildErrorImage();
     }
-    
+
     if (image.startsWith('data:')) {
       try {
         final base64String = image.split(',')[1];
@@ -564,7 +614,7 @@ class _SearchPageState extends State<SearchPage> {
             child: CircularProgressIndicator(
               value: loadingProgress.expectedTotalBytes != null
                   ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
+                        loadingProgress.expectedTotalBytes!
                   : null,
             ),
           );
@@ -572,7 +622,7 @@ class _SearchPageState extends State<SearchPage> {
         errorBuilder: (_, __, ___) => _buildErrorImage(),
       );
     }
-    
+
     return _buildErrorImage();
   }
 
@@ -612,19 +662,28 @@ class _SearchPageState extends State<SearchPage> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.grey, width: 1),
               ),
-              prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: Colors.grey,
+                size: 20,
+              ),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_searchController.text.isNotEmpty)
                     IconButton(
-                      icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
+                      icon: const Icon(
+                        Icons.clear,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {
                           _products = [];
                           _shops = [];
                           _categories = [];
+                          _suggestions = [];
                         });
                       },
                       iconSize: 20,
@@ -748,12 +807,24 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ],
               ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 8,
+                horizontal: 8,
+              ),
             ),
             onTap: () {},
             onChanged: (value) {
               // Rebuild to keep the clear icon visibility in sync with the field value
               setState(() {});
+              // Debounce suggestions
+              if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+              _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+                if (value.isNotEmpty) {
+                  _fetchSuggestions(value);
+                } else {
+                  setState(() => _suggestions = []);
+                }
+              });
             },
             onSubmitted: (value) {
               _performSearch(value);
@@ -775,7 +846,9 @@ class _SearchPageState extends State<SearchPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const OffersFollowedShopsPage()),
+                MaterialPageRoute(
+                  builder: (_) => const OffersFollowedShopsPage(),
+                ),
               );
             },
           ),
@@ -784,7 +857,9 @@ class _SearchPageState extends State<SearchPage> {
       ),
       body: Column(
         children: [
-          if (_searchHistory.isNotEmpty && _getFilteredHistory().isNotEmpty && (_products.isEmpty && _shops.isEmpty && _categories.isEmpty))
+          if (_searchHistory.isNotEmpty &&
+              _getFilteredHistory().isNotEmpty &&
+              (_products.isEmpty && _shops.isEmpty && _categories.isEmpty))
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Column(
@@ -792,10 +867,7 @@ class _SearchPageState extends State<SearchPage> {
                 children: [
                   const Text(
                     'Recent searches',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
                   Align(
@@ -815,6 +887,32 @@ class _SearchPageState extends State<SearchPage> {
                           .toList(),
                     ),
                   ),
+                ],
+              ),
+            ),
+          if (_suggestions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Suggestions',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._suggestions
+                      .take(5)
+                      .map(
+                        (s) => ListTile(
+                          title: Text(s),
+                          onTap: () {
+                            _searchController.text = s;
+                            setState(() => _suggestions = []);
+                            _performSearch(s);
+                          },
+                        ),
+                      ),
                 ],
               ),
             ),
@@ -884,7 +982,10 @@ class _SearchPageState extends State<SearchPage> {
                 controller: _pageController,
                 onPageChanged: (page) {
                   int totalPages = _getTotalPages();
-                  int validPage = page.clamp(0, totalPages > 0 ? totalPages - 1 : 0);
+                  int validPage = page.clamp(
+                    0,
+                    totalPages > 0 ? totalPages - 1 : 0,
+                  );
                   setState(() => _currentPage = validPage);
                 },
                 itemCount: _getTotalPages(),
