@@ -21,6 +21,14 @@ class _AddProductPageState extends State<AddProductPage> {
   final _mrpController = TextEditingController();
   bool _inStock = true;
   final _skuController = TextEditingController();
+  final _colorController = TextEditingController();
+  final _sizeController = TextEditingController();
+  final _materialController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _brandController = TextEditingController();
+  final _lengthController = TextEditingController();
+  final _widthController = TextEditingController();
+  final _heightController = TextEditingController();
   String? _category;
   // final List<String> _images = [];
   bool _isActive = true;
@@ -44,6 +52,14 @@ class _AddProductPageState extends State<AddProductPage> {
     _priceController.dispose();
     _mrpController.dispose();
     _skuController.dispose();
+    _colorController.dispose();
+    _sizeController.dispose();
+    _materialController.dispose();
+    _weightController.dispose();
+    _brandController.dispose();
+    _lengthController.dispose();
+    _widthController.dispose();
+    _heightController.dispose();
     super.dispose();
   }
 
@@ -107,6 +123,30 @@ class _AddProductPageState extends State<AddProductPage> {
       'inStock': _inStock,
       'sku': _skuController.text,
       'category': _category,
+      'color': _colorController.text.trim().isNotEmpty
+          ? _colorController.text.trim()
+          : null,
+      'size': _sizeController.text.trim().isNotEmpty
+          ? _sizeController.text.trim()
+          : null,
+      'material': _materialController.text.trim().isNotEmpty
+          ? _materialController.text.trim()
+          : null,
+      'weight': _weightController.text.trim().isNotEmpty
+          ? _weightController.text.trim()
+          : null,
+      'brand': _brandController.text.trim().isNotEmpty
+          ? _brandController.text.trim()
+          : null,
+      'length': _lengthController.text.trim().isNotEmpty
+          ? _lengthController.text.trim()
+          : null,
+      'width': _widthController.text.trim().isNotEmpty
+          ? _widthController.text.trim()
+          : null,
+      'height': _heightController.text.trim().isNotEmpty
+          ? _heightController.text.trim()
+          : null,
       'isActive': _isActive,
       'isFeatured': _isFeatured,
       'images': imagesData,
@@ -455,6 +495,70 @@ class _AddProductPageState extends State<AddProductPage> {
                               onChanged: (v) => setState(() => _category = v),
                               validator: (v) =>
                                   v == null ? 'Please select a category' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _colorController,
+                              decoration: const InputDecoration(
+                                labelText: 'Color (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _sizeController,
+                              decoration: const InputDecoration(
+                                labelText: 'Size (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _materialController,
+                              decoration: const InputDecoration(
+                                labelText: 'Material (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _weightController,
+                              decoration: const InputDecoration(
+                                labelText: 'Weight (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _brandController,
+                              decoration: const InputDecoration(
+                                labelText: 'Brand (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _lengthController,
+                              decoration: const InputDecoration(
+                                labelText: 'Length (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _widthController,
+                              decoration: const InputDecoration(
+                                labelText: 'Width (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _heightController,
+                              decoration: const InputDecoration(
+                                labelText: 'Height (Optional)',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ],
                         ),

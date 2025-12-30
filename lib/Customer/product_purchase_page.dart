@@ -1303,31 +1303,62 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             ),
         ],
       ),
-      const SizedBox(height: 16),
-      // Valid till
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              const Icon(Icons.calendar_today, color: Colors.blue),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Offer valid till',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  Text(
-                    offer['validTill'] ?? 'N/A',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ],
+      const SizedBox(height: 8),
+      // Stock availability info
+      if (!available)
+        const Text(
+          'Out of Stock',
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
+        )
+      else
+        Builder(
+          builder: (context) {
+            final stock = offer['stock'];
+            if (stock != null && stock is num && stock > 0) {
+              return Text(
+                'In Stock: ${stock.toInt()}',
+                style: const TextStyle(color: Colors.green, fontSize: 14),
+              );
+            }
+            return const Text(
+              'In Stock',
+              style: TextStyle(color: Colors.green, fontSize: 14),
+            );
+          },
         ),
+      const SizedBox(height: 16),
+      // Product Details
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Product Details',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          if (offer['color'] != null && offer['color'].toString().isNotEmpty)
+            Text('Color: ${offer['color']}'),
+          if (offer['size'] != null && offer['size'].toString().isNotEmpty)
+            Text('Size: ${offer['size']}'),
+          if (offer['material'] != null &&
+              offer['material'].toString().isNotEmpty)
+            Text('Material: ${offer['material']}'),
+          if (offer['weight'] != null && offer['weight'].toString().isNotEmpty)
+            Text('Weight: ${offer['weight']}'),
+          if (offer['brand'] != null && offer['brand'].toString().isNotEmpty)
+            Text('Brand: ${offer['brand']}'),
+          if (offer['length'] != null && offer['length'].toString().isNotEmpty)
+            Text('Length: ${offer['length']}'),
+          if (offer['width'] != null && offer['width'].toString().isNotEmpty)
+            Text('Width: ${offer['width']}'),
+          if (offer['height'] != null && offer['height'].toString().isNotEmpty)
+            Text('Height: ${offer['height']}'),
+          // Add more fields as needed
+        ],
       ),
       const SizedBox(height: 20),
       // Quantity selector
@@ -1358,8 +1389,12 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           const SizedBox(width: 16),
           ElevatedButton(
             onPressed: () {
-              final newVal = (_quantityNotifier.value + 1) > 100
-                  ? 100
+              final stock = offer['stock'];
+              final maxQty = (stock != null && stock is num && stock > 0)
+                  ? stock.toInt()
+                  : 100;
+              final newVal = (_quantityNotifier.value + 1) > maxQty
+                  ? maxQty
                   : (_quantityNotifier.value + 1);
               _quantityNotifier.value = newVal;
             },
