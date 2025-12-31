@@ -1694,48 +1694,86 @@ class _AllSimilarProductsPage extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: thumb.isNotEmpty
-                              ? Image.network(thumb, fit: BoxFit.cover)
-                              : Container(
-                                  color: Colors.grey.shade200,
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.image,
-                                    color: Colors.grey,
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: thumb.isNotEmpty
+                                  ? Image.network(thumb, fit: BoxFit.cover)
+                                  : Container(
+                                      color: Colors.grey.shade200,
+                                      alignment: Alignment.center,
+                                      child: const Icon(
+                                        Icons.image,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            (item['name'] ?? item['product'] ?? item['title'] ?? '')
+                                .toString(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '₹${item['price'] ?? item['mrp'] ?? 0}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Stock Out Banner
+                    if (item['inStock'] == false)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Transform.rotate(
+                              angle: -0.3,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: ThemeColors.primary,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'STOCK OUT',
+                                  style: TextStyle(
+                                    color: ThemeColors.textColorWhite,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    letterSpacing: 1,
                                   ),
                                 ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        (item['name'] ?? item['product'] ?? item['title'] ?? '')
-                            .toString(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '₹${item['price'] ?? item['mrp'] ?? 0}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
             );

@@ -203,110 +203,148 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                               ),
                             );
                           },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Stack(
                             children: [
-                              Expanded(
-                                flex: 3,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        color: Colors.blue.shade50,
+                                        child: _buildImageFromProduct(
+                                          product,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.star,
+                                                size: 12,
+                                                color: Colors.amber,
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                rating > 0
+                                                    ? rating.toStringAsFixed(1)
+                                                    : 'New',
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                '₹${price.toInt()}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              if (mrp > price)
+                                                Text(
+                                                  '₹${mrp.toInt()}',
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    decoration:
+                                                        TextDecoration.lineThrough,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          if (discount > 0) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.shade100,
+                                                borderRadius: BorderRadius.circular(
+                                                  4,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                '$discount% off',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.orange.shade700,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              // Stock Out Banner
+                              if (product['inStock'] == false)
+                                Positioned.fill(
                                   child: Container(
-                                    color: Colors.blue.shade50,
-                                    child: _buildImageFromProduct(
-                                      product,
-                                      fit: BoxFit.cover,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.4),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Center(
+                                      child: Transform.rotate(
+                                        angle: -0.3,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: ThemeColors.primary,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'STOCK OUT',
+                                            style: TextStyle(
+                                              color: ThemeColors.textColorWhite,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              letterSpacing: 1,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.star,
-                                            size: 12,
-                                            color: Colors.amber,
-                                          ),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            rating > 0
-                                                ? rating.toStringAsFixed(1)
-                                                : 'New',
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            '₹${price.toInt()}',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.green,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          if (mrp > price)
-                                            Text(
-                                              '₹${mrp.toInt()}',
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                decoration:
-                                                    TextDecoration.lineThrough,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      if (discount > 0) ...[
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange.shade100,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '$discount% off',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Colors.orange.shade700,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),

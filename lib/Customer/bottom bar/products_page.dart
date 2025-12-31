@@ -166,58 +166,60 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                             ),
                           );
                         },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Stack(
                           children: [
-                            // image area (~75% of card) with multiple-image support
-                            Expanded(
-                              flex: 3,
-                              child: AspectRatio(
-                                aspectRatio: 1.1,
-                                child: imagesList.isNotEmpty
-                                    ? _buildImageFromSource(
-                                        imagesList[0],
-                                        index,
-                                      )
-                                    : _placeholder(index),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: Padding(
-                                padding: const EdgeInsets.all(6.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // image area (~75% of card) with multiple-image support
+                                Expanded(
+                                  flex: 3,
+                                  child: AspectRatio(
+                                    aspectRatio: 1.1,
+                                    child: imagesList.isNotEmpty
+                                        ? _buildImageFromSource(
+                                            imagesList[0],
+                                            index,
+                                          )
+                                        : _placeholder(index),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        _buildRating(rating),
-                                        const SizedBox(width: 2),
                                         Text(
-                                          rating > 0
-                                              ? rating.toStringAsFixed(1)
-                                              : 'New',
-                                          style: const TextStyle(fontSize: 9),
+                                          name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 12,
+                                          ),
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        if (mrp > price)
-                                          Text(
-                                            '₹${mrp.toStringAsFixed(0)}',
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            _buildRating(rating),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              rating > 0
+                                                  ? rating.toStringAsFixed(1)
+                                                  : 'New',
+                                              style: const TextStyle(fontSize: 9),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            if (mrp > price)
+                                              Text(
+                                                '₹${mrp.toStringAsFixed(0)}',
                                             style: const TextStyle(
                                               decoration:
                                                   TextDecoration.lineThrough,
@@ -252,14 +254,50 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
+                        // Stock Out Banner
+                        if (p['inStock'] == false)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Transform.rotate(
+                                  angle: -0.3,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: ThemeColors.primary,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'STOCK OUT',
+                                      style: TextStyle(
+                                        color: ThemeColors.textColorWhite,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );    
+              },
+            ),
           );
-  }
+        },
+      );
+}
 
   Widget _placeholder(int index) {
     final col = ThemeColors.primary;

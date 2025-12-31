@@ -291,60 +291,98 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                               border: Border.all(color: Colors.grey.shade200),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Stack(
                               children: [
-                                Expanded(
-                                  child: Container(
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(8),
-                                        topRight: Radius.circular(8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(8),
+                                            topRight: Radius.circular(8),
+                                          ),
+                                        ),
+                                        child: _buildImageFromProduct(product,
+                                            fit: BoxFit.cover),
                                       ),
                                     ),
-                                    child: _buildImageFromProduct(product,
-                                        fit: BoxFit.cover),
-                                  ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '₹$price',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            shopName.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name.toString(),
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                // Stock Out Banner
+                                if (product['inStock'] == false)
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.4),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '₹$price',
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green,
+                                      child: Center(
+                                        child: Transform.rotate(
+                                          angle: -0.3,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: ThemeColors.primary,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              'STOCK OUT',
+                                              style: TextStyle(
+                                                color: ThemeColors.textColorWhite,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                letterSpacing: 1,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        shopName.toString(),
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),

@@ -273,126 +273,164 @@ class _SearchPageState extends State<SearchPage> {
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Product Image (75%)
-            Expanded(
-              flex: 3,
-              child: AspectRatio(
-                aspectRatio: 1.1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Product Image (75%)
+                Expanded(
+                  flex: 3,
+                  child: AspectRatio(
+                    aspectRatio: 1.1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                        ),
+                        color: Colors.grey[200],
+                      ),
+                      child: productId != null
+                          ? Hero(
+                              tag: 'product-$productId',
+                              child: _buildProductImage(image),
+                            )
+                          : _buildProductImage(image),
                     ),
-                    color: Colors.grey[200],
                   ),
-                  child: productId != null
-                      ? Hero(
-                          tag: 'product-$productId',
-                          child: _buildProductImage(image),
-                        )
-                      : _buildProductImage(image),
                 ),
-              ),
-            ),
-            // Product Info (25%)
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      name.toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                    ),
-                    if (shopName != null && shopName.toString().isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        shopName.toString(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 9, color: Colors.grey),
-                      ),
-                    ],
-                    const SizedBox(height: 2),
-                    Row(
+                // Product Info (25%)
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '₹${priceVal.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            color: ThemeColors.primary,
-                            fontWeight: FontWeight.bold,
+                          name.toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
                             fontSize: 11,
                           ),
                         ),
-                        if (hasDiscount) ...[
-                          const SizedBox(width: 4),
+                        if (shopName != null && shopName.toString().isNotEmpty) ...[
+                          const SizedBox(height: 2),
                           Text(
-                            '₹${mrpVal.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey,
-                              decoration: TextDecoration.lineThrough,
-                            ),
+                            shopName.toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 9, color: Colors.grey),
                           ),
                         ],
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(
+                              '₹${priceVal.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                color: ThemeColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                            if (hasDiscount) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '₹${mrpVal.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        if (hasDiscount)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '-$discountPct%',
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        if (!hasDiscount) const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: available
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            available ? 'In stock' : 'Out',
+                            style: TextStyle(
+                              color: available ? Colors.green : Colors.red,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    if (hasDiscount)
-                      Container(
+                  ),
+                ),
+              ],
+            ),
+            // Stock Out Banner
+            if (product['inStock'] == false)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Transform.rotate(
+                      angle: -0.3,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
+                          horizontal: 16,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(10),
+                          color: ThemeColors.primary,
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
-                          '-$discountPct%',
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
+                        child: const Text(
+                          'STOCK OUT',
+                          style: TextStyle(
+                            color: ThemeColors.textColorWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            letterSpacing: 1,
                           ),
                         ),
                       ),
-                    if (!hasDiscount) const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: available
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        available ? 'In stock' : 'Out',
-                        style: TextStyle(
-                          color: available ? Colors.green : Colors.red,
-                          fontSize: 8,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

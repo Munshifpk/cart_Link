@@ -9,6 +9,7 @@ import '../category_products_page.dart';
 import '../../services/product_service.dart';
 import 'package:cart_link/services/auth_state.dart';
 import 'package:cart_link/constant.dart';
+import '../../theme_data.dart';
 
 class CustomerHomePage extends StatefulWidget {
   final Customer? customer;
@@ -812,105 +813,143 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Stack(
                             children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(8),
-                                    topRight: Radius.circular(8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(8),
+                                        topRight: Radius.circular(8),
+                                      ),
+                                      child: thumb.isNotEmpty
+                                          ? Image.network(
+                                              thumb,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) =>
+                                                      Container(
+                                                        color: Colors.grey[300],
+                                                        child: const Icon(
+                                                          Icons.image_not_supported,
+                                                          color: Colors.grey,
+                                                        ),
+                                                      ),
+                                            )
+                                          : Container(
+                                              color: Colors.grey[300],
+                                              child: const Icon(
+                                                Icons.image_not_supported,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                    ),
                                   ),
-                                  child: thumb.isNotEmpty
-                                      ? Image.network(
-                                          thumb,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Container(
-                                                    color: Colors.grey[300],
-                                                    child: const Icon(
-                                                      Icons.image_not_supported,
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                        )
-                                      : Container(
-                                          color: Colors.grey[300],
-                                          child: const Icon(
-                                            Icons.image_not_supported,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      shopName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          '₹${pr.toStringAsFixed(0)}',
+                                          name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
                                             fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.green,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        if (m > pr) ...[
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '₹${m.toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey[500],
-                                              decoration:
-                                                  TextDecoration.lineThrough,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          shopName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '₹${pr.toStringAsFixed(0)}',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                            if (m > pr) ...[
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '₹${m.toStringAsFixed(0)}',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[500],
+                                                  decoration:
+                                                      TextDecoration.lineThrough,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        if (discount > 0)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 4.0),
+                                            child: Text(
+                                              '$discount% off',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.red,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                             ),
                                           ),
-                                        ],
                                       ],
                                     ),
-                                    if (discount > 0)
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(top: 4.0),
-                                        child: Text(
-                                          '$discount% off',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.red,
-                                            fontWeight: FontWeight.w600,
+                                  ),
+                                ],
+                              ),
+                              // Stock Out Banner
+                              if (p['inStock'] == false)
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.4),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Center(
+                                      child: Transform.rotate(
+                                        angle: -0.3,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: ThemeColors.primary,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'STOCK OUT',
+                                            style: TextStyle(
+                                              color: ThemeColors.textColorWhite,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              letterSpacing: 1,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                  ],
+                                    ),
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
