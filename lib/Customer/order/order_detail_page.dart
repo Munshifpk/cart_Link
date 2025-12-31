@@ -1531,20 +1531,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               }
               if (imageUrlOrData != null && imageUrlOrData.isNotEmpty) {
                 final val = imageUrlOrData;
-                if (val.startsWith('data:image')) {
-                  try {
-                    final base64String = val.split(',').length > 1 ? val.split(',')[1] : val;
-                    final bytes = base64.decode(base64String);
-                    return Image.memory(bytes, fit: BoxFit.cover);
-                  } catch (_) {}
-                }
-                final base64Regex = RegExp(r'^[A-Za-z0-9+/=]+$');
-                if (!val.startsWith('http') && base64Regex.hasMatch(val)) {
-                  try {
-                    final bytes = base64.decode(val);
-                    return Image.memory(bytes, fit: BoxFit.cover);
-                  } catch (_) {}
-                }
                 if (val.startsWith('http')) {
                   return Image.network(val, fit: BoxFit.cover);
                 }

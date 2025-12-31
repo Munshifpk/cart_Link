@@ -402,7 +402,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
     );
   }
 
-  // Helper: get first image URL/base64 from a product map and render it
+  // Helper: get first image URL from a product map and render it
   Widget _buildImageForProduct(Map<String, dynamic> product) {
     String? src;
     final imgs = product['images'];
@@ -416,27 +416,6 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       return const Center(
         child: Icon(Icons.shopping_bag, size: 40, color: Colors.grey),
       );
-    }
-
-    if (src.trim().startsWith('data:')) {
-      try {
-        final parts = src.split(',');
-        final b64 = parts.length > 1 ? parts.last : '';
-        final bytes = base64Decode(b64);
-        return Center(
-          child: Image.memory(
-            bytes,
-            fit: BoxFit.contain,
-            width: double.infinity,
-            height: double.infinity,
-            alignment: Alignment.center,
-          ),
-        );
-      } catch (_) {
-        return const Center(
-          child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
-        );
-      }
     }
 
     return Center(

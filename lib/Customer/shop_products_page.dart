@@ -34,25 +34,6 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       );
     }
 
-    if (src.trim().startsWith('data:')) {
-      try {
-        final parts = src.split(',');
-        final b64 = parts.length > 1 ? parts.last : '';
-        final bytes = base64Decode(b64);
-        return Image.memory(
-          bytes,
-          fit: fit,
-          width: double.infinity,
-          height: double.infinity,
-          alignment: Alignment.center,
-        );
-      } catch (_) {
-        return const Center(
-          child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
-        );
-      }
-    }
-
     return Image.network(
       src,
       fit: fit,

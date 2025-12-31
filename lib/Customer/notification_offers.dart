@@ -73,34 +73,34 @@ class _OffersFollowedShopsPageState extends State<OffersFollowedShopsPage> {
     }
   }
 
-  Future<bool> _quickAddToCart(Map<String, dynamic> offer) async {
-    try {
-      final shopId = offer['shopId'] ?? offer['ownerId'] ?? offer['shop'];
-      final productId = offer['_id'] ?? offer['id'] ?? offer['productId'];
-      final customerId =
-          AuthState.currentCustomer?['_id'] ??
-          AuthState.currentCustomer?['id'] ??
-          AuthState.currentCustomer?['mobile'];
+  // Future<bool> _quickAddToCart(Map<String, dynamic> offer) async {
+  //   try {
+  //     final shopId = offer['shopId'] ?? offer['ownerId'] ?? offer['shop'];
+  //     final productId = offer['_id'] ?? offer['id'] ?? offer['productId'];
+  //     final customerId =
+  //         AuthState.currentCustomer?['_id'] ??
+  //         AuthState.currentCustomer?['id'] ??
+  //         AuthState.currentCustomer?['mobile'];
 
-      if (customerId == null) return false;
-      if (shopId == null || productId == null) return false;
+  //     if (customerId == null) return false;
+  //     if (shopId == null || productId == null) return false;
 
-      final body = jsonEncode({
-        'productId': productId,
-        'customerId': customerId,
-        'shopId': shopId,
-        'quantity': 1,
-      });
+  //     final body = jsonEncode({
+  //       'productId': productId,
+  //       'customerId': customerId,
+  //       'shopId': shopId,
+  //       'quantity': 1,
+  //     });
 
-      final uri = backendUri(kApiCart);
-      final res = await http
-          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
-          .timeout(const Duration(seconds: 10));
-      return res.statusCode == 200 || res.statusCode == 201;
-    } catch (_) {
-      return false;
-    }
-  }
+  //     final uri = backendUri(kApiCart);
+  //     final res = await http
+  //         .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+  //         .timeout(const Duration(seconds: 10));
+  //     return res.statusCode == 200 || res.statusCode == 201;
+  //   } catch (_) {
+  //     return false;
+  //   }
+  // }
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';

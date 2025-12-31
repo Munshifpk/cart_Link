@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'product_aded.dart';
 import '../services/product_service.dart';
 import '../services/auth_state.dart';
+import '../services/upload_service.dart';
 
 class AddProductPage extends StatefulWidget {
   const AddProductPage({super.key});
@@ -96,8 +97,8 @@ class _AddProductPageState extends State<AddProductPage> {
     }
     setState(() => _loading = true);
 
-    // Collect base64-encoded images (skip if empty)
-    final List<String> imagesData = [];
+    // Upload images to Cloudinary and collect URLs
+    final List<String> imageUrls = [];
     if (_pickedImages.isNotEmpty) {
       for (final x in _pickedImages) {
         try {
@@ -105,9 +106,19 @@ class _AddProductPageState extends State<AddProductPage> {
           final b64 = base64Encode(bytes);
           final path = x.path.toLowerCase();
           final mime = path.endsWith('.png') ? 'image/png' : 'image/jpeg';
-          imagesData.add('data:$mime;base64,$b64');
+          final base64WithMime = 'data:$mime;base64,$b64';
+          
+          // Upload to Cloudinary
+          final uploadResult = await UploadService.uploadImage(base64WithMime);
+          
+          if (uploadResult['success'] == true && uploadResult['url'] != null) {
+            imageUrls.add(uploadResult['url']);
+            print('[IMAGE_UPLOAD] Uploaded: ${uploadResult['url']}');
+          } else {
+            print('[IMAGE_UPLOAD_ERROR] ${uploadResult['message']}');
+          }
         } catch (e) {
-          print('[IMAGE_ENCODE_ERROR] Failed to encode image: $e');
+          print('[IMAGE_UPLOAD_ERROR] Failed to upload image: $e');
         }
       }
     }
@@ -149,7 +160,7 @@ class _AddProductPageState extends State<AddProductPage> {
           : null,
       'isActive': _isActive,
       'isFeatured': _isFeatured,
-      'images': imagesData,
+      'images': imageUrls,
       // include ownerId if present
       'ownerId': AuthState.currentOwner != null
           ? AuthState.currentOwner!['_id']
@@ -159,7 +170,7 @@ class _AddProductPageState extends State<AddProductPage> {
     try {
       print('[PRODUCT_SUBMIT] Sending payload: ${payload.keys.join(', ')}');
       print(
-        '[PRODUCT_SUBMIT] Owner: ${payload['ownerId']}, Images: ${imagesData.length}',
+        '[PRODUCT_SUBMIT] Owner: ${payload['ownerId']}, Images: ${imageUrls.length}',
       );
       final res = await ProductService.createProduct(payload).timeout(
         const Duration(seconds: 30),

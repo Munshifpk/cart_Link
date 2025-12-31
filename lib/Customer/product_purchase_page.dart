@@ -1520,26 +1520,6 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       );
     }
 
-    if (imageUrl.startsWith('data:')) {
-      try {
-        final parts = imageUrl.split(',');
-        final b64 = parts.length > 1 ? parts.last : '';
-        final bytes = base64Decode(b64);
-        return Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          alignment: Alignment.center,
-          errorBuilder: (_, _, _) => const Center(
-            child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
-          ),
-        );
-      } catch (_) {
-        return const Center(
-          child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
-        );
-      }
-    }
-
     return Image.network(
       imageUrl,
       fit: BoxFit.cover,
@@ -2015,25 +1995,6 @@ class _ImageViewerDialogState extends State<_ImageViewerDialog> {
       return const Center(
         child: Icon(Icons.image, size: 80, color: Colors.grey),
       );
-    }
-
-    if (imageUrl.startsWith('data:')) {
-      try {
-        final parts = imageUrl.split(',');
-        final b64 = parts.length > 1 ? parts.last : '';
-        final bytes = base64Decode(b64);
-        return Image.memory(
-          bytes,
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const Center(
-            child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
-          ),
-        );
-      } catch (_) {
-        return const Center(
-          child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
-        );
-      }
     }
 
     return Image.network(

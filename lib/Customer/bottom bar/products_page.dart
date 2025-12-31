@@ -315,18 +315,6 @@ class _CustomerProductsPageState extends State<CustomerProductsPage> {
     int index, {
     BoxFit fit = BoxFit.cover,
   }) {
-    if (src.trim().startsWith('data:')) {
-      try {
-        final parts = src.split(',');
-        final b64 = parts.length > 1 ? parts.last : '';
-        final bytes = base64Decode(b64);
-        return Center(
-          child: Image.memory(bytes, fit: fit, alignment: Alignment.center),
-        );
-      } catch (_) {
-        return _placeholder(index);
-      }
-    }
     return Center(
       child: Image.network(
         src,

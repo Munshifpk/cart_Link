@@ -552,97 +552,8 @@ class _SearchPageState extends State<SearchPage> {
       return _buildErrorImage();
     }
 
-    if (image.startsWith('data:')) {
-      try {
-        final base64String = image.split(',')[1];
-        final bytes = base64Decode(base64String);
-        return Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildErrorImage(),
-        );
-      } catch (e) {
-        return _buildErrorImage();
-      }
-    } else if (image.startsWith('http')) {
-      return Image.network(
-        image,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                  : null,
-            ),
-          );
-        },
-        errorBuilder: (_, __, ___) => _buildErrorImage(),
-      );
-    }
-
-    return _buildErrorImage();
-  }
-
-  Widget _buildShopImage(String image) {
-    if (image.isEmpty) {
-      return _buildErrorImage();
-    }
-
-    if (image.startsWith('data:')) {
-      try {
-        final base64String = image.split(',')[1];
-        final bytes = base64Decode(base64String);
-        return Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildErrorImage(),
-        );
-      } catch (e) {
-        return _buildErrorImage();
-      }
-    } else if (image.startsWith('http')) {
-      return Image.network(
-        image,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                  : null,
-            ),
-          );
-        },
-        errorBuilder: (_, __, ___) => _buildErrorImage(),
-      );
-    }
-
-    return _buildErrorImage();
-  }
-
-  Widget _buildCategoryImage(String image) {
-    if (image.isEmpty) {
-      return _buildErrorImage();
-    }
-
-    if (image.startsWith('data:')) {
-      try {
-        final base64String = image.split(',')[1];
-        final bytes = base64Decode(base64String);
-        return Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildErrorImage(),
-        );
-      } catch (e) {
-        return _buildErrorImage();
-      }
-    } else if (image.startsWith('http')) {
+    // Only handle HTTP URLs (from Cloudinary)
+    if (image.startsWith('http')) {
       return Image.network(
         image,
         fit: BoxFit.cover,
@@ -1195,23 +1106,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _selectedFilter == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() => _selectedFilter = value);
-      },
-      backgroundColor: Colors.grey[200],
-      selectedColor: ThemeColors.primary.withOpacity(0.3),
-      labelStyle: TextStyle(
-        color: isSelected ? ThemeColors.primary : Colors.grey[600],
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-    );
-  }
-
   bool _shouldShowProducts() {
     return _selectedFilter == 'all' || _selectedFilter == 'products';
   }
@@ -1295,26 +1189,26 @@ class _SearchPageState extends State<SearchPage> {
     return true;
   }
 
-  void _nextPage() {
-    int totalPages = _getTotalPages();
-    int nextPage = _currentPage + 1;
-    if (nextPage < totalPages && _pageController.hasClients) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
+  // void _nextPage() {
+  //   int totalPages = _getTotalPages();
+  //   int nextPage = _currentPage + 1;
+  //   if (nextPage < totalPages && _pageController.hasClients) {
+  //     _pageController.nextPage(
+  //       duration: const Duration(milliseconds: 300),
+  //       curve: Curves.easeInOut,
+  //     );
+  //   }
+  // }
 
-  void _previousPage() {
-    int previousPage = _currentPage - 1;
-    if (previousPage >= 0 && _pageController.hasClients) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
+  // void _previousPage() {
+  //   int previousPage = _currentPage - 1;
+  //   if (previousPage >= 0 && _pageController.hasClients) {
+  //     _pageController.previousPage(
+  //       duration: const Duration(milliseconds: 300),
+  //       curve: Curves.easeInOut,
+  //     );
+  //   }
+  // }
 
   // Helper to get related items based on category or tag
   List<dynamic> _relatedItems() {
