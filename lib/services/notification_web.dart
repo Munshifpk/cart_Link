@@ -6,7 +6,7 @@ bool isNotificationSupported() {
 }
 
 /// Get current notification permission status
-String getNotificationPermission() {
+String? getNotificationPermission() {
   return html.Notification.permission;
 }
 
