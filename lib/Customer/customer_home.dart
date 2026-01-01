@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'bottom bar/home_page.dart';
 import 'bottom bar/products_page.dart';
 import 'cart_page.dart';
 import 'bottom bar/profile_page.dart';
 import '../theme_data.dart';
 import 'package:cart_link/shared/notification_actions.dart';
+import 'package:cart_link/services/notification_service.dart';
 import 'bottom bar/shops_page.dart';
 import 'search_page.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:cart_link/services/auth_state.dart';
+import 'package:cart_link/constant.dart';
 import 'dart:convert';
-import 'dart:async';
 
 // Google Maps API key must be provided at build/run time using --dart-define
 // Example: flutter run -d chrome --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY
@@ -73,6 +76,9 @@ class _CustomerHomeState extends State<CustomerHome> {
   int _currentIndex = 0;
   String _selectedLocation = 'Select Location';
   List<Map<String, String>> _locationSuggestions = [];
+  int _notificationCount = 0;
+  int _cartItemCount = 0;
+  StreamSubscription<NotificationMessage>? _notificationSubscription;
 
   List<Widget> get _pages => <Widget>[
     CustomerHomePage(customer: widget.customer),
@@ -82,9 +88,224 @@ class _CustomerHomeState extends State<CustomerHome> {
     CustomerProfilePage(customer: widget.customer),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _refreshCounts();
+    _initializeNotifications();
+  }
+
+  @override
+  void dispose() {
+    _notificationSubscription?.cancel();
+    NotificationService().stopPolling();
+    super.dispose();
+  }
+
+  Future<void> _initializeNotifications() async {
+    try {
+      // Initialize notification service
+      await NotificationService().initialize();
+      
+      // Request permission with user dialog
+      final granted = await _requestNotificationPermission();
+      
+      if (granted) {
+        print('[CustomerHome] Notification permission granted');
+        
+        // Listen to incoming notifications
+        _notificationSubscription = NotificationService().onMessageStream.listen((message) {
+          // Refresh counts when notification arrives
+          if (mounted) {
+            _refreshCounts();
+            
+            // Show in-app notification banner
+            _showInAppNotification(
+              message.title ?? 'New Notification',
+              message.body ?? '',
+            );
+          }
+        });
+      } else {
+        print('[CustomerHome] Notification permission denied');
+      }
+    } catch (e) {
+      print('[CustomerHome] Notification initialization error: $e');
+    }
+  }
+
+  Future<bool> _requestNotificationPermission() async {
+    if (!mounted) return false;
+    
+    // Show permission dialog
+    final shouldRequest = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.notifications_active, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Enable Notifications'),
+          ],
+        ),
+        content: const Text(
+          'Cart Link would like to send you notifications about:\n\n'
+          '• Special offers from followed shops\n'
+          '• Order status updates\n'
+          '• New products and deals\n\n'
+          'You can change this later in settings.',
+          style: TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not Now'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ThemeColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRequest == true) {
+      return await NotificationService().requestPermission();
+    }
+    
+    return false;
+  }
+
+  void _showInAppNotification(String title, String body) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.notifications_active, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  if (body.isNotEmpty)
+                    Text(
+                      body,
+                      style: const TextStyle(fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: ThemeColors.primary,
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'VIEW',
+          textColor: Colors.white,
+          onPressed: () {
+            // Navigate to notifications page
+            setState(() => _currentIndex = 0);
+          },
+        ),
+      ),
+    );
+  }
+
   void _onTap(int index) {
-    if (index == _currentIndex) return;
-    setState(() => _currentIndex = index);
+    if (index != _currentIndex) {
+      setState(() => _currentIndex = index);
+    }
+    _refreshCounts();
+  }
+
+  Future<void> _refreshCounts() async {
+    await Future.wait([
+      _fetchNotificationCount(),
+      _fetchCartItemCount(),
+    ]);
+  }
+
+  Future<void> _fetchNotificationCount() async {
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ?? AuthState.currentCustomer?['id'];
+      if (customerId == null) {
+        if (mounted) setState(() => _notificationCount = 0);
+        return;
+      }
+
+      final uri = backendUri('$kApiNotifications/$customerId');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final notifications = (data is Map && data['data'] is List)
+            ? data['data'] as List
+            : (data is List ? data : <dynamic>[]);
+        final unread = notifications
+            .whereType<Map<String, dynamic>>()
+            .where((n) => !(n['isRead'] ?? false))
+            .length;
+        if (mounted) {
+          setState(() => _notificationCount = unread);
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _notificationCount = 0);
+    }
+  }
+
+  Future<void> _fetchCartItemCount() async {
+    try {
+      final customerId = AuthState.currentCustomer?['_id'];
+      if (customerId == null) {
+        if (mounted) setState(() => _cartItemCount = 0);
+        return;
+      }
+
+      final uri = backendUri('$kApiCart/customer/$customerId');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final carts = (data is Map<String, dynamic>)
+            ? (data['data'] as List? ?? [])
+            : <dynamic>[];
+        int total = 0;
+        for (final cart in carts) {
+          final items = (cart is Map ? cart['items'] as List? : null) ?? [];
+          for (final item in items) {
+            final quantity = (item as Map?)?['quantity'];
+            if (quantity is int) {
+              total += quantity;
+            } else if (quantity is num) {
+              total += quantity.toInt();
+            }
+          }
+        }
+        if (mounted) {
+          setState(() => _cartItemCount = total);
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _cartItemCount = 0);
+    }
   }
 
   Future<void> _getLocationFromCoordinates(double lat, double lng) async {
@@ -510,11 +731,12 @@ class _CustomerHomeState extends State<CustomerHome> {
             // Search bar - takes remaining space
             Expanded(
               child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const SearchPage()),
                   );
+                  if (mounted) await _refreshCounts();
                 },
                 child: Container(
                   height: 40,
@@ -551,18 +773,52 @@ class _CustomerHomeState extends State<CustomerHome> {
             const SizedBox(width: 8),
 
             // Notification icon
-            const NotificationActions(),
+            NotificationActions(
+              badgeCount: _notificationCount,
+              onAfterNavigate: _refreshCounts,
+            ),
 
             const SizedBox(width: 4),
 
             // Cart icon
-            IconButton(
-              icon: const Icon(Icons.shopping_cart, color: Colors.white),
-              onPressed: () {
-                setState(() => _currentIndex = 3);
-              },
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                  onPressed: () => _onTap(3),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                if (_cartItemCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        _cartItemCount > 99
+                            ? '99+'
+                            : _cartItemCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),

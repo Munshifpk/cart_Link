@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'Customer/login.dart';
 import 'Shops/login-Shops.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
   FlutterError.onError = (details) {
     FlutterError.dumpErrorToConsole(details);
     // optionally send to a logger / print
@@ -144,9 +146,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
