@@ -40,3 +40,4 @@ const String kApiProducts = '/api/products';
 const String kApiFollowedProducts = '/api/products/followed';
 const String kApiNotifications = '/api/notifications';
 const String kApiCart = '/api/cart';
+const String kApiCompare = '/api/compare';

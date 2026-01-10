@@ -32,12 +32,20 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
   int _totalReviews = 0;
   bool _hasPurchased = false;
   bool _checkingPurchase = false;
+  bool _isInCart = false;
+  bool _checkingCart = false;
+  int _cartItemCount = 0;
+  List<Map<String, dynamic>> _compareList = [];
+  bool _isInCompare = false;
+  bool _loadingCompare = false;
 
   @override
   void initState() {
     super.initState();
     _quantityNotifier = ValueNotifier<int>(1);
     _fetchProductAndShopDetails();
+    _fetchCartCount();
+    _fetchCompareList();
   }
 
   @override
@@ -48,7 +56,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
   Future<void> _fetchProductAndShopDetails() async {
     try {
-      final productId = widget.offer['_id'] ?? widget.offer['id'];
+      final productId =
+          widget.offer['_id'] ?? widget.offer['id'] ?? widget.offer['productId'];
       final shopId =
           widget.offer['shopId'] ??
           widget.offer['ownerId'] ??
@@ -107,18 +116,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         // Validate and ensure all required product fields are present
         _validateProductData(productData);
 
-        // Fetch shop details
-        final shopResponse = await http
-            .get(backendUri('$kApiShops/$shopId'))
-            .timeout(const Duration(seconds: 8));
-
-        String shopName = 'Unknown Shop';
-        if (shopResponse.statusCode == 200) {
-          final shopData =
-              jsonDecode(shopResponse.body)['data'] ??
-              jsonDecode(shopResponse.body);
-          shopName = shopData['shopName'] ?? 'Unknown Shop';
-        }
+        // Always hydrate shop name from backend (ignore incoming offer value)
+        final shopName = await _fetchShopNameFromBackend(shopId.toString());
 
         // Merge shop name with product data
         productData['shopName'] = shopName;
@@ -139,6 +138,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             if (pId != null) {
               _fetchReviews(pId);
               _checkPurchaseStatus(pId);
+              _checkCartStatus(pId, shopId?.toString());
+              _checkCompareStatus(pId, shopId?.toString());
             }
           } catch (_) {}
         }
@@ -338,6 +339,86 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     }
   }
 
+  Future<void> _checkCartStatus(String productId, String? shopId) async {
+    setState(() => _checkingCart = true);
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+      if (customerId == null || shopId == null) {
+        setState(() => _isInCart = false);
+        return;
+      }
+
+      final uri = backendUri(
+        kApiCart,
+        queryParameters: {
+          'customerId': customerId.toString(),
+          'shopId': shopId,
+        },
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final List<dynamic> items = body is Map && body.containsKey('items')
+            ? (body['items'] as List<dynamic>)
+            : (body is List ? body : []);
+        
+        // Check if this product is in the cart
+        final inCart = items.any((item) {
+          final itemProductId = item['productId'] ?? item['_id'] ?? item['id'];
+          return itemProductId.toString() == productId.toString();
+        });
+        setState(() => _isInCart = inCart);
+      } else {
+        setState(() => _isInCart = false);
+      }
+    } catch (_) {
+      setState(() => _isInCart = false);
+    } finally {
+      if (mounted) setState(() => _checkingCart = false);
+    }
+  }
+
+  Future<void> _fetchCartCount() async {
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+      if (customerId == null) {
+        setState(() => _cartItemCount = 0);
+        return;
+      }
+
+      final uri = backendUri(
+        kApiCart,
+        queryParameters: {
+          'customerId': customerId.toString(),
+        },
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final List<dynamic> items = body is Map && body.containsKey('items')
+            ? (body['items'] as List<dynamic>)
+            : (body is List ? body : []);
+        
+        int totalCount = 0;
+        for (final item in items) {
+          final qty = item['quantity'] ?? item['qty'] ?? 1;
+          totalCount += (qty is num ? qty.toInt() : 1);
+        }
+        setState(() => _cartItemCount = totalCount);
+      } else {
+        setState(() => _cartItemCount = 0);
+      }
+    } catch (_) {
+      setState(() => _cartItemCount = 0);
+    }
+  }
+
   /// Parse numeric value from database field safely
   double _parsePrice(dynamic value) {
     if (value == null) return 0.0;
@@ -516,7 +597,16 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
               body: body,
             )
             .timeout(const Duration(seconds: 15));
-        if (res.statusCode == 201 || res.statusCode == 200) return true;
+        if (res.statusCode == 201 || res.statusCode == 200) {
+          await _fetchCartCount();
+          // Refresh cart status for single item
+          final productId = offer['_id'] ?? offer['id'] ?? offer['productId'];
+          final shopId = offer['shopId'] ?? offer['ownerId'] ?? offer['shop'];
+          if (productId != null && shopId != null) {
+            await _checkCartStatus(productId.toString(), shopId.toString());
+          }
+          return true;
+        }
         // ignore: avoid_print
         print('Add to cart failed: ${res.statusCode} ${res.body}');
         return false;
@@ -536,7 +626,17 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 15));
 
-      if (res.statusCode == 201 || res.statusCode == 200) return true;
+      if (res.statusCode == 201 || res.statusCode == 200) {
+        await _fetchCartCount();
+        // Refresh cart status for this product
+        final productId = offer['_id'] ?? offer['id'] ?? offer['productId'];
+        final shopId = offer['shopId'] ?? offer['ownerId'] ?? offer['shop'];
+        if (productId != null && shopId != null) {
+          await _checkCartStatus(productId.toString(), shopId.toString());
+          print('✅ Cart status checked: _isInCart=$_isInCart');
+        }
+        return true;
+      }
       // debug log
       // ignore: avoid_print
       print('Add to cart failed: ${res.statusCode} ${res.body}');
@@ -596,6 +696,232 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           ),
         ),
       );
+    }
+  }
+
+  /// Fetch the current compare list for the customer
+  Future<void> _fetchCompareList() async {
+    setState(() => _loadingCompare = true);
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+      if (customerId == null) {
+        setState(() {
+          _compareList = [];
+          _loadingCompare = false;
+        });
+        return;
+      }
+
+      final uri = backendUri(
+        kApiCompare,
+        queryParameters: {'customerId': customerId.toString()},
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final List<dynamic> items = body is Map && body.containsKey('items')
+            ? (body['items'] as List<dynamic>)
+            : (body is Map && body.containsKey('compareList')
+                ? (body['compareList'] as List<dynamic>)
+                : []);
+
+        // Ensure shop names are hydrated from the database when missing
+        final mappedItems = items
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+        final enriched = await _populateShopNames(mappedItems);
+
+        setState(() {
+          _compareList = enriched;
+        });
+      } else {
+        setState(() => _compareList = []);
+      }
+    } catch (_) {
+      setState(() => _compareList = []);
+    } finally {
+      if (mounted) setState(() => _loadingCompare = false);
+    }
+  }
+
+  /// Fetch shop names for compare list items that don't already have one
+  Future<List<Map<String, dynamic>>> _populateShopNames(
+    List<Map<String, dynamic>> items,
+  ) async {
+    final futures = items.map((item) async {
+      final hasName =
+          item['shopName'] != null && item['shopName'].toString().trim().isNotEmpty;
+      final shopId = item['shopId'] ?? item['ownerId'] ?? item['shop'];
+
+      if (hasName || shopId == null) return item;
+
+      try {
+        item['shopName'] = await _fetchShopNameFromBackend(shopId.toString());
+      } catch (_) {
+        // ignore failures; keep existing data
+      }
+
+      return item;
+    }).toList();
+
+    return Future.wait(futures);
+  }
+
+  /// Fetch shop name from backend shop collection by shopId
+  Future<String> _fetchShopNameFromBackend(String shopId) async {
+    try {
+      final uri = backendUri('$kApiShops/$shopId');
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final data = decoded is Map && decoded.containsKey('data')
+            ? decoded['data']
+            : decoded;
+        if (data is Map && data['shopName'] != null) {
+          return data['shopName'].toString();
+        }
+      }
+    } catch (_) {
+      // ignore errors and fall through to default
+    }
+    return 'Unknown Shop';
+  }
+
+  /// Check if current product is in compare list
+  Future<void> _checkCompareStatus(String productId, String? shopId) async {
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+      if (customerId == null || shopId == null) {
+        setState(() => _isInCompare = false);
+        return;
+      }
+
+      // Check if product exists in compare list
+      final inCompare = _compareList.any((item) {
+        final itemProductId = item['productId'] ?? item['_id'] ?? item['id'];
+        final itemShopId = item['shopId'] ?? item['ownerId'];
+        return itemProductId.toString() == productId.toString() &&
+            itemShopId.toString() == shopId.toString();
+      });
+      setState(() => _isInCompare = inCompare);
+    } catch (_) {
+      setState(() => _isInCompare = false);
+    }
+  }
+
+  /// Add product to compare list
+  Future<bool> _addToCompare(Map<String, dynamic> offer) async {
+    try {
+      final shopId = offer['shopId'] ?? offer['ownerId'] ?? offer['shop'];
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+
+      if (customerId == null || customerId.toString().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please log in to use compare feature'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return false;
+      }
+
+      if (shopId == null) return false;
+
+      final productId = offer['_id'] ?? offer['id'] ?? offer['productId'];
+      
+      // Check if already at max (3 products)
+      if (_compareList.length >= 3) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Maximum 3 products can be compared at once'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return false;
+      }
+
+      final body = jsonEncode({
+        'productId': productId,
+        'customerId': customerId,
+        'shopId': shopId,
+      });
+
+      final uri = backendUri(kApiCompare);
+      final res = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 201 || res.statusCode == 200) {
+        await _fetchCompareList();
+        await _checkCompareStatus(productId.toString(), shopId.toString());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Added to compare'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Add to compare error: $e');
+      return false;
+    }
+  }
+
+  /// Remove product from compare list
+  Future<bool> _removeFromCompare(String productId, String shopId) async {
+    try {
+      final customerId =
+          AuthState.currentCustomer?['_id'] ??
+          AuthState.currentCustomer?['id'] ??
+          AuthState.currentCustomer?['mobile'];
+
+      if (customerId == null) return false;
+
+      final uri = backendUri(
+        '$kApiCompare/$productId',
+        queryParameters: {
+          'customerId': customerId.toString(),
+          'shopId': shopId,
+        },
+      );
+      final res = await http.delete(uri).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200 || res.statusCode == 204) {
+        await _fetchCompareList();
+        await _checkCompareStatus(productId, shopId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Removed from compare'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Remove from compare error: $e');
+      return false;
     }
   }
 
@@ -686,6 +1012,92 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         ),
         foregroundColor: ThemeColors.white,
         backgroundColor: ThemeColors.primary,
+        actions: [
+          // Compare Icon
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.balance),
+                onPressed: () {
+                  if (_compareList.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('No products to compare'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+                  _showComparisonModal(context);
+                },
+                tooltip: 'Compare Products',
+              ),
+              if (_compareList.isNotEmpty)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: ThemeColors.success,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    child: Text(
+                      _compareList.length.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.shopping_cart),
+                onPressed: () {
+                  if (context.mounted) {
+                    Navigator.pushNamed(context, '/cart');
+                  }
+                },
+                tooltip: 'Go to Cart',
+              ),
+              if (_cartItemCount > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: ThemeColors.accent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    child: Text(
+                      _cartItemCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -914,59 +1326,58 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                   child: ElevatedButton.icon(
                                     onPressed: available
                                         ? () async {
-                                            final qty = _quantityNotifier.value;
-                                            final ok = await _addToCartRequest(
-                                              offer,
-                                              qty,
-                                            );
-                                            if (ok) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Added $qty item(s) to cart',
-                                                  ),
-                                                  duration: const Duration(
-                                                    seconds: 2,
-                                                  ),
-                                                ),
-                                              );
-                                              Future.delayed(
-                                                const Duration(
-                                                  milliseconds: 500,
-                                                ),
-                                                () {
-                                                  if (context.mounted)
-                                                    Navigator.pushNamed(
-                                                      context,
-                                                      '/cart',
-                                                    );
-                                                },
-                                              );
+                                            if (_isInCart) {
+                                              if (context.mounted) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  '/cart',
+                                                );
+                                              }
                                             } else {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Failed to add to cart',
-                                                  ),
-                                                  duration: Duration(
-                                                    seconds: 2,
-                                                  ),
-                                                ),
+                                              final qty = _quantityNotifier.value;
+                                              final ok = await _addToCartRequest(
+                                                offer,
+                                                qty,
                                               );
+                                              if (ok && context.mounted) {
+                                                // Explicitly set button state to show "Go to Cart"
+                                                setState(() => _isInCart = true);
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Added $qty item(s) to cart',
+                                                    ),
+                                                    duration: const Duration(
+                                                      seconds: 2,
+                                                    ),
+                                                  ),
+                                                );
+                                              } else if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Failed to add to cart',
+                                                    ),
+                                                    duration: Duration(
+                                                      seconds: 2,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
                                             }
                                           }
                                         : null,
-                                    icon: const Icon(
-                                      Icons.shopping_cart,
+                                    icon: Icon(
+                                      _isInCart ? Icons.check_circle : Icons.shopping_cart,
                                       size: 24,
                                     ),
-                                    label: const Text(
-                                      'Add to Cart',
-                                      style: TextStyle(
+                                    label: Text(
+                                      _isInCart ? 'Go to Cart' : 'Add to Cart',
+                                      style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -1004,7 +1415,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                     ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: available
-                                          ? ThemeColors.primaryDark
+                                          ? ThemeColors.success
                                           : ThemeColors.divider,
                                       foregroundColor: ThemeColors.white,
                                       padding: const EdgeInsets.symmetric(
@@ -1334,7 +1745,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           },
         ),
       const SizedBox(height: 16),
-      // Product Details
+      // Product Details - Display all available fields from database
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1343,24 +1754,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          if (offer['color'] != null && offer['color'].toString().isNotEmpty)
-            Text('Color: ${offer['color']}'),
-          if (offer['size'] != null && offer['size'].toString().isNotEmpty)
-            Text('Size: ${offer['size']}'),
-          if (offer['material'] != null &&
-              offer['material'].toString().isNotEmpty)
-            Text('Material: ${offer['material']}'),
-          if (offer['weight'] != null && offer['weight'].toString().isNotEmpty)
-            Text('Weight: ${offer['weight']}'),
-          if (offer['brand'] != null && offer['brand'].toString().isNotEmpty)
-            Text('Brand: ${offer['brand']}'),
-          if (offer['length'] != null && offer['length'].toString().isNotEmpty)
-            Text('Length: ${offer['length']}'),
-          if (offer['width'] != null && offer['width'].toString().isNotEmpty)
-            Text('Width: ${offer['width']}'),
-          if (offer['height'] != null && offer['height'].toString().isNotEmpty)
-            Text('Height: ${offer['height']}'),
-          // Add more fields as needed
+          ..._buildProductDetailsFromDatabase(offer),
         ],
       ),
       const SizedBox(height: 20),
@@ -1426,34 +1820,42 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
               child: ElevatedButton.icon(
                 onPressed: available
                     ? () async {
-                        final qty = _quantityNotifier.value;
-                        final ok = await _addToCartRequest(offer, qty);
-                        if (ok) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Added $qty item(s) to cart'),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                          Future.delayed(const Duration(milliseconds: 500), () {
-                            if (context.mounted) {
-                              Navigator.pushNamed(context, '/cart');
-                            }
-                          });
+                        if (_isInCart) {
+                          if (context.mounted) {
+                            Navigator.pushNamed(context, '/cart');
+                          }
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Failed to add to cart'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          final qty = _quantityNotifier.value;
+                          final ok = await _addToCartRequest(offer, qty);
+                          
+                          if (ok && context.mounted) {
+                            // Explicitly set button state to show "Go to Cart"
+                            setState(() => _isInCart = true);
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Added $qty item(s) to cart'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } else if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to add to cart'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
                         }
                       }
                     : null,
-                icon: const Icon(Icons.shopping_cart, size: 20),
+                icon: Icon(
+                  _isInCart ? Icons.check_circle : Icons.shopping_cart,
+                  size: 20,
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: available
-                      ? ThemeColors.accent
+                      ? ThemeColors.primary
                       : Colors.grey.shade400,
                   foregroundColor: ThemeColors.textColorWhite,
                   padding: const EdgeInsets.symmetric(
@@ -1461,9 +1863,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                     horizontal: 8,
                   ),
                 ),
-                label: const Text(
-                  'Add to Cart',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                label: Text(
+                  _isInCart ? 'Go to Cart' : 'Add to Cart',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -1486,7 +1888,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: available
-                      ? ThemeColors.greenButton
+                      ? ThemeColors.success
                       : Colors.grey.shade400,
                   foregroundColor: ThemeColors.textColorWhite,
                   padding: const EdgeInsets.symmetric(
@@ -1499,7 +1901,179 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           ),
         ],
       ),
+      const SizedBox(height: 12),
+      // Add to Compare button
+      SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: available
+              ? () async {
+                  if (_isInCompare) {
+                    final productId =
+                        offer['_id'] ?? offer['id'] ?? offer['productId'];
+                    final shopId =
+                        offer['shopId'] ?? offer['ownerId'] ?? offer['shop'];
+                    if (productId != null && shopId != null) {
+                      await _removeFromCompare(
+                        productId.toString(),
+                        shopId.toString(),
+                      );
+                    }
+                  } else {
+                    await _addToCompare(offer);
+                  }
+                }
+              : null,
+          icon: Icon(
+            _isInCompare ? Icons.check : Icons.balance,
+            size: 20,
+          ),
+          label: Text(
+            _isInCompare ? 'Remove from Compare' : 'Add to Compare',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: available
+                ? (_isInCompare ? Colors.orange : ThemeColors.primary)
+                : Colors.grey.shade400,
+            foregroundColor: ThemeColors.textColorWhite,
+            padding: const EdgeInsets.symmetric(
+              vertical: 10,
+              horizontal: 12,
+            ),
+          ),
+        ),
+      ),
     ];
+  }
+
+  /// Build a list of product detail widgets from all available database fields
+  List<Widget> _buildProductDetailsFromDatabase(Map<String, dynamic> offer) {
+    // Fields to exclude from display (system fields, already displayed elsewhere, or irrelevant)
+    final excludedFields = {
+      '_id',
+      'id',
+      '__v',
+      'createdAt',
+      'updatedAt',
+      'deletedAt',
+      'isDeleted',
+      'isActive',
+      'name',
+      'product',
+      'productName',
+      'title',
+      'price',
+      'offerPrice',
+      'mrp',
+      'discount',
+      'description',
+      'stock',
+      'inStock',
+      'category',
+      'images',
+      'shopId',
+      'ownerId',
+      'shop',
+      'shopName',
+    };
+
+    final widgets = <Widget>[];
+
+    // Get all keys from the offer map, sorted alphabetically
+    final sortedKeys = offer.keys.toList()..sort();
+
+    for (final key in sortedKeys) {
+      // Skip excluded fields
+      if (excludedFields.contains(key)) continue;
+
+      final value = offer[key];
+
+      // Skip null or empty values
+      if (value == null) continue;
+      if (value is String && value.toString().trim().isEmpty) continue;
+      if (value is List && value.isEmpty) continue;
+      if (value is Map && value.isEmpty) continue;
+
+      // Format the field name (convert camelCase to Title Case)
+      final displayKey = _formatFieldName(key);
+
+      // Format the value for display
+      final displayValue = _formatFieldValue(value);
+
+      // Add the field to display
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            '$displayKey: $displayValue',
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+        ),
+      );
+    }
+
+    // If no details found, show a message
+    if (widgets.isEmpty) {
+      widgets.add(
+        const Text(
+          'No additional details available',
+          style: TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  /// Convert camelCase field name to Title Case (e.g., "productColor" -> "Product Color")
+  String _formatFieldName(String fieldName) {
+    // Insert space before uppercase letters
+    final withSpaces = fieldName.replaceAllMapped(
+      RegExp(r'([A-Z])'),
+      (match) => ' ${match.group(1)}',
+    );
+    // Capitalize first letter and trim
+    final trimmed = withSpaces.trim();
+    return trimmed[0].toUpperCase() + trimmed.substring(1);
+  }
+
+  /// Format field value for display
+  String _formatFieldValue(dynamic value) {
+    if (value is List) {
+      return value.join(', ');
+    } else if (value is Map) {
+      return value.toString();
+    } else if (value is bool) {
+      return value ? 'Yes' : 'No';
+    } else if (value is num) {
+      // Format numbers with decimal places if needed
+      if (value is double && value.toStringAsFixed(0) != value.toString()) {
+        return value.toStringAsFixed(2);
+      }
+      return value.toString();
+    }
+    return value.toString();
+  }
+
+  /// Show comparison modal with all products in compare list
+  void _showComparisonModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => ComparisonModalWidget(
+        parentContext: context,
+        compareList: _compareList,
+        onRemove: (productId, shopId) async {
+          await _removeFromCompare(productId, shopId);
+          if (context.mounted) {
+            // Refresh the modal with updated list
+            Navigator.pop(context);
+            _showComparisonModal(context);
+          }
+        },
+      ),
+    );
   }
 
   void _openImageViewer(
@@ -2009,3 +2583,299 @@ class _ImageViewerDialogState extends State<_ImageViewerDialog> {
     );
   }
 }
+
+/// Price Comparison Modal Widget
+class ComparisonModalWidget extends StatelessWidget {
+  final List<Map<String, dynamic>> compareList;
+  final Future<void> Function(String productId, String shopId) onRemove;
+  final BuildContext parentContext;
+
+  const ComparisonModalWidget({
+    required this.parentContext,
+    required this.compareList,
+    required this.onRemove,
+  });
+
+  double _parsePrice(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(12),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Compare Products',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Comparison table
+              if (compareList.isEmpty)
+                const Text('No products to compare yet')
+              else
+                Builder(
+                  builder: (context) {
+                    DataRow buildRow(
+                      String label,
+                      Widget Function(Map<String, dynamic> item) cellBuilder,
+                    ) {
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Text(
+                              label,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          ...compareList.map(
+                            (item) => DataCell(
+                              SizedBox(
+                                width: 170,
+                                child: cellBuilder(item),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columnSpacing: 16,
+                        horizontalMargin: 8,
+                        columns: [
+                          const DataColumn(
+                            label: Text(
+                              'Details',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          ...compareList.map((item) {
+                            final productName = (
+                              item['name'] ??
+                              item['product'] ??
+                              item['productName'] ??
+                              'Product'
+                            ).toString();
+                            return DataColumn(
+                              label: SizedBox(
+                                width: 170,
+                                child: Text(
+                                  productName,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                        rows: [
+                          buildRow(
+                            'Shop',
+                            (item) => Text(
+                              (item['shopName'] ?? item['shop'] ?? 'Shop')
+                                  .toString(),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          buildRow(
+                            'Price',
+                            (item) {
+                              final price = _parsePrice(
+                                item['offerPrice'] ?? item['price'] ?? 0,
+                              );
+                              return Text(
+                                '₹${price.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: ThemeColors.success,
+                                ),
+                              );
+                            },
+                          ),
+                          buildRow(
+                            'MRP',
+                            (item) {
+                              final mrp = _parsePrice(item['mrp'] ?? 0);
+                              return Text(
+                                '₹${mrp.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              );
+                            },
+                          ),
+                          buildRow(
+                            'Discount',
+                            (item) {
+                              final price = _parsePrice(
+                                item['offerPrice'] ?? item['price'] ?? 0,
+                              );
+                              final mrp = _parsePrice(item['mrp'] ?? price);
+                              final discount = mrp > 0
+                                  ? ((mrp - price) / mrp * 100)
+                                  : 0;
+
+                              return Text(
+                                discount > 0
+                                    ? '-${discount.toStringAsFixed(0)}%'
+                                    : 'No',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: discount > 0
+                                      ? ThemeColors.success
+                                      : Colors.grey,
+                                ),
+                              );
+                            },
+                          ),
+                          buildRow(
+                            'Stock',
+                            (item) {
+                              final stock = item['stock'] ?? 0;
+                              final inStock = item['inStock'] ?? (stock > 0);
+                              return Text(
+                                inStock == true ? 'In Stock' : 'Out of Stock',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: inStock == true
+                                      ? ThemeColors.success
+                                      : Colors.red,
+                                ),
+                              );
+                            },
+                          ),
+                          buildRow(
+                            'View Product',
+                            (item) {
+                              final productId =
+                                  (item['productId'] ?? item['_id'] ?? item['id'])
+                                      ?.toString();
+                              final shopId =
+                                  (item['shopId'] ?? item['ownerId'] ?? item['shop'])
+                                      ?.toString();
+
+                              // Prepare minimal offer so ProductPurchasePage can refetch fully
+                              final offerForNavigation = {
+                                ...item,
+                                '_id': productId,
+                                'productId': productId,
+                                'shopId': shopId,
+                                'shopName': item['shopName'],
+                              }..removeWhere((key, value) => value == null);
+
+                              return ElevatedButton.icon(
+                                onPressed: (productId == null || shopId == null)
+                                    ? null
+                                    : () {
+                                        Navigator.of(parentContext).pop();
+                                        Future.microtask(() {
+                                          Navigator.of(parentContext).push(
+                                            MaterialPageRoute(
+                                              builder: (_) => ProductPurchasePage(
+                                                offer: offerForNavigation,
+                                              ),
+                                            ),
+                                          );
+                                        });
+                                      },
+                                icon: const Icon(Icons.open_in_new, size: 16),
+                                label: const Text(
+                                  'View Product',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 10,
+                                  ),
+                                  backgroundColor: ThemeColors.primary,
+                                  foregroundColor: Colors.white,
+                                ),
+                              );
+                            },
+                          ),
+                          buildRow(
+                            'Remove',
+                            (item) {
+                              final productId =
+                                  (item['productId'] ?? item['_id'] ?? item['id'])
+                                      ?.toString();
+                              final shopId =
+                                  (item['shopId'] ?? item['ownerId'] ?? item['shop'])
+                                      ?.toString();
+
+                              return IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                  color: Colors.red,
+                                ),
+                                onPressed: productId == null || shopId == null
+                                    ? null
+                                    : () async {
+                                        await onRemove(productId, shopId);
+                                      },
+                                tooltip: 'Remove from comparison',
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              const SizedBox(height: 20),
+              // Close button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ThemeColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Close Comparison'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

@@ -6,6 +6,7 @@ import 'package:cart_link/services/auth_storage.dart';
 import 'package:cart_link/theme_data.dart';
 import 'package:flutter/material.dart';
 import 'Customer/login.dart';
+import 'Customer/cart_page.dart';
 import 'Shops/login-Shops.dart';
 
 void main() async {
@@ -28,6 +29,10 @@ class MyApp extends StatelessWidget {
       title: 'Cart Link',
       theme: AppTheme.light,
       home: const SplashScreen(),
+      debugShowCheckedModeBanner: false,
+      routes: {
+        '/cart': (context) => const CustomerCartPage(),
+      },
     );
   }
 }
