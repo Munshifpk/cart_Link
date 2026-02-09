@@ -57,7 +57,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
   Future<void> _fetchProductAndShopDetails() async {
     try {
       final productId =
-          widget.offer['_id'] ?? widget.offer['id'] ?? widget.offer['productId'];
+          widget.offer['_id'] ??
+          widget.offer['id'] ??
+          widget.offer['productId'];
       final shopId =
           widget.offer['shopId'] ??
           widget.offer['ownerId'] ??
@@ -364,7 +366,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         final List<dynamic> items = body is Map && body.containsKey('items')
             ? (body['items'] as List<dynamic>)
             : (body is List ? body : []);
-        
+
         // Check if this product is in the cart
         final inCart = items.any((item) {
           final itemProductId = item['productId'] ?? item['_id'] ?? item['id'];
@@ -394,9 +396,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
 
       final uri = backendUri(
         kApiCart,
-        queryParameters: {
-          'customerId': customerId.toString(),
-        },
+        queryParameters: {'customerId': customerId.toString()},
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
@@ -404,7 +404,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         final List<dynamic> items = body is Map && body.containsKey('items')
             ? (body['items'] as List<dynamic>)
             : (body is List ? body : []);
-        
+
         int totalCount = 0;
         for (final item in items) {
           final qty = item['quantity'] ?? item['qty'] ?? 1;
@@ -725,8 +725,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         final List<dynamic> items = body is Map && body.containsKey('items')
             ? (body['items'] as List<dynamic>)
             : (body is Map && body.containsKey('compareList')
-                ? (body['compareList'] as List<dynamic>)
-                : []);
+                  ? (body['compareList'] as List<dynamic>)
+                  : []);
 
         // Ensure shop names are hydrated from the database when missing
         final mappedItems = items
@@ -753,7 +753,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
   ) async {
     final futures = items.map((item) async {
       final hasName =
-          item['shopName'] != null && item['shopName'].toString().trim().isNotEmpty;
+          item['shopName'] != null &&
+          item['shopName'].toString().trim().isNotEmpty;
       final shopId = item['shopId'] ?? item['ownerId'] ?? item['shop'];
 
       if (hasName || shopId == null) return item;
@@ -839,7 +840,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       if (shopId == null) return false;
 
       final productId = offer['_id'] ?? offer['id'] ?? offer['productId'];
-      
+
       // Check if already at max (3 products)
       if (_compareList.length >= 3) {
         if (mounted) {
@@ -1237,10 +1238,8 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(
                                       color: available
-                                          ? ThemeColors.success
-                                              .withOpacity(0.3)
-                                          : ThemeColors.error
-                                              .withOpacity(0.25),
+                                          ? ThemeColors.success.withOpacity(0.3)
+                                          : ThemeColors.error.withOpacity(0.25),
                                     ),
                                   ),
                                   child: Text(
@@ -1317,114 +1316,199 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                               ],
                             ),
                             const SizedBox(height: 24),
-                            // Actions stacked vertically on wide screens
-                            Column(
+                            // Add to Cart and Buy Now side by side on wide screens
+                            Row(
                               children: [
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
-                                  child: ElevatedButton.icon(
-                                    onPressed: available
-                                        ? () async {
-                                            if (_isInCart) {
-                                              if (context.mounted) {
-                                                Navigator.pushNamed(
-                                                  context,
-                                                  '/cart',
-                                                );
-                                              }
-                                            } else {
-                                              final qty = _quantityNotifier.value;
-                                              final ok = await _addToCartRequest(
-                                                offer,
-                                                qty,
-                                              );
-                                              if (ok && context.mounted) {
-                                                // Explicitly set button state to show "Go to Cart"
-                                                setState(() => _isInCart = true);
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      'Added $qty item(s) to cart',
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 56,
+                                    child: ElevatedButton.icon(
+                                      onPressed: available
+                                          ? () async {
+                                              if (_isInCart) {
+                                                if (context.mounted) {
+                                                  Navigator.pushNamed(
+                                                    context,
+                                                    '/cart',
+                                                  );
+                                                }
+                                              } else {
+                                                final qty =
+                                                    _quantityNotifier.value;
+                                                final ok =
+                                                    await _addToCartRequest(
+                                                      offer,
+                                                      qty,
+                                                    );
+                                                if (ok && context.mounted) {
+                                                  // Explicitly set button state to show "Go to Cart"
+                                                  setState(
+                                                    () => _isInCart = true,
+                                                  );
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'Added $qty item(s) to cart',
+                                                      ),
+                                                      duration: const Duration(
+                                                        seconds: 2,
+                                                      ),
                                                     ),
-                                                    duration: const Duration(
-                                                      seconds: 2,
+                                                  );
+                                                } else if (context.mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Failed to add to cart',
+                                                      ),
+                                                      duration: Duration(
+                                                        seconds: 2,
+                                                      ),
                                                     ),
-                                                  ),
-                                                );
-                                              } else if (context.mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Failed to add to cart',
-                                                    ),
-                                                    duration: Duration(
-                                                      seconds: 2,
-                                                    ),
-                                                  ),
-                                                );
+                                                  );
+                                                }
                                               }
                                             }
-                                          }
-                                        : null,
-                                    icon: Icon(
-                                      _isInCart ? Icons.check_circle : Icons.shopping_cart,
-                                      size: 24,
-                                    ),
-                                    label: Text(
-                                      _isInCart ? 'Go to Cart' : 'Add to Cart',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                          : null,
+                                      icon: Icon(
+                                        _isInCart
+                                            ? Icons.check_circle
+                                            : Icons.shopping_cart,
+                                        size: 24,
                                       ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: available
-                                          ? ThemeColors.primary
-                                          : ThemeColors.divider,
-                                      foregroundColor: ThemeColors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                        horizontal: 16,
+                                      label: Text(
+                                        _isInCart
+                                            ? 'Go to Cart'
+                                            : 'Add to Cart',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
-                                  child: ElevatedButton.icon(
-                                    onPressed: available
-                                        ? () async {
-                                            final qty = _quantityNotifier.value;
-                                            await _createOrderAndNavigate(qty);
-                                          }
-                                        : null,
-                                    icon: const Icon(Icons.payment, size: 24),
-                                    label: const Text(
-                                      'Buy Now',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: available
-                                          ? ThemeColors.success
-                                          : ThemeColors.divider,
-                                      foregroundColor: ThemeColors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                        horizontal: 16,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: available
+                                            ? ThemeColors.primary
+                                            : ThemeColors.divider,
+                                        foregroundColor: ThemeColors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                          horizontal: 8,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 56,
+                                    child: ElevatedButton.icon(
+                                      onPressed: available
+                                          ? () async {
+                                              final qty =
+                                                  _quantityNotifier.value;
+                                              await _createOrderAndNavigate(
+                                                qty,
+                                              );
+                                            }
+                                          : null,
+                                      icon: const Icon(Icons.payment, size: 24),
+                                      label: const Text(
+                                        'Buy Now',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: available
+                                            ? ThemeColors.success
+                                            : ThemeColors.divider,
+                                        foregroundColor: ThemeColors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                          horizontal: 8,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            // Add to Compare button (top of Product Details - wide screens)
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                onPressed: available
+                                    ? () async {
+                                        if (_isInCompare) {
+                                          final productId =
+                                              offer['_id'] ??
+                                              offer['id'] ??
+                                              offer['productId'];
+                                          final shopId =
+                                              offer['shopId'] ??
+                                              offer['ownerId'] ??
+                                              offer['shop'];
+                                          if (productId != null &&
+                                              shopId != null) {
+                                            await _removeFromCompare(
+                                              productId.toString(),
+                                              shopId.toString(),
+                                            );
+                                          }
+                                        } else {
+                                          await _addToCompare(offer);
+                                        }
+                                      }
+                                    : null,
+                                icon: Icon(
+                                  _isInCompare ? Icons.check : Icons.balance,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  _isInCompare
+                                      ? 'Remove from Compare'
+                                      : 'Add to Compare',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: available
+                                      ? (_isInCompare
+                                            ? Colors.orange
+                                            : ThemeColors.primary)
+                                      : Colors.grey.shade400,
+                                  foregroundColor: ThemeColors.textColorWhite,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                    horizontal: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            // Product Details section (wide screens)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Product Details',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ..._buildProductDetailsFromDatabase(offer),
                               ],
                             ),
                           ],
@@ -1667,156 +1751,165 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
   ) {
     // Compute availability
     final bool available = _isAvailable(offer);
+    final offerPrice = _parsePrice(offer['offerPrice'] ?? offer['price'] ?? 0);
+    final mrp = _parsePrice(offer['mrp'] ?? offerPrice);
+    final discount = _parsePrice(offer['discount'] ?? 0);
 
     return [
       // Product name (use DB-fetched canonical title when available)
       Text(
         productTitle,
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 4),
-      // Shop name below product name (use DB-fetched shop name when available)
-      Text(
-        shopDisplayName,
         style: const TextStyle(
-          fontSize: 13,
-          color: ThemeColors.primary,
-          fontWeight: FontWeight.w500,
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: Colors.black87,
+        ),
+      ),
+      const SizedBox(height: 6),
+      // Shop name below product name (use DB-fetched shop name when available)
+      Row(
+        children: [
+          const Icon(Icons.store, size: 16, color: ThemeColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            shopDisplayName,
+            style: const TextStyle(
+              fontSize: 14,
+              color: ThemeColors.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      // Divider
+      Container(height: 1, color: Colors.grey.shade300),
+      const SizedBox(height: 16),
+      // Pricing Section
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: ThemeColors.success.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: ThemeColors.success.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '₹${offerPrice.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: ThemeColors.success,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (mrp > offerPrice)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '₹${mrp.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    ],
+                  ),
+                const Spacer(),
+                if (discount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: ThemeColors.success,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '-${discount.toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        color: ThemeColors.textColorWhite,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
       const SizedBox(height: 12),
-      // Pricing (note: offerPrice, mrp, discount are pre-computed in build())
-      Row(
-        children: [
-          Text(
-            '₹${_parsePrice(offer['offerPrice'] ?? offer['price'] ?? 0).toStringAsFixed(0)}',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: ThemeColors.success,
-            ),
+      // Stock availability badge
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: available ? Colors.green.shade50 : Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: available ? Colors.green.shade300 : Colors.red.shade300,
+            width: 1,
           ),
-          const SizedBox(width: 12),
-          if (_parsePrice(offer['discount'] ?? 0) > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: ThemeColors.success.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '-${_parsePrice(offer['discount']).toStringAsFixed(0)}%',
-                style: const TextStyle(
-                  color: ThemeColors.success,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      // Stock availability info
-      if (!available)
-        const Text(
-          'Out of Stock',
-          style: TextStyle(
-            color: ThemeColors.error,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        )
-      else
-        Builder(
-          builder: (context) {
-            final stock = offer['stock'];
-            if (stock != null && stock is num && stock > 0) {
-              return Text(
-                'In Stock: ${stock.toInt()}',
-                style: const TextStyle(
-                  color: ThemeColors.success,
-                  fontSize: 14,
-                ),
-              );
-            }
-            return const Text(
-              'In Stock',
-              style: TextStyle(color: ThemeColors.success, fontSize: 14),
-            );
-          },
         ),
-      const SizedBox(height: 16),
-      // Product Details - Display all available fields from database
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Product Details',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          ..._buildProductDetailsFromDatabase(offer),
-        ],
-      ),
-      const SizedBox(height: 20),
-      // Quantity selector
-      const Text(
-        'Quantity',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 8),
-      Row(
-        children: [
-          ElevatedButton(
-            onPressed: () {
-              final newVal = (_quantityNotifier.value - 1) < 1
-                  ? 1
-                  : (_quantityNotifier.value - 1);
-              _quantityNotifier.value = newVal;
-            },
-            child: const Text('-'),
-          ),
-          const SizedBox(width: 16),
-          ValueListenableBuilder<int>(
-            valueListenable: _quantityNotifier,
-            builder: (context, qty, _) => Text(
-              '$qty',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        child: Row(
+          children: [
+            Icon(
+              available ? Icons.check_circle : Icons.cancel,
+              color: available ? ThemeColors.success : ThemeColors.error,
+              size: 20,
             ),
-          ),
-          const SizedBox(width: 16),
-          ElevatedButton(
-            onPressed: () {
-              final stock = offer['stock'];
-              final maxQty = (stock != null && stock is num && stock > 0)
-                  ? stock.toInt()
-                  : 100;
-              final newVal = (_quantityNotifier.value + 1) > maxQty
-                  ? maxQty
-                  : (_quantityNotifier.value + 1);
-              _quantityNotifier.value = newVal;
-            },
-            child: const Text('+'),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Builder(
+                builder: (context) {
+                  if (!available) {
+                    return const Text(
+                      'Out of Stock',
+                      style: TextStyle(
+                        color: ThemeColors.error,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    );
+                  }
+                  final stock = offer['stock'];
+                  final stockText = (stock != null && stock is num && stock > 0)
+                      ? 'In Stock: ${stock.toInt()} available'
+                      : 'In Stock';
+                  return Text(
+                    stockText,
+                    style: const TextStyle(
+                      color: ThemeColors.success,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
-      const SizedBox(height: 20),
-      // Description
-      const Text(
-        'Product Description',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'High-quality ${(offer['product'] ?? 'product').toLowerCase()} with excellent quality and durability. Perfect for everyday use.',
-        style: const TextStyle(fontSize: 14, color: Colors.grey),
-      ),
-      const SizedBox(height: 24),
-      // Add to cart and buy now buttons (side by side for small screens)
+      const SizedBox(height: 18),
+      // Action buttons
       Row(
         children: [
           Expanded(
             child: SizedBox(
-              height: 48,
+              height: 52,
               child: ElevatedButton.icon(
                 onPressed: available
                     ? () async {
@@ -1827,11 +1920,10 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                         } else {
                           final qty = _quantityNotifier.value;
                           final ok = await _addToCartRequest(offer, qty);
-                          
+
                           if (ok && context.mounted) {
-                            // Explicitly set button state to show "Go to Cart"
                             setState(() => _isInCart = true);
-                            
+
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Added $qty item(s) to cart'),
@@ -1851,21 +1943,25 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                     : null,
                 icon: Icon(
                   _isInCart ? Icons.check_circle : Icons.shopping_cart,
-                  size: 20,
+                  size: 22,
+                ),
+                label: Text(
+                  _isInCart ? 'Go to Cart' : 'Add to Cart',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: available
                       ? ThemeColors.primary
                       : Colors.grey.shade400,
                   foregroundColor: ThemeColors.textColorWhite,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 10,
-                    horizontal: 8,
+                  elevation: 3,
+                  shadowColor: ThemeColors.primary.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ),
-                label: Text(
-                  _isInCart ? 'Go to Cart' : 'Add to Cart',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -1873,7 +1969,7 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
-              height: 48,
+              height: 52,
               child: ElevatedButton.icon(
                 onPressed: available
                     ? () async {
@@ -1881,19 +1977,20 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
                         await _createOrderAndNavigate(qty);
                       }
                     : null,
-                icon: const Icon(Icons.payment, size: 20),
+                icon: const Icon(Icons.flash_on, size: 22),
                 label: const Text(
                   'Buy Now',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: available
                       ? ThemeColors.success
                       : Colors.grey.shade400,
                   foregroundColor: ThemeColors.textColorWhite,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 10,
-                    horizontal: 8,
+                  elevation: 3,
+                  shadowColor: ThemeColors.success.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
@@ -1902,11 +1999,11 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
         ],
       ),
       const SizedBox(height: 12),
-      // Add to Compare button
+      // Compare button
       SizedBox(
         width: double.infinity,
         height: 48,
-        child: ElevatedButton.icon(
+        child: OutlinedButton.icon(
           onPressed: available
               ? () async {
                   if (_isInCompare) {
@@ -1928,29 +2025,209 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
           icon: Icon(
             _isInCompare ? Icons.check : Icons.balance,
             size: 20,
+            color: _isInCompare ? Colors.orange : ThemeColors.primary,
           ),
           label: Text(
             _isInCompare ? 'Remove from Compare' : 'Add to Compare',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: available
-                ? (_isInCompare ? Colors.orange : ThemeColors.primary)
-                : Colors.grey.shade400,
-            foregroundColor: ThemeColors.textColorWhite,
-            padding: const EdgeInsets.symmetric(
-              vertical: 10,
-              horizontal: 12,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _isInCompare ? Colors.orange : ThemeColors.primary,
             ),
           ),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(
+              color: _isInCompare ? Colors.orange : ThemeColors.primary,
+              width: 2,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 20),
+      // Divider
+      Container(height: 1, color: Colors.grey.shade300),
+      const SizedBox(height: 16),
+      // Quantity selector card
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Select Quantity',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400, width: 1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: IconButton(
+                          onPressed: () {
+                            final newVal = (_quantityNotifier.value - 1) < 1
+                                ? 1
+                                : (_quantityNotifier.value - 1);
+                            _quantityNotifier.value = newVal;
+                          },
+                          icon: const Icon(Icons.remove, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey.shade400,
+                      ),
+                      Container(
+                        width: 50,
+                        alignment: Alignment.center,
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: _quantityNotifier,
+                          builder: (context, qty, _) => Text(
+                            '$qty',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey.shade400,
+                      ),
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: IconButton(
+                          onPressed: () {
+                            final stock = offer['stock'];
+                            final maxQty =
+                                (stock != null && stock is num && stock > 0)
+                                ? stock.toInt()
+                                : 100;
+                            final newVal =
+                                (_quantityNotifier.value + 1) > maxQty
+                                ? maxQty
+                                : (_quantityNotifier.value + 1);
+                            _quantityNotifier.value = newVal;
+                          },
+                          icon: const Icon(Icons.add, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+      // Product Details - Table Format
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Product Details',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: ThemeColors.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ..._buildProductDetailsTable(offer),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+      // Description section
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Description',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: ThemeColors.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200, width: 1),
+              ),
+              child: Text(
+                offer['description'] ??
+                    'High-quality ${(offer['product'] ?? 'product').toLowerCase()} with excellent quality and durability. Perfect for everyday use.',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  height: 1.8,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     ];
   }
 
-  /// Build a list of product detail widgets from all available database fields
-  List<Widget> _buildProductDetailsFromDatabase(Map<String, dynamic> offer) {
-    // Fields to exclude from display (system fields, already displayed elsewhere, or irrelevant)
+  /// Build product details in professional table format
+  List<Widget> _buildProductDetailsTable(Map<String, dynamic> offer) {
+    // Fields to exclude from display
     final excludedFields = {
       '_id',
       'id',
@@ -1979,52 +2256,90 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
       'shopName',
     };
 
-    final widgets = <Widget>[];
-
-    // Get all keys from the offer map, sorted alphabetically
+    final details = <Map<String, String>>[];
     final sortedKeys = offer.keys.toList()..sort();
 
     for (final key in sortedKeys) {
-      // Skip excluded fields
       if (excludedFields.contains(key)) continue;
-
       final value = offer[key];
-
-      // Skip null or empty values
       if (value == null) continue;
       if (value is String && value.toString().trim().isEmpty) continue;
       if (value is List && value.isEmpty) continue;
       if (value is Map && value.isEmpty) continue;
 
-      // Format the field name (convert camelCase to Title Case)
-      final displayKey = _formatFieldName(key);
+      details.add({
+        'key': _formatFieldName(key),
+        'value': _formatFieldValue(value),
+      });
+    }
 
-      // Format the value for display
-      final displayValue = _formatFieldValue(value);
+    if (details.isEmpty) {
+      return [
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              'No additional details available',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            ),
+          ),
+        ),
+      ];
+    }
 
-      // Add the field to display
+    // Build table rows
+    final widgets = <Widget>[];
+    for (int i = 0; i < details.length; i++) {
+      final detail = details[i];
+      final isOdd = i.isOdd;
       widgets.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Text(
-            '$displayKey: $displayValue',
-            style: const TextStyle(fontSize: 13, color: Colors.black87),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: isOdd ? Colors.grey.shade50 : Colors.white,
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text(
+                  detail['key']!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: ThemeColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  detail['value']!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    // If no details found, show a message
-    if (widgets.isEmpty) {
-      widgets.add(
-        const Text(
-          'No additional details available',
-          style: TextStyle(fontSize: 13, color: Colors.grey),
-        ),
-      );
-    }
-
     return widgets;
+  }
+
+  /// Build a list of product detail widgets from all available database fields (kept for compatibility)
+  List<Widget> _buildProductDetailsFromDatabase(Map<String, dynamic> offer) {
+    return _buildProductDetailsTable(offer);
   }
 
   /// Convert camelCase field name to Title Case (e.g., "productColor" -> "Product Color")
@@ -2036,7 +2351,9 @@ class _ProductPurchasePageState extends State<ProductPurchasePage> {
     );
     // Capitalize first letter and trim
     final trimmed = withSpaces.trim();
-    return trimmed[0].toUpperCase() + trimmed.substring(1);
+    if (trimmed.isEmpty) return fieldName;
+    return trimmed[0].toUpperCase() +
+        (trimmed.length > 1 ? trimmed.substring(1) : '');
   }
 
   /// Format field value for display
@@ -2275,7 +2592,10 @@ class _AllSimilarProductsPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            (item['name'] ?? item['product'] ?? item['title'] ?? '')
+                            (item['name'] ??
+                                    item['product'] ??
+                                    item['title'] ??
+                                    '')
                                 .toString(),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -2620,10 +2940,7 @@ class ComparisonModalWidget extends StatelessWidget {
                 children: [
                   const Text(
                     'Compare Products',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -2655,10 +2972,7 @@ class ComparisonModalWidget extends StatelessWidget {
                           ),
                           ...compareList.map(
                             (item) => DataCell(
-                              SizedBox(
-                                width: 170,
-                                child: cellBuilder(item),
-                              ),
+                              SizedBox(width: 170, child: cellBuilder(item)),
                             ),
                           ),
                         ],
@@ -2678,12 +2992,12 @@ class ComparisonModalWidget extends StatelessWidget {
                             ),
                           ),
                           ...compareList.map((item) {
-                            final productName = (
-                              item['name'] ??
-                              item['product'] ??
-                              item['productName'] ??
-                              'Product'
-                            ).toString();
+                            final productName =
+                                (item['name'] ??
+                                        item['product'] ??
+                                        item['productName'] ??
+                                        'Product')
+                                    .toString();
                             return DataColumn(
                               label: SizedBox(
                                 width: 170,
@@ -2709,150 +3023,136 @@ class ComparisonModalWidget extends StatelessWidget {
                               style: const TextStyle(fontSize: 12),
                             ),
                           ),
-                          buildRow(
-                            'Price',
-                            (item) {
-                              final price = _parsePrice(
-                                item['offerPrice'] ?? item['price'] ?? 0,
-                              );
-                              return Text(
-                                '₹${price.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: ThemeColors.success,
-                                ),
-                              );
-                            },
-                          ),
-                          buildRow(
-                            'MRP',
-                            (item) {
-                              final mrp = _parsePrice(item['mrp'] ?? 0);
-                              return Text(
-                                '₹${mrp.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              );
-                            },
-                          ),
-                          buildRow(
-                            'Discount',
-                            (item) {
-                              final price = _parsePrice(
-                                item['offerPrice'] ?? item['price'] ?? 0,
-                              );
-                              final mrp = _parsePrice(item['mrp'] ?? price);
-                              final discount = mrp > 0
-                                  ? ((mrp - price) / mrp * 100)
-                                  : 0;
+                          buildRow('Price', (item) {
+                            final price = _parsePrice(
+                              item['offerPrice'] ?? item['price'] ?? 0,
+                            );
+                            return Text(
+                              '₹${price.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: ThemeColors.success,
+                              ),
+                            );
+                          }),
+                          buildRow('MRP', (item) {
+                            final mrp = _parsePrice(item['mrp'] ?? 0);
+                            return Text(
+                              '₹${mrp.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            );
+                          }),
+                          buildRow('Discount', (item) {
+                            final price = _parsePrice(
+                              item['offerPrice'] ?? item['price'] ?? 0,
+                            );
+                            final mrp = _parsePrice(item['mrp'] ?? price);
+                            final discount = mrp > 0
+                                ? ((mrp - price) / mrp * 100)
+                                : 0;
 
-                              return Text(
-                                discount > 0
-                                    ? '-${discount.toStringAsFixed(0)}%'
-                                    : 'No',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: discount > 0
-                                      ? ThemeColors.success
-                                      : Colors.grey,
-                                ),
-                              );
-                            },
-                          ),
-                          buildRow(
-                            'Stock',
-                            (item) {
-                              final stock = item['stock'] ?? 0;
-                              final inStock = item['inStock'] ?? (stock > 0);
-                              return Text(
-                                inStock == true ? 'In Stock' : 'Out of Stock',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: inStock == true
-                                      ? ThemeColors.success
-                                      : Colors.red,
-                                ),
-                              );
-                            },
-                          ),
-                          buildRow(
-                            'View Product',
-                            (item) {
-                              final productId =
-                                  (item['productId'] ?? item['_id'] ?? item['id'])
-                                      ?.toString();
-                              final shopId =
-                                  (item['shopId'] ?? item['ownerId'] ?? item['shop'])
-                                      ?.toString();
+                            return Text(
+                              discount > 0
+                                  ? '-${discount.toStringAsFixed(0)}%'
+                                  : 'No',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: discount > 0
+                                    ? ThemeColors.success
+                                    : Colors.grey,
+                              ),
+                            );
+                          }),
+                          buildRow('Stock', (item) {
+                            final stock = item['stock'] ?? 0;
+                            final inStock = item['inStock'] ?? (stock > 0);
+                            return Text(
+                              inStock == true ? 'In Stock' : 'Out of Stock',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: inStock == true
+                                    ? ThemeColors.success
+                                    : Colors.red,
+                              ),
+                            );
+                          }),
+                          buildRow('View Product', (item) {
+                            final productId =
+                                (item['productId'] ?? item['_id'] ?? item['id'])
+                                    ?.toString();
+                            final shopId =
+                                (item['shopId'] ??
+                                        item['ownerId'] ??
+                                        item['shop'])
+                                    ?.toString();
 
-                              // Prepare minimal offer so ProductPurchasePage can refetch fully
-                              final offerForNavigation = {
-                                ...item,
-                                '_id': productId,
-                                'productId': productId,
-                                'shopId': shopId,
-                                'shopName': item['shopName'],
-                              }..removeWhere((key, value) => value == null);
+                            // Prepare minimal offer so ProductPurchasePage can refetch fully
+                            final offerForNavigation = {
+                              ...item,
+                              '_id': productId,
+                              'productId': productId,
+                              'shopId': shopId,
+                              'shopName': item['shopName'],
+                            }..removeWhere((key, value) => value == null);
 
-                              return ElevatedButton.icon(
-                                onPressed: (productId == null || shopId == null)
-                                    ? null
-                                    : () {
-                                        Navigator.of(parentContext).pop();
-                                        Future.microtask(() {
-                                          Navigator.of(parentContext).push(
-                                            MaterialPageRoute(
-                                              builder: (_) => ProductPurchasePage(
-                                                offer: offerForNavigation,
-                                              ),
+                            return ElevatedButton.icon(
+                              onPressed: (productId == null || shopId == null)
+                                  ? null
+                                  : () {
+                                      Navigator.of(parentContext).pop();
+                                      Future.microtask(() {
+                                        Navigator.of(parentContext).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => ProductPurchasePage(
+                                              offer: offerForNavigation,
                                             ),
-                                          );
-                                        });
-                                      },
-                                icon: const Icon(Icons.open_in_new, size: 16),
-                                label: const Text(
-                                  'View Product',
-                                  style: TextStyle(fontSize: 12),
+                                          ),
+                                        );
+                                      });
+                                    },
+                              icon: const Icon(Icons.open_in_new, size: 16),
+                              label: const Text(
+                                'View Product',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                  horizontal: 10,
                                 ),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                    horizontal: 10,
-                                  ),
-                                  backgroundColor: ThemeColors.primary,
-                                  foregroundColor: Colors.white,
-                                ),
-                              );
-                            },
-                          ),
-                          buildRow(
-                            'Remove',
-                            (item) {
-                              final productId =
-                                  (item['productId'] ?? item['_id'] ?? item['id'])
-                                      ?.toString();
-                              final shopId =
-                                  (item['shopId'] ?? item['ownerId'] ?? item['shop'])
-                                      ?.toString();
+                                backgroundColor: ThemeColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                            );
+                          }),
+                          buildRow('Remove', (item) {
+                            final productId =
+                                (item['productId'] ?? item['_id'] ?? item['id'])
+                                    ?.toString();
+                            final shopId =
+                                (item['shopId'] ??
+                                        item['ownerId'] ??
+                                        item['shop'])
+                                    ?.toString();
 
-                              return IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                  color: Colors.red,
-                                ),
-                                onPressed: productId == null || shopId == null
-                                    ? null
-                                    : () async {
-                                        await onRemove(productId, shopId);
-                                      },
-                                tooltip: 'Remove from comparison',
-                              );
-                            },
-                          ),
+                            return IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: Colors.red,
+                              ),
+                              onPressed: productId == null || shopId == null
+                                  ? null
+                                  : () async {
+                                      await onRemove(productId, shopId);
+                                    },
+                              tooltip: 'Remove from comparison',
+                            );
+                          }),
                         ],
                       ),
                     );
@@ -2878,4 +3178,3 @@ class ComparisonModalWidget extends StatelessWidget {
     );
   }
 }
-

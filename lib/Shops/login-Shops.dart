@@ -77,7 +77,7 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
             final ownerMap = owner is Map<String, dynamic>
                 ? owner
                 : Map<String, dynamic>.from(owner as Map);
-            
+
             // Save to persistent storage with token
             if (token != null) {
               await AuthState.setOwner(ownerMap, token: token);
@@ -163,6 +163,7 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -172,175 +173,182 @@ class _ShopLoginPageState extends State<ShopLoginPage> {
         backgroundColor: ThemeColors.primary,
         foregroundColor: Colors.white,
       ),
-      backgroundColor: ThemeColors.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 26,
+      body: Container(
+        decoration: const BoxDecoration(gradient: ThemeColors.primaryGradient),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: ThemeColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: const [
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.white24,
-                              child: Icon(
-                                Icons.storefront_outlined,
-                                size: 30,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Grow your business\nReach more customers',
-                                style: TextStyle(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 26,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: ThemeColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: const [
+                              CircleAvatar(
+                                radius: 28,
+                                backgroundColor: Colors.white24,
+                                child: Icon(
+                                  Icons.storefront_outlined,
+                                  size: 30,
                                   color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Grow your business\nReach more customers',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 22),
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: _mobileController,
-                              keyboardType: TextInputType.phone,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              maxLength: 15,
-                              decoration: const InputDecoration(
-                                labelText: 'Mobile number',
-                                hintText: 'e.g. 9744884713',
-                                prefixIcon: Icon(Icons.phone_android_outlined),
-                                counterText: '',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Enter mobile number';
-                                }
-                                if (v.trim().length < 7) {
-                                  return 'Enter a valid number';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscure,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscure
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
+                        const SizedBox(height: 22),
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              TextFormField(
+                                controller: _mobileController,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                maxLength: 15,
+                                decoration: const InputDecoration(
+                                  labelText: 'Mobile number',
+                                  hintText: 'e.g. 9744884713',
+                                  prefixIcon: Icon(
+                                    Icons.phone_android_outlined,
                                   ),
-                                  onPressed: () =>
-                                      setState(() => _obscure = !_obscure),
+                                  counterText: '',
+                                  border: OutlineInputBorder(),
                                 ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Enter mobile number';
+                                  }
+                                  if (v.trim().length < 7) {
+                                    return 'Enter a valid number';
+                                  }
+                                  return null;
+                                },
                               ),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'Enter password';
-                                }
-                                if (v.length < 6) return 'Password too short';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 18),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: ThemeColors.primary,
-                                  foregroundColor: ThemeColors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscure,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  border: const OutlineInputBorder(),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
                                   ),
                                 ),
-                                onPressed: _loading ? null : _verifyCredentials,
-                                child: _loading
-                                    ? const CircularProgressIndicator(
-                                        color: Colors.white,
-                                      )
-                                    : const Text(
-                                        'Login',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Enter password';
+                                  }
+                                  if (v.length < 6) return 'Password too short';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 18),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: ThemeColors.primary,
+                                    foregroundColor: ThemeColors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: _loading
+                                      ? null
+                                      : _verifyCredentials,
+                                  child: _loading
+                                      ? const CircularProgressIndicator(
                                           color: Colors.white,
+                                        )
+                                      : const Text(
+                                          'Login',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                         ),
-                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              "Don't have an account??",
+                              style: TextStyle(color: Colors.black87),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ShopSignUpPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Create one',
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            "Don't have an account??",
-                            style: TextStyle(color: Colors.black87),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Join thousands of businesses using our platform to increase sales and reach new customers.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: ThemeColors.textSecondary,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ShopSignUpPage(),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Create one',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Join thousands of businesses using our platform to increase sales and reach new customers.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: ThemeColors.textSecondary,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
