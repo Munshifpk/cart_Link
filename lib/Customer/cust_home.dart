@@ -162,7 +162,7 @@ class _HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      key: const PageStorageKey('home'),
+      key: const PageStorageKey('Home Page'),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
